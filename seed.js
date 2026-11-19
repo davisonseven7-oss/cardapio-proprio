@@ -23,7 +23,7 @@ function potengi(db) {
     tema: { cor: '#0B3480', destaque: '#FFC83D', acento: '#5DB332', fonte: 'Archivo Black' },
     horario: { 0: null, 1: [7.5, 17.5], 2: [7.5, 17.5], 3: [7.5, 17.5], 4: [7.5, 17.5], 5: [7.5, 17.5], 6: [7.5, 12.5] },
     bairros: [['Centro', 6], ['Cohabinal', 6], ['Monte Castelo', 7], ['Rosa dos Ventos', 7], ['Emaús', 8], ['Passagem de Areia', 8], ['Parque das Nações', 9], ['Vale do Sol', 9], ['Nova Parnamirim', 10]],
-    retirada: true, minimo: 50, pagamentos: ['Pix', 'Cartão', 'Dinheiro'],
+    retirada: true, minimo: 50, pagamentos: ['Pix na entrega', 'Cartão (maquininha)', 'Dinheiro'],
     promoTemas: ['Domingo: peça para segunda', 'Segunda do cavalo', 'Terça pet', 'Quarta da selaria', 'Quinta do campo', 'Sexta country', 'Sábado de vaquejada'],
     curtidas: { meta: 3, desconto: 5, campeao: 20 }, robo: { nome: 'Potenginho', ativo: true }
   } });
@@ -79,7 +79,7 @@ function boaHora(db) {
     tema: { cor: '#17603A', destaque: '#FFC53D', acento: '#C9F25C', fonte: 'Shrikhand' },
     horario: { 0: [7, 19], 1: [7, 19], 2: [7, 19], 3: [7, 19], 4: [7, 19], 5: [7, 19], 6: [7, 19] },
     bairros: [['Lagoa Nova', 4], ['Tirol', 5], ['Petrópolis', 5], ['Candelária', 5], ['Capim Macio', 6], ['Ponta Negra', 7], ['Nova Parnamirim', 8]],
-    retirada: false, minimo: 15, pagamentos: ['Pix', 'Cartão', 'Dinheiro'],
+    retirada: false, minimo: 15, pagamentos: ['Pix na entrega', 'Cartão (maquininha)', 'Dinheiro'],
     promoTemas: ['Domingo em família', 'Segunda fit', 'Terça da polpa', 'Quarta do galão', 'Quinta a dois', 'Sextou', 'Sábado de praia'],
     curtidas: { meta: 3, desconto: 5, campeao: 20 }, robo: { nome: 'Coquinho', ativo: true }
   } });

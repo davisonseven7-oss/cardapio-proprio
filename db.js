@@ -97,5 +97,26 @@ CREATE TABLE IF NOT EXISTS events(
 CREATE INDEX IF NOT EXISTS events_t ON events(tenant_id, created_at);
 `);
 
+/* migrações simples: colunas novas em bancos que já existem */
+const addCol = (tb, col, def) => { const cols = db.prepare(`PRAGMA table_info(${tb})`).all().map(c => c.name); if (!cols.includes(col)) db.exec(`ALTER TABLE ${tb} ADD COLUMN ${col} ${def}`); };
+addCol('orders', 'track', 'TEXT');                 // código secreto da página de acompanhamento
+addCol('orders', 'log', "TEXT DEFAULT '[]'");      // histórico de status [{s, t}]
+for (const o of db.prepare('SELECT id, created_at FROM orders WHERE track IS NULL').all())
+  db.prepare('UPDATE orders SET track=?, log=? WHERE id=?').run(require('crypto').randomBytes(8).toString('base64url'), JSON.stringify([{ s: 'novo', t: o.created_at }]), o.id);
+db.exec('CREATE UNIQUE INDEX IF NOT EXISTS orders_track ON orders(track)');
+
+/* cadastro de clientes (um por WhatsApp em cada loja) */
+db.exec(`CREATE TABLE IF NOT EXISTS customers(
+  id INTEGER PRIMARY KEY,
+  tenant_id INTEGER NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  phone TEXT NOT NULL, name TEXT DEFAULT '', email TEXT DEFAULT '', birthday TEXT DEFAULT '',
+  address TEXT DEFAULT '', bairro TEXT DEFAULT '', notes TEXT DEFAULT '', tags TEXT DEFAULT '',
+  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+  UNIQUE(tenant_id, phone)
+)`);
+/* quem já pediu antes do cadastro existir vira cliente cadastrado */
+db.exec(`INSERT OR IGNORE INTO customers(tenant_id, phone, name, address, bairro, created_at)
+  SELECT o.tenant_id, o.phone, o.customer, o.address, o.bairro, MIN(o.created_at) FROM orders o WHERE o.phone!='' GROUP BY o.tenant_id, o.phone`);
+
 const J = (s, d) => { try { return s ? JSON.parse(s) : d; } catch { return d; } };
 module.exports = { db, DATA_DIR, J };

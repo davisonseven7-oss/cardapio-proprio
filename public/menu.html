@@ -235,9 +235,14 @@ svg.i{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.9;stro
 .field{display:grid;gap:6px;margin-top:12px}
 .field label,.field>span{font-size:12px;color:var(--muted);font-weight:700}
 input[type=text],input[type=tel],select,textarea{width:100%;border:1.5px solid var(--line);border-radius:12px;padding:11px 12px;background:var(--soft);color:var(--ink);font:inherit}
-.pay{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.pay{display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:8px}
 .pay button{border:1.5px solid var(--line);border-radius:12px;height:42px;font-weight:600}
 .pay button.on{border-color:var(--green);background:var(--soft);font-weight:800}
+.pay button{font-size:13px;line-height:1.15;padding:4px;min-height:46px;height:auto}
+.pixbox{margin-top:10px;background:var(--soft);border-radius:12px;padding:10px 12px;font-size:13px;line-height:1.5}
+.pixbox .pk{font-weight:800;word-break:break-all}
+.pixbox small{color:var(--muted)}
+.cpx{display:inline-block;margin-left:4px;border:1.5px solid var(--line);border-radius:8px;padding:2px 8px;font-size:12px;font-weight:700;background:var(--bg)}
 .tot{display:grid;grid-template-columns:1fr auto;gap:4px 12px;margin-top:12px}
 .tot .big{font-size:18px;font-weight:800}
 .tot .disc{color:var(--heart);font-weight:700}
@@ -268,6 +273,10 @@ input[type=text],input[type=tel],select,textarea{width:100%;border:1.5px solid v
 .dmf button{color:var(--brandtx);font-weight:800;padding:0 6px}
 .robo{font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;background:var(--lime);color:#14200A;padding:1px 6px;border-radius:5px;margin-left:4px;vertical-align:1px}
 
+.live{display:flex;align-items:center;gap:10px;margin:4px 16px 6px;padding:10px 14px;border-radius:14px;background:var(--green);color:var(--green-fg);text-decoration:none;font-size:13px}
+.live i{width:9px;height:9px;border-radius:50%;background:var(--lime);flex:none;animation:blink 1.4s infinite}
+@keyframes blink{50%{opacity:.3}}
+.live span{flex:1;min-width:0}.live em{font-style:normal;font-weight:800;white-space:nowrap}
 .credit{font-size:11px;color:var(--muted);text-align:center;padding-block:20px 12px}
 .toast{position:fixed;left:50%;bottom:calc(90px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:60;background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:14px;font-weight:700;font-size:13px;box-shadow:var(--shadow);max-width:calc(100vw - 32px)}
 .full{min-height:100vh;display:grid;place-items:center;text-align:center;padding:24px;color:var(--muted)}
@@ -372,9 +381,20 @@ function build(){
   </div>`;
   $('#sLogo').src=L.logo||''; $('#sUser').textContent=L.name; $('#dmLogo').src=L.logo||''; $('#dmName').textContent=L.robo.nome; $('#dmSub').textContent='Responde na hora'+(L.atendente?` · atendente ${L.atendente}`:'');
   renderCatalog();
+  activeOrderBanner();
   const v=LS('view'); if(v==='list'||v==='feed') setView(v);
   if(promos.length && LS('story')!==new Date().toDateString()){ setTimeout(()=>openStory(0),900); LS('story',new Date().toDateString()); }
   setInterval(()=>{ const tm=document.querySelector('.timer'); if(tm) tm.textContent='termina em '+untilSunday(); },60000);
+}
+/* faixa no topo quando o cliente tem pedido em andamento */
+async function activeOrderBanner(){
+  let u; try{ u=JSON.parse(LS('ultimo')||'null'); }catch{} if(!u||Date.now()-u.t>24*36e5) return;
+  let o; try{ const r=await fetch(`/api/m/${SLUG}/pedido/${encodeURIComponent(u.track)}`); if(!r.ok) return; o=await r.json(); }catch{ return; }
+  if(['concluido','cancelado'].includes(o.status)) return;
+  const lab={pix:'Aguardando confirmação do Pix',novo:'Recebido, aguardando a loja',preparando:'Em preparo',saiu:o.retirada?'Pronto para retirada':'Saiu para entrega'}[o.status];
+  const a=document.createElement('a'); a.href=`/${SLUG}/pedido/${u.track}`; a.className='live';
+  a.innerHTML=`<i></i><span><b>Pedido #${o.num}</b> · ${lab}</span><em>Acompanhar →</em>`;
+  document.querySelector('.appbar').after(a);
 }
 const visCats=()=>CATS.filter(c=>brand==='all'||String(c.brand_id)===String(brand));
 const prodsOf=c=>D.prods.filter(p=>p.cat===c.id);
@@ -492,9 +512,13 @@ function openCart(){
   <div class="field"><label for="nome">Nome</label><input type="text" id="nome" autocomplete="name" value="${esc(saved.nome||'')}"></div>
   <div class="field"><label for="fone">WhatsApp com DDD</label><input type="tel" id="fone" autocomplete="tel" inputmode="tel" placeholder="(84) 9 9999-9999" value="${esc(saved.fone||'')}"></div>
   <div class="field"><label for="bairro">Entrega ou retirada</label><select id="bairro">${opts.map(([v,t])=>`<option value="${esc(v)}" ${saved.bairro===v?'selected':''}>${esc(t)}</option>`).join('')}</select></div>
-  <div class="field" id="endF"><label for="end">Endereço</label><input type="text" id="end" autocomplete="street-address" placeholder="Rua, número, referência" value="${esc(saved.end||'')}"></div>
-  <div class="field"><span>Pagamento</span><div class="pay">${L.pagamentos.map(x=>`<button data-pay="${esc(x)}" class="${x===pay?'on':''}">${esc(x)}</button>`).join('')}</div></div>
-  <div class="field"><label for="obs">Observação (opcional)</label><input type="text" id="obs" placeholder="Ex.: troco para R$ 100"></div>
+  <div id="endF"><div class="field"><label for="end">Rua / Avenida</label><input type="text" id="end" autocomplete="address-line1" placeholder="Ex.: Rua das Flores" value="${esc(saved.end||'')}"></div>
+    <div style="display:grid;grid-template-columns:110px 1fr;gap:10px"><div class="field"><label for="num">Número</label><input type="text" id="num" inputmode="numeric" placeholder="123 ou S/N" value="${esc(saved.num||'')}"></div><div class="field"><label for="comp">Complemento</label><input type="text" id="comp" autocomplete="address-line2" placeholder="Apto, bloco, casa" value="${esc(saved.comp||'')}"></div></div>
+    <div class="field"><label for="ref">Ponto de referência</label><input type="text" id="ref" placeholder="Ex.: perto da praça, portão azul" value="${esc(saved.ref||'')}"></div></div>
+  <div class="field"><span>Pagamento na ${'entrega ou retirada'}</span><small style="color:var(--muted);font-size:12px;margin-top:-2px">Você não paga nada agora: escolha como vai pagar quando receber.</small><div class="pay">${L.pagamentos.map(x=>`<button data-pay="${esc(x)}" class="${x===pay?'on':''}">${esc(x)}</button>`).join('')}</div></div>
+  ${L.pixChave?`<div class="pixbox" id="pixF" hidden><span id="pixTx"></span><br>Chave Pix: <span class="pk">${esc(L.pixChave)}</span>${L.pixNome?` <small>(${esc(L.pixNome)})</small>`:''} <button type="button" class="cpx" data-copy="${esc(L.pixChave)}">Copiar chave</button></div>`:''}
+  <div class="field" id="trocoF" hidden><label for="troco">Troco para quanto? (opcional)</label><input type="text" id="troco" inputmode="decimal" placeholder="Ex.: 100"></div>
+  <div class="field"><label for="obs">Observação (opcional)</label><input type="text" id="obs" placeholder="Ex.: sem cebola, entregar depois das 18h"></div>
   <div class="tot num" id="tot"></div><div class="err" id="err"></div>
   <div class="foot"><button class="btn" id="send"><span>Enviar pedido</span><span class="num" id="sp"></span></button></div>`);
   const fee=()=>{ const v=$('#bairro').value; if(v==='__retirada') return 0; const b=L.bairros.find(x=>x[0]===v); return b?+b[1]:0; };
@@ -503,19 +527,30 @@ function openCart(){
     $('#tot').innerHTML=`<span>Subtotal</span><span>${BRL(s)}</span>${d?`<span class="disc">Curtiu e ganhou (${L.curtidas.desconto}%)</span><span class="disc">− ${BRL(d)}</span>`:L.curtidas.meta>0?`<span style="color:var(--muted)">Curta ${L.curtidas.meta-Math.min(mine.size,L.curtidas.meta)} produto(s) e ganhe ${L.curtidas.desconto}%</span><span></span>`:''}<span>${ret?'Retirada':'Entrega'}</span><span>${ret?'grátis':BRL(t)}</span><span class="big">Total</span><span class="big">${BRL(s-d+t)}</span>`;
     $('#sp').textContent=BRL(s-d+t); $('#err').textContent=!ret&&L.minimo&&s<L.minimo?`Pedido mínimo para entrega: ${BRL(L.minimo)}. Faltam ${BRL(L.minimo-s)}.`:''; };
   $('#panel').onclick=e=>{ const m=e.target.closest('[data-rm]'); if(m){cart.splice(+m.dataset.rm,1);refresh();if(!cart.length){close();return}r()}
-    const y=e.target.closest('[data-pay]'); if(y){pay=y.dataset.pay;document.querySelectorAll('[data-pay]').forEach(b=>b.classList.toggle('on',b===y))} };
+    const y=e.target.closest('[data-pay]'); if(y){pay=y.dataset.pay;document.querySelectorAll('[data-pay]').forEach(b=>b.classList.toggle('on',b===y)); payExtras();}
+    const cp=e.target.closest('[data-copy]'); if(cp){ navigator.clipboard.writeText(cp.dataset.copy).then(()=>{cp.textContent='Copiada ✓'}).catch(()=>{}); } };
+  const payExtras=()=>{ $('#trocoF').hidden=!/dinheiro/i.test(pay); const pf=$('#pixF'); if(!pf) return; const agora=/antecipado/i.test(pay);
+    pf.hidden=!(agora||(/pix/i.test(pay)&&!L.pixAntecipado));
+    $('#pixTx').innerHTML=agora?'<b>Pague o Pix agora</b> e envie o comprovante. Seu pedido vai para o preparo assim que a loja confirmar o pagamento.':'<b>Quer adiantar o Pix?</b> É opcional, pode pagar na entrega.'; };
+  payExtras();
   $('#bairro').onchange=r;
   $('#send').onclick=async()=>{
-    const body={nome:$('#nome').value,telefone:$('#fone').value,bairro:$('#bairro').value,endereco:$('#end').value,pagamento:pay,obs:$('#obs').value,visitor:VIS,itens:cart.map(l=>({id:l.id,qty:l.qty,opts:l.sel})),fbp:cookie('_fbp'),fbc:cookie('_fbc'),origem:new URLSearchParams(location.search).get('utm_source')||document.referrer.slice(0,100)};
-    LS('cliente',JSON.stringify({nome:body.nome,fone:body.telefone,bairro:body.bairro,end:body.endereco}));
+    const body={nome:$('#nome').value,telefone:$('#fone').value,bairro:$('#bairro').value,endereco:$('#end').value,numero:$('#num').value,complemento:$('#comp').value,referencia:$('#ref').value,pagamento:pay,troco:$('#troco').value,obs:$('#obs').value,visitor:VIS,itens:cart.map(l=>({id:l.id,qty:l.qty,opts:l.sel})),fbp:cookie('_fbp'),fbc:cookie('_fbc'),origem:new URLSearchParams(location.search).get('utm_source')||document.referrer.slice(0,100)};
+    LS('cliente',JSON.stringify({nome:body.nome,fone:body.telefone,bairro:body.bairro,end:body.endereco,num:body.numero,comp:body.complemento,ref:body.referencia}));
     const btn=$('#send'); btn.disabled=true; $('#err').textContent='';
     let j; try{ const res=await fetch(`/api/m/${SLUG}/order`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)}); j=await res.json(); if(!res.ok) throw new Error(j.erro||'Erro'); }
     catch(err){ btn.disabled=false; $('#err').textContent=err.message||'Não deu pra enviar agora. Tente de novo.'; return; }
     track('Purchase',`pedido #${j.num}`,{data:{value:j.total,currency:'BRL',content_type:'product',content_ids:cart.map(l=>String(l.id))},opt:{eventID:j.eventId}});
+    LS('ultimo',JSON.stringify({track:j.track,num:j.num,t:Date.now()}));
     if(j.whats) location.href=j.whats;
-    show(`<div class="ok"><div class="big">✓</div><h3>Pedido #${j.num} enviado</h3><p style="color:var(--muted);margin:0">${j.whats?'Abrimos o WhatsApp da loja com o pedido escrito. É só tocar em enviar.':`${esc(L.name)} recebeu seu pedido e vai te chamar no WhatsApp.`}</p></div>
+    const pixBox=j.pix?`<div class="pixbox" style="margin-top:12px"><b>Falta pagar o Pix: ${BRL(j.total)}</b><br>Chave: <span class="pk">${esc(j.pix.chave)}</span>${j.pix.nome?` <small>(${esc(j.pix.nome)})</small>`:''}<br><button type="button" class="cpx" id="cpk" style="margin:6px 0 0">Copiar chave Pix</button>${j.pix.whatsapp?` <a class="cpx" style="text-decoration:none;color:inherit" target="_blank" rel="noopener" href="https://wa.me/${esc(j.pix.whatsapp)}?text=${encodeURIComponent(`Oi! Segue o comprovante do Pix do pedido #${j.num} (${BRL(j.total)}).`)}">Enviar comprovante no WhatsApp</a>`:''}<br><small>Assim que a loja confirmar, o pedido vai para o preparo e você recebe o aviso.</small></div>`:'';
+    show(`<div class="ok"><div class="big">${j.pix?'⏳':'✓'}</div><h3>Pedido #${j.num} ${j.pix?'reservado':'enviado'}</h3><p style="color:var(--muted);margin:0">${j.whats?'Abrimos o WhatsApp da loja com o pedido escrito. É só tocar em enviar.':`${esc(L.name)} recebeu seu pedido e vai te chamar no WhatsApp.`}</p></div>
+      ${pixBox}
+      <a class="btn" href="${esc(j.trackUrl)}" style="justify-content:center;text-decoration:none;margin-top:14px;background:var(--lime);color:#14200A">Acompanhar meu pedido →</a>
+      <p style="color:var(--muted);font-size:12px;text-align:center;margin:8px 0 0">A loja também te avisa no WhatsApp a cada etapa.</p>
       <div class="msg" id="msg" style="margin-top:12px"></div><div class="foot">${j.whats?`<a class="btn" href="${esc(j.whats)}" style="justify-content:center;text-decoration:none">Abrir WhatsApp</a>`:'<button class="btn ghost" id="cp">Copiar pedido</button>'}<button class="btn ${j.whats?'ghost':''}" id="nv" style="justify-content:center">Novo pedido</button></div>`);
     $('#msg').textContent=j.msg;
+    $('#cpk')&&($('#cpk').onclick=()=>navigator.clipboard.writeText(j.pix.chave).then(()=>$('#cpk').textContent='Chave copiada ✓').catch(()=>{}));
     $('#cp')&&($('#cp').onclick=()=>navigator.clipboard.writeText(j.msg).then(()=>$('#cp').textContent='Copiado').catch(()=>{}));
     $('#nv').onclick=()=>{cart=[];refresh();close();document.querySelectorAll('.addbtn.done').forEach(a=>{a.classList.remove('done');a.textContent='+ Sacola'})};
   };
@@ -531,7 +566,12 @@ function render(){ const s=sh.slides[si], pr=s.prod&&P[s.prod];
   [...$('#sBars').children].forEach((b,k)=>b.firstChild.style.width=k<si?'100%':'0');
   cancelAnimationFrame(timer); start=performance.now(); tick();
   $('#sBuy')&&($('#sBuy').onclick=e=>{e.stopPropagation(); if(pr.opts.length){closeStory();openItem(pr.id);return;} addToCart(pr.id,1,[],'story');$('#sBuy').textContent='Na sacola ✓'}); }
-function tick(){ const k=Math.min(1,(performance.now()-start)/DUR); $('#sBars').children[si].firstChild.style.width=k*100+'%'; if(k>=1) return next(); timer=requestAnimationFrame(tick); }
+/* segurar o dedo pausa o story (como no Instagram); telas com produto ficam mais tempo */
+let held=0;
+$('#story').addEventListener('pointerdown',e=>{ if(e.target.closest('button.sbtn,#sClose')) return; held=performance.now(); });
+$('#story').addEventListener('pointerup',()=>{ if(held){ start+=performance.now()-held; held=0; } });
+$('#story').addEventListener('pointercancel',()=>{ if(held){ start+=performance.now()-held; held=0; } });
+function tick(){ if(held){ timer=requestAnimationFrame(tick); return; } const d=sh.slides[si].prod?8000:DUR, k=Math.min(1,(performance.now()-start)/d); $('#sBars').children[si].firstChild.style.width=k*100+'%'; if(k>=1) return next(); timer=requestAnimationFrame(tick); }
 function next(){ if(si<sh.slides.length-1){si++;render()} else closeStory(); }
 function prev(){ if(si>0){si--;} render(); }
 function closeStory(){ cancelAnimationFrame(timer); $('#story').hidden=true; document.body.style.overflow=''; }

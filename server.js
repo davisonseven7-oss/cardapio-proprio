@@ -32,17 +32,38 @@ function hashPass(p) { const salt = crypto.randomBytes(16).toString('hex'); retu
 function checkPass(p, h) { const [salt, k] = String(h).split(':'); if (!salt || !k) return false; const a = crypto.scryptSync(p, salt, 64), b = Buffer.from(k, 'hex'); return a.length === b.length && crypto.timingSafeEqual(a, b); }
 
 const DEFAULTS = {
-  subtitulo: '', cidade: '', logo: '', capa: '',
+  subtitulo: '', cidade: '', logo: '', capa: '', endereco: '', telefone: '', tempoPreparo: 30, tempoEntrega: 40,
   whatsapp: '', enviarWhats: false, atendente: '',
   tema: { cor: '#17603A', destaque: '#FFC53D', acento: '#C9F25C', fonte: 'Shrikhand' },
   horario: { 0: [7, 19], 1: [7, 19], 2: [7, 19], 3: [7, 19], 4: [7, 19], 5: [7, 19], 6: [7, 19] },
-  bairros: [], retirada: true, minimo: 0, pagamentos: ['Pix', 'Cartão', 'Dinheiro'],
+  bairros: [], retirada: true, minimo: 0, pagamentos: ['Pix na entrega', 'Cartão (maquininha)', 'Dinheiro'], pixChave: '', pixNome: '', pixAntecipado: false,
   promoTemas: ['', '', '', '', '', '', ''],
   curtidas: { meta: 3, desconto: 5, campeao: 20 },
   robo: { nome: 'Atendente', ativo: true },
-  pixelId: '', capiToken: '', capiTeste: ''
+  pixelId: '', capiToken: '', capiTeste: '',
+  mensagens: {
+    preparando: 'Oi, {nome}! Seu pedido #{pedido} na {loja} foi aceito e já está em preparo. 👨‍🍳\nAcompanhe aqui: {link}',
+    saiu: '{nome}, seu pedido #{pedido} saiu para entrega! 🛵\nTotal: {total} ({pagamento}).\nAcompanhe aqui: {link}',
+    pronto: '{nome}, seu pedido #{pedido} está pronto para retirada na {loja}! ✅\nTotal: {total} ({pagamento}).',
+    concluido: 'Pedido #{pedido} entregue. Obrigado pela preferência, {nome}! 💚\nVolte sempre: {cardapio}',
+    pixConfirmado: 'Pagamento confirmado ✅ {nome}, recebemos seu Pix de {total}. Seu pedido #{pedido} já está em preparo!\nAcompanhe aqui: {link}',
+    cancelado: '{nome}, infelizmente seu pedido #{pedido} na {loja} foi cancelado. Se tiver dúvida, é só responder esta mensagem.'
+  }
 };
-const settingsOf = t => { const s = J(t.settings, {}); return { ...DEFAULTS, ...s, tema: { ...DEFAULTS.tema, ...(s.tema || {}) }, curtidas: { ...DEFAULTS.curtidas, ...(s.curtidas || {}) }, robo: { ...DEFAULTS.robo, ...(s.robo || {}) } }; };
+const isPickup = o => o.bairro === 'Retirada na loja';
+const PIX_AGORA = 'Pix agora (antecipado)';
+const payOptions = s => (s.pixAntecipado && s.pixChave ? [PIX_AGORA] : []).concat(s.pagamentos);
+const brlS = v => 'R$ ' + (+v || 0).toFixed(2).replace('.', ',');
+const baseUrl = req => `${req.protocol}://${req.headers.host}`;
+/* mensagem de status para o cliente, com os campos {nome} {pedido} {loja} {total} {pagamento} {link} {cardapio} */
+function statusMessage(t, s, o, req) {
+  const key = o.status === 'saiu' && isPickup(o) ? 'pronto' : o.status === 'preparando' && o.prev === 'pix' ? 'pixConfirmado' : o.status, tpl = (s.mensagens || {})[key]; if (!tpl) return '';
+  const map = { nome: String(o.customer || '').split(' ')[0], pedido: o.num, loja: t.name, total: brlS(o.total), pagamento: o.payment, link: `${baseUrl(req)}/${t.slug}/pedido/${o.track}`, cardapio: `${baseUrl(req)}/${t.slug}` };
+  return tpl.replace(/\{(\w+)\}/g, (m, k) => map[k] != null ? String(map[k]) : m);
+}
+const waLink = (phone, text) => { let p = String(phone || '').replace(/\D/g, ''); if (p.length <= 11) p = '55' + p; return `https://wa.me/${p}?text=${encodeURIComponent(text)}`; };
+const OLD_PAY = 'Pix|Cartão|Dinheiro';
+const settingsOf = t => { const s = J(t.settings, {}); if (Array.isArray(s.pagamentos) && s.pagamentos.join('|') === OLD_PAY) s.pagamentos = DEFAULTS.pagamentos; return { ...DEFAULTS, ...s, tema: { ...DEFAULTS.tema, ...(s.tema || {}) }, curtidas: { ...DEFAULTS.curtidas, ...(s.curtidas || {}) }, robo: { ...DEFAULTS.robo, ...(s.robo || {}) }, mensagens: { ...DEFAULTS.mensagens, ...(s.mensagens || {}) } }; };
 
 const tenantBySlug = slug => db.prepare('SELECT * FROM tenants WHERE slug=?').get(String(slug || '').toLowerCase());
 const tenantById = id => db.prepare('SELECT * FROM tenants WHERE id=?').get(id);
@@ -132,7 +153,7 @@ function menuPayload(t, visitor) {
   const mine = visitor ? db.prepare('SELECT product_id FROM likes WHERE tenant_id=? AND week=? AND visitor=?').all(t.id, wk, visitor).map(r => r.product_id) : [];
   const stories = db.prepare('SELECT id,name,cover,slides FROM stories WHERE tenant_id=? AND active=1 ORDER BY sort,id').all(t.id).map(x => ({ ...x, slides: J(x.slides, []) }));
   const posts = db.prepare('SELECT id,img,product_id prod,caption,overlay,created_at FROM posts WHERE tenant_id=? AND active=1 ORDER BY created_at DESC LIMIT 30').all(t.id);
-  const pub = { subtitulo: s.subtitulo, cidade: s.cidade, logo: s.logo, tema: s.tema, horario: s.horario, bairros: s.bairros, retirada: s.retirada, minimo: s.minimo, pagamentos: s.pagamentos, curtidas: s.curtidas, robo: s.robo, temaHoje: s.promoTemas[dow] || '', whatsapp: s.whatsapp ? true : false, atendente: s.atendente, pixelId: s.pixelId };
+  const pub = { pixChave: s.pixChave, pixNome: s.pixNome, pixAntecipado: !!(s.pixAntecipado && s.pixChave), subtitulo: s.subtitulo, cidade: s.cidade, logo: s.logo, endereco: s.endereco, tempoPreparo: s.tempoPreparo, tempoEntrega: s.tempoEntrega, tema: s.tema, horario: s.horario, bairros: s.bairros, retirada: s.retirada, minimo: s.minimo, pagamentos: payOptions(s), curtidas: s.curtidas, robo: s.robo, temaHoje: s.promoTemas[dow] || '', whatsapp: s.whatsapp ? true : false, atendente: s.atendente, pixelId: s.pixelId };
   return { loja: { slug: t.slug, name: t.name, ...pub }, brands, cats, prods, stories, posts, likes: { counts, mine, week: wk }, champion: champ, dow, agora: nowLocal().toISOString() };
 }
 const visitorOk = v => typeof v === 'string' && /^[a-z0-9]{8,40}$/i.test(v);
@@ -163,7 +184,7 @@ app.post('/api/m/:slug/ev', (req, res) => {
 app.post('/api/m/:slug/order', async (req, res) => {
   const t = tenantBySlug(req.params.slug); if (!t || t.status !== 'ativo') return res.status(404).json({ erro: 'Cardápio indisponível' });
   const s = settingsOf(t), b = req.body || {}, dow = nowLocal().getUTCDay(), champ = champion(t.id);
-  const nome = String(b.nome || '').trim().slice(0, 80), fone = String(b.telefone || '').replace(/\D/g, '').slice(0, 13);
+  const nome = String(b.nome || '').trim().slice(0, 80), fone = phoneNorm(b.telefone);
   if (!nome) return res.status(400).json({ erro: 'Coloque seu nome' });
   if (fone.length < 10) return res.status(400).json({ erro: 'Coloque um WhatsApp com DDD' });
   const raw = Array.isArray(b.itens) ? b.itens.slice(0, 60) : []; if (!raw.length) return res.status(400).json({ erro: 'Sacola vazia' });
@@ -177,7 +198,7 @@ app.post('/api/m/:slug/order', async (req, res) => {
     prodQty[p.id] = (prodQty[p.id] || 0) + qty;
     lines.push({ p, qty, extra, opts });
   }
-  const items = lines.map(({ p, qty, extra, opts }) => { const info = priceInfo(p, dow, champ, s), unit = round2(unitFor(p, info, prodQty[p.id]) + extra); return { id: p.id, nome: p.name, qty, unit, opts, total: round2(unit * qty) }; });
+  const items = lines.map(({ p, qty, extra, opts }) => { const info = priceInfo(p, dow, champ, s), unit = round2(unitFor(p, info, prodQty[p.id]) + extra); return { id: p.id, nome: p.name, desc: p.descr || '', qty, unit, opts, total: round2(unit * qty) }; });
   const subtotal = round2(items.reduce((a, i) => a + i.total, 0));
   let discount = 0;
   if (visitorOk(b.visitor) && s.curtidas.meta > 0) { const n = db.prepare('SELECT COUNT(*) n FROM likes WHERE tenant_id=? AND visitor=? AND week=?').get(t.id, b.visitor, weekKey()).n; if (n >= s.curtidas.meta) discount = round2(subtotal * s.curtidas.desconto / 100); }
@@ -185,18 +206,29 @@ app.post('/api/m/:slug/order', async (req, res) => {
   if (!retirada && bi < 0) return res.status(400).json({ erro: 'Escolha o bairro de entrega' });
   const fee = retirada ? 0 : +s.bairros[bi][1] || 0;
   if (!retirada && s.minimo && subtotal < s.minimo) return res.status(400).json({ erro: `Pedido mínimo para entrega: R$ ${s.minimo.toFixed(2).replace('.', ',')}` });
-  const endereco = retirada ? '' : String(b.endereco || '').trim().slice(0, 200); if (!retirada && !endereco) return res.status(400).json({ erro: 'Coloque o endereço' });
-  const pay = s.pagamentos.includes(b.pagamento) ? b.pagamento : s.pagamentos[0];
+  /* endereço em partes: rua, número, complemento, referência */
+  const cut = (v, n) => String(v || '').trim().slice(0, n);
+  const rua = cut(b.endereco, 140), numero = cut(b.numero, 12), compl = cut(b.complemento, 60), ref = cut(b.referencia, 100);
+  if (!retirada && !rua) return res.status(400).json({ erro: 'Coloque a rua do endereço' });
+  if (!retirada && !numero && !/\d/.test(rua)) return res.status(400).json({ erro: 'Coloque o número da casa (ou S/N)' });
+  const endereco = retirada ? '' : `${rua}${numero ? ', ' + numero : ''}${compl ? ' - ' + compl : ''}${ref ? ' (Ref.: ' + ref + ')' : ''}`;
+  const opts = payOptions(s), pixFirst = b.pagamento === PIX_AGORA && opts.includes(PIX_AGORA);
+  let pay = pixFirst ? 'Pix antecipado' : s.pagamentos.includes(b.pagamento) ? b.pagamento : s.pagamentos[0];
+  const status0 = pixFirst ? 'pix' : 'novo';
+  const troco = +String(b.troco || '').replace(/[^\d,.]/g, '').replace(',', '.');
+  if (/dinheiro/i.test(pay) && troco > 0) pay += ` (troco p/ R$ ${troco.toFixed(2).replace('.', ',')})`;
   const total = round2(subtotal - discount + fee);
   const num = (db.prepare('SELECT MAX(num) m FROM orders WHERE tenant_id=?').get(t.id).m || 0) + 1;
-  const r = db.prepare('INSERT INTO orders(tenant_id,num,customer,phone,address,bairro,payment,notes,items,subtotal,discount,fee,total,visitor,source) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)')
-    .run(t.id, num, nome, fone, endereco, retirada ? 'Retirada na loja' : b.bairro, pay, String(b.obs || '').slice(0, 300), JSON.stringify(items), subtotal, discount, fee, total, visitorOk(b.visitor) ? b.visitor : null, String(b.origem || '').slice(0, 120));
+  const track = crypto.randomBytes(8).toString('base64url'), trackUrl = `${baseUrl(req)}/${t.slug}/pedido/${track}`;
+  const r = db.prepare('INSERT INTO orders(tenant_id,num,customer,phone,address,bairro,payment,notes,items,subtotal,discount,fee,total,visitor,source,track,log,status) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)')
+    .run(t.id, num, nome, fone, endereco, retirada ? 'Retirada na loja' : b.bairro, pay, String(b.obs || '').slice(0, 300), JSON.stringify(items), subtotal, discount, fee, total, visitorOk(b.visitor) ? b.visitor : null, String(b.origem || '').slice(0, 120), track, JSON.stringify([{ s: status0, t: new Date().toISOString() }]), status0);
   const brl = v => 'R$ ' + v.toFixed(2).replace('.', ',');
   const msg = `*Pedido #${num} · ${t.name}*\n\n` + items.map(i => `${i.qty}× ${i.nome} — ${brl(i.total)}${i.opts.length ? `\n   ${i.opts.join(' · ')}` : ''}`).join('\n') +
-    `\n\nSubtotal: ${brl(subtotal)}${discount ? `\nDesconto curtidas: − ${brl(discount)}` : ''}\n${retirada ? 'Retirada na loja' : `Entrega (${b.bairro}): ${brl(fee)}`}\n*Total: ${brl(total)}*\n\nNome: ${nome}\nWhatsApp: ${fone}${retirada ? '' : `\nEndereço: ${endereco}, ${b.bairro}`}\nPagamento: ${pay}${b.obs ? `\nObs.: ${String(b.obs).slice(0, 300)}` : ''}`;
+    `\n\nSubtotal: ${brl(subtotal)}${discount ? `\nDesconto curtidas: − ${brl(discount)}` : ''}\n${retirada ? 'Retirada na loja' : `Entrega (${b.bairro}): ${brl(fee)}`}\n*Total: ${brl(total)}*\n\nNome: ${nome}\nWhatsApp: ${fone}${retirada ? '' : `\nEndereço: ${endereco}, ${b.bairro}`}\nPagamento: ${pay} ${pixFirst ? ' — aguardando confirmação da loja' : ` (na ${retirada ? 'retirada' : 'entrega'})`}${/pix/i.test(pay) && s.pixChave ? `\nChave Pix da loja: ${s.pixChave}${s.pixNome ? ' · ' + s.pixNome : ''}` : ''}${b.obs ? `\nObs.: ${String(b.obs).slice(0, 300)}` : ''}\n\nAcompanhar pedido: ${trackUrl}`;
+  try { upsertCustomer(t.id, { phone: fone, name: nome, address: endereco, bairro: retirada ? '' : b.bairro }); } catch (e) { console.error('cliente', e.message); }
   const eventId = `${t.slug}-${num}`;
   if (s.pixelId && s.capiToken) sendCapi(t, s, { eventId, total, items, fone, nome, req, fbp: b.fbp, fbc: b.fbc }).catch(() => {});
-  res.json({ ok: true, id: r.lastInsertRowid, num, total, eventId, msg, whats: s.whatsapp && s.enviarWhats ? `https://wa.me/${s.whatsapp.replace(/\D/g, '')}?text=${encodeURIComponent(msg)}` : null });
+  res.json({ ok: true, id: r.lastInsertRowid, num, total, eventId, msg, track, trackUrl, status: status0, pix: pixFirst ? { chave: s.pixChave, nome: s.pixNome, whatsapp: s.whatsapp || '' } : null, whats: s.whatsapp && s.enviarWhats ? `https://wa.me/${s.whatsapp.replace(/\D/g, '')}?text=${encodeURIComponent(msg)}` : null });
 });
 
 /* API de Conversões da Meta (Purchase pelo servidor, com o mesmo event_id do Pixel para não contar duas vezes) */
@@ -217,7 +249,7 @@ const P = auth('painel');
 app.get('/api/p/loja', P, (req, res) => { const t = req.tenant; res.json({ id: t.id, slug: t.slug, name: t.name, status: t.status, settings: settingsOf(t) }); });
 app.put('/api/p/loja', P, (req, res) => {
   const b = req.body || {}, cur = settingsOf(req.tenant), n = b.settings || {};
-  const keep = ['subtitulo', 'cidade', 'logo', 'whatsapp', 'enviarWhats', 'atendente', 'tema', 'horario', 'bairros', 'retirada', 'minimo', 'pagamentos', 'promoTemas', 'curtidas', 'robo', 'pixelId', 'capiToken', 'capiTeste'];
+  const keep = ['subtitulo', 'cidade', 'logo', 'endereco', 'telefone', 'tempoPreparo', 'tempoEntrega', 'whatsapp', 'enviarWhats', 'atendente', 'tema', 'horario', 'bairros', 'retirada', 'minimo', 'pagamentos', 'promoTemas', 'curtidas', 'robo', 'pixelId', 'capiToken', 'capiTeste', 'mensagens', 'pixChave', 'pixNome', 'pixAntecipado'];
   const out = { ...cur }; keep.forEach(k => { if (k in n) out[k] = n[k]; });
   out.minimo = +out.minimo || 0; out.bairros = (out.bairros || []).filter(x => x && x[0]).map(([a, v]) => [String(a).slice(0, 60), +v || 0]);
   out.pixelId = String(out.pixelId || '').replace(/\D/g, ''); out.whatsapp = String(out.whatsapp || '').replace(/\D/g, '');
@@ -262,20 +294,93 @@ app.post('/api/p/upload', P, (req, res) => {
 /* pedidos */
 function rangeOf(q) { const today = nowLocal().toISOString().slice(0, 10); const de = /^\d{4}-\d{2}-\d{2}$/.test(q.de) ? q.de : today, ate = /^\d{4}-\d{2}-\d{2}$/.test(q.ate) ? q.ate : today;
   const toUtc = (d, end) => new Date(new Date(d + (end ? 'T23:59:59.999Z' : 'T00:00:00.000Z')).getTime() - TZ * 36e5).toISOString(); return { de, ate, a: toUtc(de), b: toUtc(ate, true) }; }
-const ST = ['novo', 'preparando', 'saiu', 'concluido', 'cancelado'];
+const ST = ['pix', 'novo', 'preparando', 'saiu', 'concluido', 'cancelado'];
 app.get('/api/p/orders', P, (req, res) => {
   const r = rangeOf(req.query), st = ST.includes(req.query.status) ? req.query.status : null;
-  const rows = db.prepare(`SELECT * FROM orders WHERE tenant_id=? AND created_at BETWEEN ? AND ? ${st ? 'AND status=?' : ''} ORDER BY created_at DESC LIMIT 500`).all(req.tid, r.a, r.b, ...(st ? [st] : []));
-  res.json(rows.map(o => ({ ...o, items: J(o.items, []) })));
+  /* ativos=1: todos os pedidos em andamento (de qualquer dia) + os do período */
+  const when = req.query.ativos ? `(status IN ('pix','novo','preparando','saiu') OR created_at BETWEEN ? AND ?)` : 'created_at BETWEEN ? AND ?';
+  /* ordem = qual pedido do cliente é este (1 = cliente novo); cli_* = histórico do cliente pelo telefone */
+  const rows = db.prepare(`SELECT o.*,
+      (SELECT COUNT(*) FROM orders x WHERE x.tenant_id=o.tenant_id AND x.phone=o.phone AND x.status!='cancelado' AND x.id<=o.id) ordem,
+      (SELECT COUNT(*) FROM orders x WHERE x.tenant_id=o.tenant_id AND x.phone=o.phone AND x.status!='cancelado') cli_pedidos,
+      (SELECT COALESCE(SUM(total),0) FROM orders x WHERE x.tenant_id=o.tenant_id AND x.phone=o.phone AND x.status!='cancelado') cli_total,
+      (SELECT MIN(created_at) FROM orders x WHERE x.tenant_id=o.tenant_id AND x.phone=o.phone) cli_desde
+    FROM orders o WHERE o.tenant_id=? AND ${when.replace(/status|created_at/g, m => 'o.' + m)} ${st ? 'AND o.status=?' : ''} ORDER BY o.created_at DESC LIMIT 500`).all(req.tid, r.a, r.b, ...(st ? [st] : []));
+  res.json(rows.map(o => ({ ...o, items: J(o.items, []), log: J(o.log, []) })));
 });
-app.get('/api/p/orders/novos', P, (req, res) => res.json(db.prepare(`SELECT COUNT(*) n, MAX(id) ultimo FROM orders WHERE tenant_id=? AND status='novo'`).get(req.tid)));
-app.put('/api/p/orders/:id', P, (req, res) => { const st = (req.body || {}).status; if (!ST.includes(st)) return res.status(400).end(); db.prepare('UPDATE orders SET status=? WHERE id=? AND tenant_id=?').run(st, +req.params.id, req.tid); res.json({ ok: true }); });
+app.get('/api/p/orders/novos', P, (req, res) => res.json(db.prepare(`SELECT COUNT(*) n, MAX(id) ultimo FROM orders WHERE tenant_id=? AND status IN ('novo','pix')`).get(req.tid)));
+app.put('/api/p/orders/:id', P, (req, res) => {
+  const st = (req.body || {}).status; if (!ST.includes(st)) return res.status(400).end();
+  const o = db.prepare('SELECT * FROM orders WHERE id=? AND tenant_id=?').get(+req.params.id, req.tid); if (!o) return res.status(404).end();
+  const log = J(o.log, []); if (o.status !== st) log.push({ s: st, t: new Date().toISOString() });
+  db.prepare('UPDATE orders SET status=?, log=? WHERE id=?').run(st, JSON.stringify(log), o.id);
+  const msg = statusMessage(req.tenant, settingsOf(req.tenant), { ...o, status: st, prev: o.status }, req);
+  res.json({ ok: true, aviso: msg, whats: msg && o.phone ? waLink(o.phone, msg) : null });
+});
+/* acompanhamento do pedido pelo cliente (link secreto) */
+app.get('/api/m/:slug/pedido/:track', (req, res) => {
+  const t = tenantBySlug(req.params.slug); if (!t) return res.status(404).json({ erro: 'Loja não encontrada' });
+  const o = db.prepare('SELECT * FROM orders WHERE tenant_id=? AND track=?').get(t.id, String(req.params.track)); if (!o) return res.status(404).json({ erro: 'Pedido não encontrado' });
+  const s = settingsOf(t);
+  res.json({ loja: { name: t.name, slug: t.slug, logo: s.logo, tema: s.tema, whatsapp: s.whatsapp || '', pixChave: s.pixChave, pixNome: s.pixNome, endereco: s.endereco, tempoPreparo: +s.tempoPreparo || 30, tempoEntrega: +s.tempoEntrega || 40 }, address: o.address, num: o.num, status: o.status, retirada: isPickup(o), created_at: o.created_at, log: J(o.log, []),
+    items: J(o.items, []), subtotal: o.subtotal, discount: o.discount, fee: o.fee, total: o.total, payment: o.payment, bairro: o.bairro, customer: String(o.customer || '').split(' ')[0] });
+});
 app.get('/api/p/orders.csv', P, (req, res) => {
   const r = rangeOf(req.query), rows = db.prepare('SELECT * FROM orders WHERE tenant_id=? AND created_at BETWEEN ? AND ? ORDER BY created_at').all(req.tid, r.a, r.b);
   const q = v => `"${String(v ?? '').replace(/"/g, '""')}"`, n = v => String(v ?? 0).replace('.', ',');
   const csv = ['Pedido;Data;Hora;Status;Cliente;WhatsApp;Bairro;Endereço;Pagamento;Itens;Subtotal;Desconto;Entrega;Total',
     ...rows.map(o => { const d = new Date(new Date(o.created_at).getTime() + TZ * 36e5).toISOString(); return [o.num, d.slice(0, 10), d.slice(11, 16), o.status, q(o.customer), o.phone, q(o.bairro), q(o.address), o.payment, q(J(o.items, []).map(i => `${i.qty}x ${i.nome}${i.opts.length ? ' (' + i.opts.join(', ') + ')' : ''}`).join(' | ')), n(o.subtotal), n(o.discount), n(o.fee), n(o.total)].join(';'); })].join('\r\n');
   res.setHeader('Content-Type', 'text/csv; charset=utf-8'); res.setHeader('Content-Disposition', `attachment; filename="vendas-${req.tenant.slug}-${r.de}-a-${r.ate}.csv"`); res.send('﻿' + csv);
+});
+
+/* cadastro de clientes + números dos pedidos (pelo WhatsApp) */
+const phoneNorm = v => String(v || '').replace(/\D/g, '').replace(/^55(?=\d{10,11}$)/, '').slice(0, 13);
+function clientes(tid, id) {
+  const now = Date.now();
+  return db.prepare(`SELECT c.*, COUNT(o.id) pedidos, COALESCE(SUM(o.total),0) total, MIN(o.created_at) primeiro, MAX(o.created_at) ultimo
+    FROM customers c LEFT JOIN orders o ON o.tenant_id=c.tenant_id AND o.phone=c.phone AND o.status!='cancelado'
+    WHERE c.tenant_id=? ${id ? 'AND c.id=?' : ''} GROUP BY c.id ORDER BY COALESCE(MAX(o.created_at), c.created_at) DESC`).all(tid, ...(id ? [id] : [])).map(c => {
+    const dias = c.ultimo ? Math.floor((now - new Date(c.ultimo)) / 864e5) : null;
+    const seg = !c.pedidos ? 'cadastrado' : dias > 30 && c.pedidos > 1 ? 'sumido' : c.pedidos >= 5 ? 'fiel' : c.pedidos >= 2 ? 'recorrente' : 'novo';
+    return { ...c, total: round2(c.total), ticket: c.pedidos ? round2(c.total / c.pedidos) : 0, dias, seg };
+  });
+}
+/* chamado a cada pedido: cria ou atualiza a ficha */
+function upsertCustomer(tid, o) {
+  const c = db.prepare('SELECT * FROM customers WHERE tenant_id=? AND phone=?').get(tid, o.phone);
+  if (!c) db.prepare('INSERT INTO customers(tenant_id,phone,name,address,bairro) VALUES(?,?,?,?,?)').run(tid, o.phone, o.name, o.address, o.bairro);
+  else db.prepare('UPDATE customers SET name=COALESCE(NULLIF(name,\'\'),?), address=CASE WHEN ?!=\'\' THEN ? ELSE address END, bairro=CASE WHEN ?!=\'\' AND ?!=\'Retirada na loja\' THEN ? ELSE bairro END WHERE id=?')
+    .run(o.name, o.address, o.address, o.bairro, o.bairro, o.bairro, c.id);
+}
+app.get('/api/p/clientes', P, (req, res) => res.json(clientes(req.tid)));
+app.get('/api/p/clientes/:id', P, (req, res) => {
+  const c = clientes(req.tid, +req.params.id)[0]; if (!c) return res.status(404).end();
+  const pedidos = db.prepare('SELECT id,num,created_at,status,total,payment,bairro,items FROM orders WHERE tenant_id=? AND phone=? ORDER BY id DESC LIMIT 100').all(req.tid, c.phone).map(o => ({ ...o, items: J(o.items, []) }));
+  const fav = {}; pedidos.filter(o => o.status !== 'cancelado').forEach(o => o.items.forEach(i => fav[i.nome] = (fav[i.nome] || 0) + i.qty));
+  res.json({ ...c, historico: pedidos, favoritos: Object.entries(fav).sort((a, b) => b[1] - a[1]).slice(0, 5) });
+});
+const CUST = ['name', 'email', 'birthday', 'address', 'bairro', 'notes', 'tags'];
+function custBody(b) { const o = {}; CUST.forEach(k => { if (k in b) o[k] = String(b[k] ?? '').trim().slice(0, k === 'notes' ? 500 : 160); }); if (o.birthday && !/^\d{4}-\d{2}-\d{2}$|^$/.test(o.birthday)) o.birthday = ''; return o; }
+app.post('/api/p/clientes', P, (req, res) => {
+  const b = req.body || {}, phone = phoneNorm(b.phone); if (phone.length < 10) return res.status(400).json({ erro: 'WhatsApp com DDD' });
+  if (db.prepare('SELECT 1 FROM customers WHERE tenant_id=? AND phone=?').get(req.tid, phone)) return res.status(400).json({ erro: 'Já existe cliente com esse WhatsApp' });
+  const o = custBody(b), ks = Object.keys(o);
+  const r = db.prepare(`INSERT INTO customers(tenant_id,phone${ks.map(k => ',' + k).join('')}) VALUES(?,?${ks.map(() => ',?').join('')})`).run(req.tid, phone, ...ks.map(k => o[k]));
+  res.json({ id: r.lastInsertRowid });
+});
+app.put('/api/p/clientes/:id', P, (req, res) => {
+  const c = db.prepare('SELECT * FROM customers WHERE id=? AND tenant_id=?').get(+req.params.id, req.tid); if (!c) return res.status(404).end();
+  const o = custBody(req.body || {}), ks = Object.keys(o); if (ks.length) db.prepare(`UPDATE customers SET ${ks.map(k => k + '=?').join(',')} WHERE id=?`).run(...ks.map(k => o[k]), c.id);
+  res.json({ ok: true });
+});
+app.delete('/api/p/clientes/:id', P, (req, res) => { db.prepare('DELETE FROM customers WHERE id=? AND tenant_id=?').run(+req.params.id, req.tid); res.json({ ok: true }); });
+app.get('/api/p/clientes.csv', P, (req, res) => {
+  const q = v => `"${String(v ?? '').replace(/"/g, '""')}"`, n = v => String(v ?? 0).replace('.', ',');
+  const SEG = { novo: 'Novo', recorrente: 'Recorrente', fiel: 'Fiel', sumido: 'Sumido' };
+  SEG.cadastrado = 'Sem pedido';
+  const csv = ['Nome;WhatsApp;E-mail;Aniversário;Grupo;Pedidos;Total gasto;Ticket médio;Primeiro pedido;Último pedido;Dias sem comprar;Bairro;Endereço;Etiquetas;Observações',
+    ...clientes(req.tid).map(c => [q(c.name), c.phone, q(c.email), c.birthday ? c.birthday.split('-').reverse().join('/') : '', SEG[c.seg], c.pedidos, n(c.total), n(c.ticket), c.primeiro ? localDate(c.primeiro) : '', c.ultimo ? localDate(c.ultimo) : '', c.dias ?? '', q(c.bairro), q(c.address), q(c.tags), q(c.notes)].join(';'))].join('\r\n');
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8'); res.setHeader('Content-Disposition', `attachment; filename="clientes-${req.tenant.slug}.csv"`); res.send('﻿' + csv);
 });
 
 /* relatório */
@@ -294,13 +399,17 @@ app.get('/api/p/report', P, (req, res) => {
     for (const i of J(o.items, [])) { const k = i.nome; prods[k] = prods[k] || { nome: k, qtd: 0, total: 0 }; prods[k].qtd += i.qty; prods[k].total += i.total; }
   }
   const capi = db.prepare(`SELECT info, created_at FROM events WHERE tenant_id=? AND type='CAPI' ORDER BY id DESC LIMIT 5`).all(req.tid);
+  /* clientes novos x que voltaram, no período */
+  const firstOf = db.prepare(`SELECT MIN(id) id FROM orders WHERE tenant_id=? AND phone=? AND status!='cancelado'`);
+  let novos = 0, voltaram = 0; const vistos = new Set();
+  for (const o of orders) { if (vistos.has(o.phone)) continue; vistos.add(o.phone); const f = firstOf.get(req.tid, o.phone); if (f && orders.some(x => x.id === f.id)) novos++; else voltaram++; }
   const wk = weekKey(), topLikes = db.prepare('SELECT p.name, COUNT(*) n FROM likes l JOIN products p ON p.id=l.product_id WHERE l.tenant_id=? AND l.week=? GROUP BY l.product_id ORDER BY n DESC LIMIT 5').all(req.tid, wk);
   res.json({ de: r.de, ate: r.ate, pedidos: orders.length, total: round2(total), ticket: orders.length ? round2(total / orders.length) : 0,
     visitas: ev.PageView || 0, carrinhos: ev.AddToCart || 0, checkouts: ev.InitiateCheckout || 0, contatos: ev.Contact || 0,
     dias: Object.entries(days).map(([d, v]) => ({ d, ...v, total: round2(v.total) })), horas,
     produtos: Object.values(prods).sort((a, b) => b.total - a.total).slice(0, 10).map(p => ({ ...p, total: round2(p.total) })),
     bairros: Object.entries(bairros).sort((a, b) => b[1] - a[1]).slice(0, 8), pagamentos: Object.entries(pays).map(([k, v]) => [k, round2(v)]),
-    curtidas: topLikes, capi });
+    curtidas: topLikes, capi, clientesNovos: novos, clientesVoltaram: voltaram });
 });
 
 /* ---------------- admin ---------------- */
@@ -353,6 +462,7 @@ app.get('/', (req, res) => res.redirect('/login'));
 app.get('/login', (req, res) => res.sendFile(path.join(pub, 'login.html')));
 app.get('/painel', (req, res) => res.sendFile(path.join(pub, 'painel.html')));
 app.get('/admin', (req, res) => res.sendFile(path.join(pub, 'admin.html')));
+app.get('/:slug/pedido/:track', (req, res, next) => { if (RESERVED.has(req.params.slug) || !tenantBySlug(req.params.slug)) return next(); res.sendFile(path.join(pub, 'pedido.html')); });
 app.get('/:slug', (req, res, next) => { if (RESERVED.has(req.params.slug) || !tenantBySlug(req.params.slug)) return next(); res.sendFile(path.join(pub, 'menu.html')); });
 app.use((req, res) => res.status(404).send('<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Não encontrado</title><body style="font-family:system-ui;padding:40px;text-align:center"><h1>Página não encontrada</h1><p>Confira o link do cardápio.</p></body>'));
 

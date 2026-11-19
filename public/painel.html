@@ -50,15 +50,45 @@ main{max-width:1180px;margin:0 auto;padding:18px 16px 60px}
 .funnel em{display:block;height:22px;background:var(--hx-soft);border-radius:6px;position:relative;overflow:hidden;font-style:normal}
 .funnel em i{position:absolute;inset:0 auto 0 0;background:var(--hx);border-radius:6px}
 
-.orders{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
-.ord{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;display:grid;gap:8px}
-.ord.novo{border-color:var(--hx);box-shadow:0 0 0 3px var(--hx-soft)}
-.ord .h{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
-.ord .h b{font-size:16px}
-.ord ul{margin:0;padding:0;list-style:none;font-size:13px;display:grid;gap:3px}
+.ptools{font-size:13px;gap:14px}
+.tg{display:inline-flex;gap:6px;align-items:center;font-weight:500;color:var(--ink)}
+.kanban{display:grid;grid-template-columns:repeat(4,minmax(250px,1fr));gap:12px;overflow-x:auto;padding-bottom:8px;align-items:start}
+.col{background:var(--soft);border-radius:14px;padding:10px;min-height:300px;border:2px dashed transparent;transition:border-color .15s}
+.col.over{border-color:var(--hx)}
+.col header{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:2px 4px 10px}
+.col header b{font-size:14px}
+.col header .cnt{min-width:22px;height:22px;border-radius:11px;background:var(--card);display:grid;place-items:center;font-size:12px;font-weight:800;padding:0 6px}
+.col[data-col=novo] header .cnt{background:var(--hx);color:#fff}
+.col header small{width:100%;color:var(--muted);font-size:11px}
+.col .cards{display:grid;gap:10px}
+.col footer{font-size:12px;padding:8px 4px 0}
+.col .empty{color:var(--muted);font-size:13px;text-align:center;padding:20px 0;margin:0}
+.ord{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;display:grid;gap:8px;cursor:grab}
+.ord.drag{opacity:.4}
+.ord.novo{border-color:var(--hx);box-shadow:0 0 0 3px var(--hx-soft);animation:pulse 2s infinite}
+@keyframes pulse{50%{box-shadow:0 0 0 6px var(--hx-soft)}}
+.ord.cancelado{opacity:.6}
+.ord .h{display:flex;justify-content:space-between;gap:8px;align-items:center}
+.ord .h b{font-size:17px}
+.ord .tm{font-size:12px;font-weight:700;color:var(--muted);white-space:nowrap}
+.ord .tm.late{color:var(--bad)}
+.ord ul{margin:0;padding:0;list-style:none;font-size:13px;display:grid;gap:2px}
 .ord ul small{color:var(--muted)}
+.ord .obs,.obs{font-size:12px;background:color-mix(in srgb,var(--warn) 12%,transparent);color:var(--ink);border-radius:8px;padding:6px 8px}
 .ord .tt{display:flex;justify-content:space-between;font-weight:700;border-top:1px dashed var(--line);padding-top:8px}
-.ord .acts{display:flex;gap:6px;flex-wrap:wrap}
+.ord .acts{display:flex;gap:6px}
+.ord .mini{display:flex;gap:12px;font-size:12px;border-top:1px solid var(--line);padding-top:8px}
+.ord .mini button,.ord .mini a{background:none;border:0;padding:0;color:var(--muted);font-weight:600;text-decoration:none;cursor:pointer}
+.ord .mini button:hover,.ord .mini a:hover{color:var(--hx)}
+.steps{display:flex;gap:0;margin-top:14px}
+.stp{flex:1;display:grid;justify-items:center;gap:6px;text-align:center;font-size:12px;color:var(--muted);position:relative}
+.stp i{width:14px;height:14px;border-radius:50%;background:var(--line);z-index:1}
+.stp::before{content:"";position:absolute;top:6px;left:-50%;right:50%;height:2px;background:var(--line)}
+.stp:first-child::before{display:none}
+.stp.done i,.stp.done::before{background:var(--ok)}
+.stp.done{color:var(--ink);font-weight:600}
+.stp.bad i{background:var(--bad)}
+.stp small{display:block;font-weight:400;color:var(--muted)}
 
 .cat{margin-bottom:18px}
 .cat .ch{display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap}
@@ -105,6 +135,7 @@ main{max-width:1180px;margin:0 auto;padding:18px 16px 60px}
 </div>
 <nav class="tabs" id="tabs">
   <button data-tab="pedidos" class="on">Pedidos<span class="dot" id="newDot" hidden>0</span></button>
+  <button data-tab="clientes">Clientes</button>
   <button data-tab="relatorios">Relatórios</button>
   <button data-tab="cardapio">Cardápio</button>
   <button data-tab="stories">Stories</button>
@@ -123,7 +154,7 @@ const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const BRL=v=>(+v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 const DIAS=['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
-const ST={novo:['Novo','hx'],preparando:['Preparando','warn'],saiu:['Saiu p/ entrega','warn'],concluido:['Concluído','ok'],cancelado:['Cancelado','bad']};
+const ST={pix:['Aguardando Pix','warn'],novo:['Novo','hx'],preparando:['Preparando','warn'],saiu:['Saiu p/ entrega','warn'],concluido:['Concluído','ok'],cancelado:['Cancelado','bad']};
 const NEXT={novo:'preparando',preparando:'saiu',saiu:'concluido'};
 function toast(t){ const el=$('#toast'); el.textContent=t; el.hidden=false; clearTimeout(toast.t); toast.t=setTimeout(()=>el.hidden=true,2600); }
 async function api(url,method='GET',body){ const r=await fetch(url,{method,headers:body?{'content-type':'application/json'}:{},body:body?JSON.stringify(body):undefined}); if(r.status===401){ location.replace('/login'); throw new Error('login'); } const j=r.headers.get('content-type')?.includes('json')?await r.json():{}; if(!r.ok) throw new Error(j.erro||'Erro ao salvar'); return j; }
@@ -158,34 +189,254 @@ let ME,LOJA,tab='pedidos';
 async function loadLoja(){ LOJA=await api('/api/p/loja'); $('#sName').textContent=LOJA.name; const url=location.origin+'/'+LOJA.slug; $('#sLink').textContent=url.replace(/^https?:\/\//,'')+(LOJA.status==='pausado'?' · pausado':''); $('#ver').href='/'+LOJA.slug; const lg=$('#sLogo'); lg.hidden=!LOJA.settings.logo; lg.src=LOJA.settings.logo||''; document.title=LOJA.name+' · Huntix'; }
 $('#sair').onclick=async()=>{ await fetch('/api/logout',{method:'POST'}); location.replace('/login'); };
 $('#tabs').onclick=e=>{ const b=e.target.closest('[data-tab]'); if(b) show(b.dataset.tab); };
-function show(t){ tab=t; location.hash=t; $$('#tabs [data-tab]').forEach(b=>b.classList.toggle('on',b.dataset.tab===t)); $('#main').innerHTML='<p class="muted">Carregando…</p>'; ({pedidos,relatorios,cardapio,stories,feed,loja,pixel,conta})[t]().catch(e=>{ $('#main').innerHTML=`<p class="err">${esc(e.message)}</p>`; }); }
+function show(t){ tab=t; location.hash=t; $$('#tabs [data-tab]').forEach(b=>b.classList.toggle('on',b.dataset.tab===t)); $('#main').innerHTML='<p class="muted">Carregando…</p>'; ({pedidos,clientes:clientesTab,relatorios,cardapio,stories,feed,loja,pixel,conta})[t]().catch(e=>{ $('#main').innerHTML=`<p class="err">${esc(e.message)}</p>`; }); }
 let lastNew=null;
 async function pollNew(){ try{ const j=await api('/api/p/orders/novos'); $('#newDot').hidden=!j.n; $('#newDot').textContent=j.n; document.title=(j.n?`(${j.n}) `:'')+LOJA.name+' · Huntix';
-  if(lastNew!==null&&j.ultimo&&j.ultimo>lastNew){ toast('Pedido novo!'); beep(); if(tab==='pedidos') pedidos(); } lastNew=j.ultimo||0; }catch{} }
+  if(lastNew!==null&&j.ultimo&&j.ultimo>lastNew){ toast('Pedido novo!'); beep(); const prev=lastNew;
+    if(pref('imprimirNovo',false)){ try{ const ns=(await api('/api/p/orders?ativos=1')).filter(o=>o.id>prev&&o.status==='novo').sort((x,y)=>x.id-y.id); for(const o of ns){ printOrder(o); await new Promise(r=>setTimeout(r,1500)); } }catch{} }
+    if(tab==='pedidos') pedidos(); } lastNew=j.ultimo||0; }catch{} }
 function beep(){ try{ const a=new AudioContext(),o=a.createOscillator(),g=a.createGain(); o.connect(g); g.connect(a.destination); o.frequency.value=880; g.gain.value=.08; o.start(); o.stop(a.currentTime+.25); }catch{} }
 
-/* ---------------- pedidos ---------------- */
-let OF={de:today(),ate:today(),status:''};
+/* ---------------- pedidos (estilo Anota AI: colunas por etapa) ---------------- */
+const PIXCOL=['pix','Aguardando Pix','Confira o Pix e confirme'];
+const COLS=[['novo','Em análise','Aceite ou recuse'],['preparando','Em preparo','Na cozinha / separação'],['saiu','Saiu / Pronto','A caminho ou aguardando retirada'],['concluido','Concluídos','Hoje']];
+const pref=(k,d)=>{ try{ const v=localStorage.getItem('hx-'+k); return v===null?d:v==='1'; }catch{ return d; } };
+const setPref=(k,v)=>{ try{ localStorage.setItem('hx-'+k,v?'1':'0'); }catch{} };
+let OV={view:'kanban',q:'',tipo:'',de:today(),ate:today(),status:''}, ORD=[], alarm=null;
+const isRet=o=>o.bairro==='Retirada na loja';
+const stLabel=o=>o.status==='saiu'?(isRet(o)?'Pronto p/ retirada':'Saiu p/ entrega'):ST[o.status][0];
+const mins=o=>Math.floor((Date.now()-new Date(o.created_at))/6e4);
+const elapsed=o=>{ const m=mins(o); return m<60?`${m} min`:`${Math.floor(m/60)}h${String(m%60).padStart(2,'0')}`; };
+const hhmm=iso=>new Date(iso).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+const nextOf=o=>({pix:['preparando','Confirmar Pix ✓'],novo:['preparando','Aceitar'],preparando:['saiu',isRet(o)?'Pronto p/ retirada':'Saiu p/ entrega'],saiu:['concluido',isRet(o)?'Retirado':'Entregue']})[o.status];
+
 async function pedidos(){
-  const q=new URLSearchParams({de:OF.de,ate:OF.ate,...(OF.status?{status:OF.status}:{})}), list=await api('/api/p/orders?'+q);
-  const tot=list.filter(o=>o.status!=='cancelado').reduce((s,o)=>s+o.total,0);
+  const q=OV.view==='kanban'?new URLSearchParams({de:today(),ate:today(),ativos:1}):new URLSearchParams({de:OV.de,ate:OV.ate,...(OV.status?{status:OV.status}:{})});
+  ORD=await api('/api/p/orders?'+q);
+  const s=LOJA.settings, avisar=pref('avisar',true), som=pref('som',true);
   $('#main').innerHTML=`<div class="bar"><h1>Pedidos</h1>
-    <input type="date" id="oDe" value="${OF.de}" style="width:auto"><span class="muted">até</span><input type="date" id="oAte" value="${OF.ate}" style="width:auto">
-    <a class="btn ghost sm" href="/api/p/orders.csv?de=${OF.de}&ate=${OF.ate}">Baixar vendas (CSV)</a></div>
-    <div class="bar"><div class="seg" id="oSt">${[['','Todos'],...Object.entries(ST).map(([k,v])=>[k,v[0]])].map(([k,n])=>`<button data-st="${k}" class="${OF.status===k?'on':''}">${n}</button>`).join('')}</div>
-    <span class="muted" style="margin-left:auto">${list.length} pedido(s) · <b class="num" style="color:var(--ink)">${BRL(tot)}</b></span></div>
-    ${list.length?`<div class="orders">${list.map(o=>{ const d=new Date(o.created_at), [n,c]=ST[o.status]; return `<div class="ord ${o.status==='novo'?'novo':''}">
-      <div class="h"><div><b>#${o.num} · ${esc(o.customer)}</b><div class="muted" style="font-size:12px">${d.toLocaleDateString('pt-BR')} ${d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})} · ${esc(o.payment)}</div></div><span class="badge ${c}">${n}</span></div>
-      <ul>${o.items.map(i=>`<li>${i.qty}× ${esc(i.nome)} <span class="num" style="float:right">${BRL(i.total)}</span>${i.opts.length?`<br><small>${esc(i.opts.join(' · '))}</small>`:''}</li>`).join('')}</ul>
-      <div style="font-size:13px">${esc(o.bairro)}${o.address?` · ${esc(o.address)}`:''}${o.notes?`<br><span class="muted">Obs.: ${esc(o.notes)}</span>`:''}</div>
-      <div class="tt"><span>Total${o.discount?` <small class="muted">(−${BRL(o.discount)} curtidas)</small>`:''}</span><span class="num">${BRL(o.total)}</span></div>
-      <div class="acts">${NEXT[o.status]?`<button class="btn sm" data-next="${o.id}" data-to="${NEXT[o.status]}">${ST[NEXT[o.status]][0]}</button>`:''}
-        <a class="btn sec sm" target="_blank" rel="noopener" href="https://wa.me/${o.phone.length<=11?'55':''}${o.phone}">WhatsApp</a>
-        ${!['cancelado','concluido'].includes(o.status)?`<button class="btn danger sm" data-next="${o.id}" data-to="cancelado">Cancelar</button>`:''}</div></div>`; }).join('')}</div>`
-    :`<div class="card muted">Nenhum pedido nesse período. Divulgue o link <b style="color:var(--ink)">${esc(location.origin+'/'+LOJA.slug)}</b> na bio do Instagram e no WhatsApp.</div>`}`;
-  $('#oDe').onchange=e=>{OF.de=e.target.value;pedidos()}; $('#oAte').onchange=e=>{OF.ate=e.target.value;pedidos()};
-  $('#oSt').onclick=e=>{ const b=e.target.closest('[data-st]'); if(b){OF.status=b.dataset.st;pedidos()} };
-  $$('[data-next]').forEach(b=>b.onclick=async()=>{ if(b.dataset.to==='cancelado'&&!confirm('Cancelar este pedido?')) return; await api('/api/p/orders/'+b.dataset.next,'PUT',{status:b.dataset.to}); pollNew(); pedidos(); });
+    <div class="seg" id="ovw"><button data-v="kanban" class="${OV.view==='kanban'?'on':''}">Quadro</button><button data-v="lista" class="${OV.view==='lista'?'on':''}">Histórico</button></div>
+    <input type="text" id="oq" placeholder="Buscar nº, nome ou telefone" value="${esc(OV.q)}" style="width:210px">
+    <select id="otp" style="width:auto"><option value="">Entrega e retirada</option><option value="e" ${OV.tipo==='e'?'selected':''}>Só entrega</option><option value="r" ${OV.tipo==='r'?'selected':''}>Só retirada</option></select></div>
+  <div class="bar ptools">
+    <label class="tg"><input type="checkbox" id="pAv" ${avisar?'checked':''}> Avisar o cliente no WhatsApp ao mudar o status</label>
+    <label class="tg"><input type="checkbox" id="pSom" ${som?'checked':''}> Alarme de pedido novo</label>
+    <button class="btn ghost sm" id="pPrn">🖨 Impressora${pref('imprimirNovo',false)||pref('imprimir',false)?' · automática':''}</button>
+    <span class="muted" style="margin-left:auto;font-size:12px">Tempo estimado: preparo ${s.tempoPreparo||30} min · entrega ${s.tempoEntrega||40} min <a href="#loja" data-goloja>alterar</a></span></div>
+  <div id="obody"></div>`;
+  $('#ovw').onclick=e=>{ const b=e.target.closest('[data-v]'); if(b){ OV.view=b.dataset.v; pedidos(); } };
+  $('#oq').oninput=e=>{ OV.q=e.target.value; drawOrders(); };
+  $('#otp').onchange=e=>{ OV.tipo=e.target.value; drawOrders(); };
+  $('#pAv').onchange=e=>setPref('avisar',e.target.checked);
+  $('#pSom').onchange=e=>{ setPref('som',e.target.checked); checkAlarm(); };
+  $('#pPrn').onclick=printerSetup;
+  $('[data-goloja]').onclick=e=>{ e.preventDefault(); show('loja'); };
+  drawOrders(); checkAlarm();
+}
+function filtered(){ const q=OV.q.trim().toLowerCase(), qd=q.replace(/\D/g,'');
+  return ORD.filter(o=>(!OV.tipo||(OV.tipo==='r')===isRet(o))&&(!q||String(o.num)===q.replace('#','')||String(o.customer).toLowerCase().includes(q)||(qd.length>=4&&o.phone.includes(qd)))); }
+function cardHtml(o){
+  const nx=nextOf(o), late=['novo','preparando','saiu'].includes(o.status)&&mins(o)>=((LOJA.settings.tempoPreparo||30)+(isRet(o)?0:(LOJA.settings.tempoEntrega||40)));
+  return `<div class="ord ${o.status}" draggable="${['concluido','cancelado'].includes(o.status)?'false':'true'}" data-id="${o.id}">
+    <div class="h"><div><b>#${o.num}</b> <span class="badge ${isRet(o)?'':'hx'}">${isRet(o)?'Retirada':'Entrega'}</span></div><span class="tm ${late?'late':''}" title="Pedido às ${hhmm(o.created_at)}">⏱ ${elapsed(o)}</span></div>
+    <div><b style="font-size:14px">${esc(o.customer)}</b> ${cliBadge(o)}<div class="muted" style="font-size:12px">${hhmm(o.created_at)} · ${esc(o.payment)}${isRet(o)?'':' · '+esc(o.bairro)}</div></div>
+    <ul>${o.items.slice(0,4).map(i=>`<li>${i.qty}× ${esc(i.nome)}${i.opts.length?` <small>(${esc(i.opts.map(x=>x.split(': ')[1]||x).join(', '))})</small>`:''}</li>`).join('')}${o.items.length>4?`<li class="muted">+ ${o.items.length-4} item(ns)</li>`:''}</ul>
+    ${o.notes?`<div class="obs">Obs.: ${esc(o.notes)}</div>`:''}
+    <div class="tt"><span>Total</span><span class="num">${BRL(o.total)}</span></div>
+    <div class="acts">${o.status==='novo'?`<button class="btn danger sm" data-cancel="${o.id}">Recusar</button>`:o.status==='pix'?`<button class="btn danger sm" data-cancel="${o.id}" title="Cliente não pagou">Cancelar</button>`:''}${nx?`<button class="btn sm" data-mv="${o.id}" data-to="${nx[0]}" style="flex:1">${nx[1]} →</button>`:`<span class="badge ${ST[o.status][1]}">${stLabel(o)}</span>`}</div>
+    <div class="mini"><button data-det="${o.id}">Detalhes</button><button data-print="${o.id}">Imprimir</button><a href="${waUrl(o.phone,'')}" target="_blank" rel="noopener">WhatsApp</a>${['preparando','saiu'].includes(o.status)?`<button data-cancel="${o.id}">Cancelar</button>`:''}</div></div>`;
+}
+function drawOrders(){
+  const list=filtered(), box=$('#obody'); if(!box) return;
+  if(OV.view==='kanban'){
+    const t0=today();
+    const cols=(LOJA.settings.pixAntecipado||list.some(o=>o.status==='pix'))?[PIXCOL,...COLS]:COLS;
+    box.innerHTML=`<div class="kanban" style="grid-template-columns:repeat(${cols.length},minmax(250px,1fr))">${cols.map(([st,nm,sub])=>{ const its=list.filter(o=>st==='concluido'?(['concluido','cancelado'].includes(o.status)&&o.created_at&&new Date(o.created_at).toLocaleDateString('sv')===t0):o.status===st);
+      return `<section class="col" data-col="${st}"><header><b>${nm}</b><span class="cnt">${its.length}</span><small>${sub}</small></header><div class="cards">${its.map(cardHtml).join('')||'<p class="empty">Nenhum pedido</p>'}</div>
+      ${st==='concluido'&&its.length?`<footer class="muted">${BRL(its.filter(o=>o.status==='concluido').reduce((a,o)=>a+o.total,0))} concluídos hoje</footer>`:''}</section>`; }).join('')}</div>
+      <p class="help">Arraste o pedido para a próxima coluna ou use o botão laranja. Com o aviso ligado, o WhatsApp abre com a mensagem pronta para o cliente: é só tocar em enviar.</p>`;
+    dnd();
+  } else {
+    const tot=list.filter(o=>o.status!=='cancelado').reduce((a,o)=>a+o.total,0);
+    box.innerHTML=`<div class="bar"><input type="date" id="oDe" value="${OV.de}" style="width:auto"><span class="muted">até</span><input type="date" id="oAte" value="${OV.ate}" style="width:auto">
+      <div class="seg" id="oSt">${[['','Todos'],...Object.entries(ST).map(([k,v])=>[k,v[0]])].map(([k,n])=>`<button data-st="${k}" class="${OV.status===k?'on':''}">${n}</button>`).join('')}</div>
+      <a class="btn ghost sm" href="/api/p/orders.csv?de=${OV.de}&ate=${OV.ate}">Baixar vendas (CSV)</a><span class="muted" style="margin-left:auto">${list.length} pedido(s) · <b class="num" style="color:var(--ink)">${BRL(tot)}</b></span></div>
+      <div class="card tw" style="padding:0">${list.length?`<table><tr><th>Nº</th><th>Data</th><th>Cliente</th><th>Tipo</th><th>Pagamento</th><th>Status</th><th style="text-align:right">Total</th><th></th></tr>${list.map(o=>`<tr><td><b>#${o.num}</b></td><td class="num">${new Date(o.created_at).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}</td><td>${esc(o.customer)}<br><small class="muted">${esc(o.phone)}</small></td><td>${isRet(o)?'Retirada':esc(o.bairro)}</td><td>${esc(o.payment)}</td><td><span class="badge ${ST[o.status][1]}">${stLabel(o)}</span></td><td class="num" style="text-align:right">${BRL(o.total)}</td><td><button class="btn ghost sm" data-det="${o.id}">Ver</button></td></tr>`).join('')}</table>`:'<p class="muted" style="padding:16px">Nenhum pedido nesse período.</p>'}</div>`;
+    $('#oDe').onchange=e=>{OV.de=e.target.value;pedidos()}; $('#oAte').onchange=e=>{OV.ate=e.target.value;pedidos()};
+    $('#oSt').onclick=e=>{ const b=e.target.closest('[data-st]'); if(b){OV.status=b.dataset.st;pedidos()} };
+  }
+  box.onclick=e=>{
+    const mv=e.target.closest('[data-mv]'); if(mv) return moveOrder(+mv.dataset.mv,mv.dataset.to);
+    const c=e.target.closest('[data-cancel]'); if(c) return cancelOrder(+c.dataset.cancel);
+    const d=e.target.closest('[data-det]'); if(d) return orderDetail(+d.dataset.det);
+    const p=e.target.closest('[data-print]'); if(p) return printOrder(ORD.find(o=>o.id===+p.dataset.print));
+  };
+}
+const fmtTel=v=>{ let d=String(v||"").replace(/D/g,""); if(d.length>11&&d.startsWith("55")) d=d.slice(2); return d.length===11?`(${d.slice(0,2)}) ${d.slice(2,7)}-${d.slice(7)}`:d.length===10?`(${d.slice(0,2)}) ${d.slice(2,6)}-${d.slice(6)}`:String(v||""); };
+const waUrl=(phone,text)=>{ let p=String(phone||'').replace(/\D/g,''); if(p.length<=11) p='55'+p; return `https://wa.me/${p}${text?'?text='+encodeURIComponent(text):''}`; };
+function dnd(){
+  $$('.ord[draggable=true]').forEach(c=>{ c.ondragstart=e=>{ e.dataTransfer.setData('text/plain',c.dataset.id); c.classList.add('drag'); }; c.ondragend=()=>c.classList.remove('drag'); });
+  $$('.col').forEach(col=>{ col.ondragover=e=>{ e.preventDefault(); col.classList.add('over'); }; col.ondragleave=()=>col.classList.remove('over');
+    col.ondrop=e=>{ e.preventDefault(); col.classList.remove('over'); const id=+e.dataTransfer.getData('text/plain'), o=ORD.find(x=>x.id===id); if(!o||o.status===col.dataset.col) return; moveOrder(id,col.dataset.col); }; });
+}
+/* muda o status; abre o WhatsApp do cliente na mesma ação do clique (senão o navegador bloqueia a janela) */
+async function moveOrder(id,to,motivo){
+  const o=ORD.find(x=>x.id===id), avisar=pref('avisar',true)&&o&&o.phone;
+  const win=avisar?window.open('about:blank','_blank'):null;
+  try{ const j=await api('/api/p/orders/'+id,'PUT',{status:to});
+    let msg=j.aviso; if(to==='cancelado'&&motivo) msg+=`\nMotivo: ${motivo}`;
+    if(win){ if(msg){ win.location.href=waUrl(o.phone,msg); } else win.close(); }
+    toast(`#${o.num}: ${to==='saiu'?stLabel({...o,status:'saiu'}):ST[to][0]}${win&&msg?' · WhatsApp aberto':''}`);
+    /* Pix antecipado: imprime quando a loja confirma o pagamento (nunca antes) */
+    if(to==='preparando'&&(pref('imprimir',false)||(o.status==='pix'&&pref('imprimirNovo',false)))) printOrder({...o,status:to});
+  }catch(e){ win&&win.close(); toast(e.message); }
+  pollNew(); pedidos();
+}
+function cancelOrder(id){
+  const o=ORD.find(x=>x.id===id);
+  modal(`<h2>Cancelar pedido #${o.num}?</h2><p class="muted" style="margin-top:-8px">${esc(o.customer)} · ${BRL(o.total)}</p>
+    <label class="f">Motivo (vai na mensagem para o cliente)<select id="cm"><option>Produto em falta</option><option>Fora da área de entrega</option><option>Loja fechada / sem atendimento</option><option>Cliente pediu para cancelar</option><option>Não conseguimos contato</option><option value="">Sem motivo</option></select></label>
+    <div class="foot"><button class="btn sec" onclick="closeModal()">Voltar</button><button class="btn danger" id="ok" style="background:var(--bad);color:#fff;border:0">Cancelar pedido</button></div>`);
+  $('#ok').onclick=()=>{ const m=$('#cm').value; closeModal(); moveOrder(id,'cancelado',m); };
+}
+function orderDetail(id){
+  const o=ORD.find(x=>x.id===id), link=`${location.origin}/${LOJA.slug}/pedido/${o.track}`, nx=nextOf(o);
+  const steps=[/antecipado/i.test(o.payment)?['pix',o.status==='pix'?'Aguardando Pix':'Pix confirmado']:['novo','Recebido'],['preparando','Em preparo'],['saiu',isRet(o)?'Pronto p/ retirada':'Saiu p/ entrega'],['concluido',isRet(o)?'Retirado':'Entregue']];
+  const when=st=>{ const l=(o.log||[]).filter(x=>x.s===st).pop(); return l?hhmm(l.t):''; };
+  modal(`<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px"><div><h2 style="margin:0">Pedido #${o.num}</h2><div class="muted">${new Date(o.created_at).toLocaleString('pt-BR')} · há ${elapsed(o)}</div></div><span class="badge ${ST[o.status][1]}">${stLabel(o)}</span></div>
+    <div class="steps">${o.status==='cancelado'?`<div class="stp bad"><i></i><span>Cancelado ${when('cancelado')}</span></div>`:steps.map(([st,n])=>`<div class="stp ${when(st)?'done':''}"><i></i><span>${n}<small>${when(st)}</small></span></div>`).join('')}</div>
+    <div class="row cols2" style="margin-top:14px"><div><div class="muted" style="font-size:12px;font-weight:600">CLIENTE</div><b>${esc(o.customer)}</b> ${cliBadge(o)}<br><a href="${waUrl(o.phone,'')}" target="_blank" rel="noopener">${esc(o.phone)}</a><div class="muted" style="font-size:12px;margin-top:4px">${o.cli_pedidos} pedido(s) · ${BRL(o.cli_total)} no total · desde ${fmtD(o.cli_desde)}</div></div>
+      <div><div class="muted" style="font-size:12px;font-weight:600">${isRet(o)?'RETIRADA':'ENTREGA'}</div>${isRet(o)?'Retirar na loja':`${esc(o.address)}<br>${esc(o.bairro)}`}</div></div>
+    <table style="margin-top:12px">${o.items.map(i=>`<tr><td>${i.qty}×</td><td>${esc(i.nome)}${i.opts.length?`<br><small class="muted">${esc(i.opts.join(' · '))}</small>`:''}</td><td class="num" style="text-align:right">${BRL(i.total)}</td></tr>`).join('')}
+      <tr><td></td><td class="muted">Subtotal</td><td class="num" style="text-align:right">${BRL(o.subtotal)}</td></tr>${o.discount?`<tr><td></td><td class="muted">Desconto curtidas</td><td class="num" style="text-align:right">− ${BRL(o.discount)}</td></tr>`:''}
+      <tr><td></td><td class="muted">Entrega</td><td class="num" style="text-align:right">${o.fee?BRL(o.fee):'grátis'}</td></tr><tr><td></td><td><b>Total · ${esc(o.payment)}</b></td><td class="num" style="text-align:right"><b>${BRL(o.total)}</b></td></tr></table>
+    ${o.notes?`<div class="obs" style="margin-top:10px">Obs.: ${esc(o.notes)}</div>`:''}
+    <label class="f" style="margin-top:12px">Link de acompanhamento do cliente<div class="linkbox"><span style="flex:1">${esc(link)}</span><button class="btn sec sm" id="cpl" type="button">Copiar</button></div></label>
+    <div class="foot">${!['concluido','cancelado'].includes(o.status)?`<button class="btn danger" id="dc">Cancelar</button>`:''}<button class="btn sec" id="dp">Imprimir</button><button class="btn sec" onclick="closeModal()">Fechar</button>${nx?`<button class="btn" id="dn">${nx[1]} →</button>`:''}</div>`);
+  $('#cpl').onclick=()=>navigator.clipboard.writeText(link).then(()=>toast('Link copiado'));
+  $('#dp').onclick=()=>printOrder(o);
+  $('#dc')&&($('#dc').onclick=()=>{ closeModal(); cancelOrder(id); });
+  $('#dn')&&($('#dn').onclick=()=>{ closeModal(); moveOrder(id,nx[0]); });
+}
+/* ---------- impressão (térmica 58/80 mm ou comum) ----------
+   Usa um quadro escondido e o print() do navegador. Com o Chrome aberto pelo atalho
+   "--kiosk-printing", imprime direto na impressora padrão, sem janela de confirmação. */
+const prnGet=(k,d)=>{ try{ return localStorage.getItem('hx-'+k)||d; }catch{ return d; } };
+const prnSet=(k,v)=>{ try{ localStorage.setItem('hx-'+k,v); }catch{} };
+function receiptHtml(o){
+  const mm=prnGet('papel','80'), w=mm==='a4'?'190mm':(+mm-6)+'mm', fs=mm==='58'?'11px':'12.5px';
+  const one=via=>`<div class="via">
+  <div class="c"><b style="font-size:1.35em">${esc(LOJA.name)}</b></div>${LOJA.settings.endereco?`<div class="c" style="font-size:.9em">${esc(LOJA.settings.endereco)}</div>`:''}${LOJA.settings.whatsapp||LOJA.settings.telefone?`<div class="c" style="font-size:.9em">${esc(fmtTel(LOJA.settings.telefone||LOJA.settings.whatsapp))}</div>`:''}<hr>
+  <div class="c">Pedido <b style="font-size:1.6em">#${o.num}</b></div>
+  <div class="c">${new Date(o.created_at).toLocaleString('pt-BR')}${via?' · '+via:''}</div><hr>
+  <div class="c"><b>${isRet(o)?'*** RETIRADA NA LOJA ***':'*** ENTREGA ***'}</b></div>
+  <div>Cliente: <b>${esc(o.customer)}</b></div><div>Tel.: ${esc(fmtTel(o.phone))}</div>${o.ordem?`<div><b>${o.ordem===1?'*** CLIENTE NOVO ***':o.ordem+'º pedido do cliente'}</b></div>`:''}${isRet(o)?'':`<hr><div><b>ENDEREÇO DE ENTREGA</b></div><div>${esc(o.address)}</div><div>Bairro: <b>${esc(o.bairro)}</b></div>`}<hr><div><b>ITENS (${o.items.reduce((a,i)=>a+i.qty,0)})</b></div>
+  ${o.items.map(i=>`<div class="it"><div class="r"><span><b>${i.qty}x</b> ${esc(i.nome)}</span><span>${BRL(i.total)}</span></div>${i.desc?`<div class="op">${esc(i.desc)}</div>`:''}${i.opts.length?`<div class="op">» ${esc(i.opts.join(' | '))}</div>`:''}${i.qty>1&&i.unit?`<div class="op">${i.qty} x ${BRL(i.unit)}</div>`:''}</div>`).join('')}<hr>
+  <div class="r"><span>Subtotal</span><span>${BRL(o.subtotal)}</span></div>${o.discount?`<div class="r"><span>Desconto</span><span>-${BRL(o.discount)}</span></div>`:''}
+  <div class="r"><span>Entrega</span><span>${o.fee?BRL(o.fee):'grátis'}</span></div>
+  <div class="r big"><b>TOTAL</b><b>${BRL(o.total)}</b></div><div>Pagamento: <b>${esc(o.payment)}</b>${/antecipado/i.test(o.payment)?(o.status==='pix'?' <b>(A CONFIRMAR)</b>':' <b>— PAGO</b>'):` (cobrar na ${isRet(o)?'retirada':'entrega'})`}</div>
+  ${o.notes?`<hr><div><b>OBS:</b> ${esc(o.notes)}</div>`:''}<hr><div class="c" style="font-size:.85em">Impresso em ${new Date().toLocaleString('pt-BR')}<br>Pedido feito pelo cardápio digital · Huntix</div></div>`;
+  const vias=+prnGet('vias','1'), names=vias>1?['Cozinha','Entrega','Caixa']:[''];
+  return `<!doctype html><meta charset="utf-8"><title>Pedido #${o.num}</title><style>
+  @page{size:${mm==='a4'?'A4':mm+'mm auto'};margin:${mm==='a4'?'12mm':'2mm'}}
+  body{font:${fs}/1.35 "Courier New",ui-monospace,monospace;margin:0;color:#000;width:${w}}
+  hr{border:0;border-top:1px dashed #000;margin:6px 0}.r{display:flex;justify-content:space-between;gap:6px}.c{text-align:center}
+  .op{padding-left:12px;font-size:.92em}.it{margin-bottom:4px}.big{font-size:1.3em;margin-top:4px}.via{page-break-after:always}.via:last-child{page-break-after:auto}
+  </style>${names.slice(0,vias).map(one).join('')}`;
+}
+function printOrder(o){
+  if(!o) return; let fr=$('#prnFrame'); if(fr) fr.remove();
+  fr=document.createElement('iframe'); fr.id='prnFrame'; fr.style.cssText='position:fixed;width:0;height:0;border:0;right:0;bottom:0'; document.body.appendChild(fr);
+  const d=fr.contentWindow.document; d.open(); d.write(receiptHtml(o)); d.close();
+  setTimeout(()=>{ try{ fr.contentWindow.focus(); fr.contentWindow.print(); }catch{ toast('Não deu para imprimir'); } },250);
+}
+function printerSetup(){
+  modal(`<h2>Impressora de pedidos</h2>
+  <div class="row"><div class="row cols2"><label class="f">Papel<select id="pp"><option value="80">Térmica 80 mm</option><option value="58">Térmica 58 mm</option><option value="a4">Folha A4 (impressora comum)</option></select></label>
+    <label class="f">Vias por pedido<select id="pv"><option value="1">1 via</option><option value="2">2 vias (cozinha + entrega)</option><option value="3">3 vias (cozinha + entrega + caixa)</option></select></label></div>
+  <label class="tg"><input type="checkbox" id="pn" ${pref('imprimirNovo',false)?'checked':''}> Imprimir sozinho quando chegar pedido novo</label>
+  <label class="tg"><input type="checkbox" id="pa" ${pref('imprimir',false)?'checked':''}> Imprimir sozinho quando aceitar o pedido</label>
+  <p class="help">Essas opções valem para este computador. Deixe o painel aberto nesta aba para a impressão automática funcionar.</p>
+  <div class="card" style="box-shadow:none;padding:12px;font-size:13px"><b>Como ligar a impressora térmica (uma vez só)</b>
+   <ol style="margin:8px 0 0;padding-left:18px;display:grid;gap:6px">
+    <li>Instale o driver da impressora (Elgin i9, Epson TM-T20, Bematech MP-4200, Knup etc.) e coloque o papel certo (58 ou 80 mm).</li>
+    <li>No Windows: <b>Configurações → Bluetooth e dispositivos → Impressoras</b>, abra a térmica e clique em <b>Definir como padrão</b>.</li>
+    <li>Para imprimir <b>sem a janela de confirmação</b>: crie um atalho do Chrome na área de trabalho, clique com o botão direito → Propriedades, e no fim de <b>Destino</b> acrescente <code>--kiosk-printing</code>. Feche todos os Chrome e abra o painel por esse atalho.</li>
+    <li>Clique em <b>Imprimir teste</b> abaixo.</li></ol></div></div>
+  <div class="foot"><button class="btn sec" id="pt">Imprimir teste</button><button class="btn sec" onclick="closeModal()">Fechar</button><button class="btn" id="ok">Salvar</button></div>`);
+  $('#pp').value=prnGet('papel','80'); $('#pv').value=prnGet('vias','1');
+  const save=()=>{ prnSet('papel',$('#pp').value); prnSet('vias',$('#pv').value); setPref('imprimirNovo',$('#pn').checked); setPref('imprimir',$('#pa').checked); };
+  $('#pt').onclick=()=>{ save(); printOrder({num:0,created_at:new Date().toISOString(),customer:'Teste de impressão',phone:'84 99999-0000',bairro:'Centro',address:'Rua Exemplo, 123',payment:'Pix',notes:'Sem cebola',items:[{qty:2,nome:'Produto de exemplo',opts:['Tamanho: G'],total:39.8},{qty:1,nome:'Outro produto',opts:[],total:12}],subtotal:51.8,discount:0,fee:6,total:57.8}); };
+  $('#ok').onclick=()=>{ save(); closeModal(); toast('Impressora salva'); if(tab==='pedidos') pedidos(); };
+}
+/* alarme: toca enquanto houver pedido "Em análise" */
+function checkAlarm(){
+  const tem=ORD.some(o=>['novo','pix'].includes(o.status)), on=pref('som',true)&&tem;
+  if(on&&!alarm){ beep(); alarm=setInterval(()=>{ if(document.visibilityState) beep(); },6000); }
+  if(!on&&alarm){ clearInterval(alarm); alarm=null; }
+}
+setInterval(()=>{ if(tab==='pedidos'&&OV.view==='kanban'&&$('#modal').hidden) drawOrders(); },30000);
+
+/* ---------------- clientes (cadastro) ---------------- */
+const SEG={cadastrado:['Sem pedido',''],novo:['Novo','hx'],recorrente:['Recorrente','warn'],fiel:['Fiel','ok'],sumido:['Sumido','bad']};
+let CF={q:'',seg:''}, CLI=[];
+const cliBadge=o=>o.ordem===1?'<span class="badge hx">⭐ Cliente novo</span>':o.cli_pedidos>=5?`<span class="badge ok">Fiel · ${o.ordem}º pedido</span>`:`<span class="badge warn">${o.ordem}º pedido</span>`;
+const fmtD=iso=>iso?new Date(iso).toLocaleDateString('pt-BR'):'—';
+const bday=b=>b?b.split('-').reverse().slice(0,2).join('/'):'';
+async function clientesTab(){
+  CLI=await api('/api/p/clientes');
+  const cnt=k=>CLI.filter(c=>c.seg===k).length, mesAniv=new Date().toISOString().slice(5,7), aniv=CLI.filter(c=>c.birthday&&c.birthday.slice(5,7)===mesAniv);
+  $('#main').innerHTML=`<div class="bar"><h1>Clientes</h1><input type="text" id="cq" placeholder="Buscar nome, telefone, bairro ou etiqueta" value="${esc(CF.q)}" style="width:260px">
+    <a class="btn ghost sm" href="/api/p/clientes.csv">Baixar lista (CSV)</a><button class="btn sm" id="cn">+ Cadastrar cliente</button></div>
+  <div class="kpis" style="margin-bottom:14px">
+    <div class="kpi"><small>Clientes cadastrados</small><b class="num">${CLI.length}</b></div>
+    <div class="kpi"><small>Novos (1 pedido)</small><b class="num">${cnt('novo')}</b></div>
+    <div class="kpi"><small>Recorrentes (2 a 4)</small><b class="num">${cnt('recorrente')}</b></div>
+    <div class="kpi"><small>Fiéis (5+ pedidos)</small><b class="num">${cnt('fiel')}</b></div>
+    <div class="kpi"><small>Sumidos (+30 dias)</small><b class="num">${cnt('sumido')}</b><span>bom para mandar promoção</span></div>
+    <div class="kpi"><small>Aniversariantes do mês</small><b class="num">${aniv.length}</b></div></div>
+  <div class="bar"><div class="seg" id="cseg">${[['','Todos'],['novo','Novos'],['recorrente','Recorrentes'],['fiel','Fiéis'],['sumido','Sumidos'],['cadastrado','Sem pedido'],['aniv','Aniversariantes']].map(([k,n])=>`<button data-seg="${k}" class="${CF.seg===k?'on':''}">${n}</button>`).join('')}</div></div>
+  <div class="card tw" style="padding:0" id="clist"></div>`;
+  $('#cq').oninput=e=>{ CF.q=e.target.value; drawCli(); };
+  $('#cseg').onclick=e=>{ const b=e.target.closest('[data-seg]'); if(b){ CF.seg=b.dataset.seg; $$('#cseg button').forEach(x=>x.classList.toggle('on',x===b)); drawCli(); } };
+  $('#cn').onclick=()=>editCliente({});
+  drawCli();
+}
+function drawCli(){
+  const q=CF.q.trim().toLowerCase(), qd=q.replace(/\D/g,''), mes=new Date().toISOString().slice(5,7);
+  const list=CLI.filter(c=>(!CF.seg||(CF.seg==='aniv'?(c.birthday&&c.birthday.slice(5,7)===mes):c.seg===CF.seg))&&(!q||[c.name,c.bairro,c.tags,c.email].join(' ').toLowerCase().includes(q)||(qd.length>=4&&c.phone.includes(qd))));
+  $('#clist').innerHTML=list.length?`<table><tr><th>Cliente</th><th>Grupo</th><th>Pedidos</th><th>Total gasto</th><th>Último pedido</th><th>Bairro</th><th></th></tr>${list.map(c=>`<tr>
+    <td><b>${esc(c.name||'Sem nome')}</b><br><small class="muted">${esc(c.phone)}${c.birthday?` · 🎂 ${bday(c.birthday)}`:''}</small>${c.tags?`<br>${c.tags.split(',').map(t=>t.trim()).filter(Boolean).map(t=>`<span class="badge" style="margin:2px 2px 0 0">${esc(t)}</span>`).join('')}`:''}</td>
+    <td><span class="badge ${SEG[c.seg][1]}">${SEG[c.seg][0]}</span></td><td class="num">${c.pedidos}</td><td class="num">${BRL(c.total)}<br><small class="muted">ticket ${BRL(c.ticket)}</small></td>
+    <td>${fmtD(c.ultimo)}${c.dias!=null?`<br><small class="muted">há ${c.dias} dia(s)</small>`:''}</td><td>${esc(c.bairro||'—')}</td>
+    <td style="white-space:nowrap"><a class="btn ghost sm" target="_blank" rel="noopener" href="${waUrl(c.phone,'')}">WhatsApp</a> <button class="btn sec sm" data-cli="${c.id}">Ficha</button></td></tr>`).join('')}</table>`
+    :'<p class="muted" style="padding:16px">Nenhum cliente aqui. Os clientes entram sozinhos no primeiro pedido, ou você cadastra no botão acima.</p>';
+  $$('[data-cli]').forEach(b=>b.onclick=()=>fichaCliente(+b.dataset.cli));
+}
+async function fichaCliente(id){
+  const c=await api('/api/p/clientes/'+id);
+  modal(`<div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start"><div><h2 style="margin:0">${esc(c.name||'Sem nome')}</h2><div class="muted">${esc(c.phone)} · cliente desde ${fmtD(c.primeiro||c.created_at)}</div></div><span class="badge ${SEG[c.seg][1]}">${SEG[c.seg][0]}</span></div>
+    <div class="kpis" style="margin:14px 0"><div class="kpi"><small>Pedidos</small><b class="num">${c.pedidos}</b></div><div class="kpi"><small>Total gasto</small><b class="num">${BRL(c.total)}</b></div><div class="kpi"><small>Ticket médio</small><b class="num">${BRL(c.ticket)}</b></div></div>
+    <div class="row cols2"><div><div class="muted" style="font-size:12px;font-weight:600">ENDEREÇO</div>${esc(c.address||'—')}${c.bairro?`<br>${esc(c.bairro)}`:''}</div>
+      <div><div class="muted" style="font-size:12px;font-weight:600">MAIS PEDE</div>${c.favoritos.length?c.favoritos.map(([n,q])=>`${q}× ${esc(n)}`).join('<br>'):'—'}</div></div>
+    ${c.email||c.birthday?`<div style="margin-top:10px">${c.email?`✉ ${esc(c.email)}  `:''}${c.birthday?`🎂 ${bday(c.birthday)}`:''}</div>`:''}
+    ${c.notes?`<div class="obs" style="margin-top:10px">${esc(c.notes)}</div>`:''}
+    <h3 style="font-size:14px;margin:16px 0 6px">Histórico de pedidos</h3>
+    ${c.historico.length?`<div class="tw"><table><tr><th>Nº</th><th>Data</th><th>Itens</th><th>Status</th><th style="text-align:right">Total</th></tr>${c.historico.map(o=>`<tr><td>#${o.num}</td><td>${new Date(o.created_at).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'})}</td><td style="font-size:12px">${esc(o.items.map(i=>i.qty+'× '+i.nome).join(', '))}</td><td><span class="badge ${ST[o.status][1]}">${ST[o.status][0]}</span></td><td class="num" style="text-align:right">${BRL(o.total)}</td></tr>`).join('')}</table></div>`:'<p class="muted">Ainda não fez pedido.</p>'}
+    <div class="foot"><button class="btn danger" id="cdel">Excluir cadastro</button><a class="btn sec" target="_blank" rel="noopener" href="${waUrl(c.phone,'')}">WhatsApp</a><button class="btn sec" onclick="closeModal()">Fechar</button><button class="btn" id="ced">Editar</button></div>`);
+  $('#ced').onclick=()=>editCliente(c);
+  $('#cdel').onclick=async()=>{ if(!confirm('Excluir o cadastro deste cliente? Os pedidos dele continuam no histórico.')) return; await api('/api/p/clientes/'+id,'DELETE'); closeModal(); toast('Cadastro excluído'); clientesTab(); };
+}
+function editCliente(c){
+  modal(`<h2>${c.id?'Editar cliente':'Cadastrar cliente'}</h2><div class="row">
+    <div class="row cols2"><label class="f">Nome<input type="text" id="kn" value="${esc(c.name||'')}"></label><label class="f">WhatsApp com DDD<input type="tel" id="kp" value="${esc(c.phone||'')}" ${c.id?'disabled':''} placeholder="84999999999"></label></div>
+    <div class="row cols2"><label class="f">E-mail<input type="email" id="ke" value="${esc(c.email||'')}"></label><label class="f">Aniversário<input type="date" id="kb" value="${esc(c.birthday||'')}"></label></div>
+    <label class="f">Endereço<input type="text" id="ka" value="${esc(c.address||'')}" placeholder="Rua, número - complemento (referência)"></label>
+    <div class="row cols2"><label class="f">Bairro<input type="text" id="kbr" value="${esc(c.bairro||'')}" list="kbl"><datalist id="kbl">${LOJA.settings.bairros.map(b=>`<option value="${esc(b[0])}">`).join('')}</datalist></label><label class="f">Etiquetas<input type="text" id="kt" value="${esc(c.tags||'')}" placeholder="Ex.: VIP, atacado, haras"><span class="h">Separadas por vírgula.</span></label></div>
+    <label class="f">Observações<textarea id="ko" placeholder="Ex.: prefere entrega à tarde, tem 3 cavalos">${esc(c.notes||'')}</textarea></label></div><div class="err" id="me"></div>
+    <div class="foot"><button class="btn sec" onclick="closeModal()">Cancelar</button><button class="btn" id="ok">Salvar</button></div>`);
+  $('#ok').onclick=async()=>{ const b={name:$('#kn').value,email:$('#ke').value,birthday:$('#kb').value,address:$('#ka').value,bairro:$('#kbr').value,tags:$('#kt').value,notes:$('#ko').value};
+    try{ if(c.id) await api('/api/p/clientes/'+c.id,'PUT',b); else await api('/api/p/clientes','POST',{...b,phone:$('#kp').value}); closeModal(); toast('Cliente salvo'); if(tab==='clientes') clientesTab(); }catch(e){ $('#me').textContent=e.message; } };
 }
 
 /* ---------------- relatórios ---------------- */
@@ -204,6 +455,7 @@ async function relatorios(){
       <div class="kpi"><small>Pedidos</small><b class="num">${r.pedidos}</b><span>sem os cancelados</span></div>
       <div class="kpi"><small>Ticket médio</small><b class="num">${BRL(r.ticket)}</b></div>
       <div class="kpi"><small>Visitas no cardápio</small><b class="num">${r.visitas}</b><span>conversão ${conv.toFixed(1).replace('.',',')}%</span></div>
+      <div class="kpi"><small>Clientes novos</small><b class="num">${r.clientesNovos}</b><span>${r.clientesVoltaram} cliente(s) voltaram</span></div>
       <div class="kpi"><small>Abriram o direct</small><b class="num">${r.contatos}</b><span>conversas com o robô</span></div></div>
     <div class="two"><div class="card"><h2>Vendas por dia</h2><div class="chart">${r.dias.map(d=>`<div class="c"><span class="tip">${d.d.split('-').reverse().slice(0,2).join('/')} · ${BRL(d.total)} · ${d.pedidos} ped.</span><i style="height:${d.total/mx*100}%"></i>${r.dias.length<=16?`<span>${d.d.slice(8)}/${d.d.slice(5,7)}</span>`:''}</div>`).join('')}</div></div>
       <div class="card"><h2>Funil</h2><div class="funnel">${fn.map(([k,v])=>`<div><span>${k}</span><em><i style="width:${v/fm*100}%"></i></em><b class="num">${v}</b></div>`).join('')}</div><p class="help">Visitas e sacola são contadas pelo próprio cardápio, mesmo sem Pixel.</p></div></div>
@@ -348,16 +600,23 @@ async function loja(){
   $('#main').innerHTML=`<div class="bar"><h1>Loja</h1><button class="btn" id="save">Salvar alterações</button></div><div class="grid">
   <div class="card"><h2>Dados</h2><div class="row"><div class="row cols2"><label class="f">Nome da loja<input type="text" id="ln" value="${esc(LOJA.name)}"></label><label class="f">Frase embaixo do nome<input type="text" id="lsub" value="${esc(s.subtitulo)}" placeholder="Ex.: Água de coco · Natal/RN"></label></div>
     <div class="row cols2"><label class="f">Cidade<input type="text" id="lci" value="${esc(s.cidade)}"></label><label class="f">Link do cardápio<div class="linkbox"><span id="lk">${esc(location.origin+'/'+LOJA.slug)}</span><button class="btn sec sm" id="cplk" type="button">Copiar</button></div><span class="h">Para trocar o endereço, fale com a Hunte Marketing.</span></label></div>
+    <div class="row cols2"><label class="f">Endereço da loja (sai na comanda)<input type="text" id="lend" value="${esc(s.endereco||'')}" placeholder="Rua, número, bairro"></label><label class="f">Telefone da loja<input type="text" id="ltel" value="${esc(s.telefone||'')}"></label></div>
     ${imgField('llogo',s.logo,'bag','Logo (aparece redonda)')}</div></div>
   <div class="card"><h2>Visual</h2><div class="row cols3"><label class="f">Cor principal<input type="color" id="tc" value="${esc(T.cor)}" style="height:40px;padding:2px"></label><label class="f">Cor de destaque (preços)<input type="color" id="td" value="${esc(T.destaque)}" style="height:40px;padding:2px"></label><label class="f">Cor de acento<input type="color" id="ta" value="${esc(T.acento)}" style="height:40px;padding:2px"></label></div>
     <label class="f" style="margin-top:12px">Fonte do nome e dos títulos<select id="tf">${FONTES.map(f=>`<option ${f===T.fonte?'selected':''}>${f}</option>`).join('')}</select></label></div>
   <div class="card"><h2>Pedidos no WhatsApp</h2><div class="row"><div class="row cols2"><label class="f">WhatsApp que recebe os pedidos<input type="tel" id="lw" value="${esc(s.whatsapp)}" placeholder="5584999999999"><span class="h">Com 55 + DDD, só números.</span></label><label class="f">Horário do atendente humano<input type="text" id="lat" value="${esc(s.atendente)}" placeholder="Ex.: das 8h às 18h"></label></div>
     <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="lew" ${s.enviarWhats?'checked':''}> Abrir o WhatsApp da loja com o pedido escrito quando o cliente finalizar</label>
     <p class="help">O pedido sempre fica salvo aqui na aba Pedidos, com ou sem essa opção.</p></div></div>
+  <div class="card"><h2>Tempo estimado</h2><div class="row cols2"><label class="f">Preparo (minutos)<input type="number" min="0" id="ltp" value="${s.tempoPreparo||30}"></label><label class="f">Entrega (minutos)<input type="number" min="0" id="lte" value="${s.tempoEntrega||40}"></label></div><p class="help">Aparece para o cliente na página de acompanhamento e deixa o pedido vermelho no painel quando passar do tempo.</p></div>
+  <div class="card"><h2>Mensagens de status no WhatsApp</h2><p class="help" style="margin-top:-6px">Enviadas ao cliente quando você move o pedido. Pode usar: {nome} {pedido} {loja} {total} {pagamento} {link} (acompanhamento) {cardapio}.</p><div class="row" style="margin-top:8px">
+    ${[['pixConfirmado','Pix confirmado'],['preparando','Aceito / em preparo'],['saiu','Saiu para entrega'],['pronto','Pronto para retirada'],['concluido','Entregue'],['cancelado','Cancelado']].map(([k,n])=>`<label class="f">${n}<textarea data-msg="${k}" style="min-height:64px">${esc(s.mensagens[k]||'')}</textarea></label>`).join('')}</div></div>
   <div class="card"><h2>Horário de funcionamento</h2><div class="row">${DIAS.map((d,i)=>{ const h=s.horario[i]; return `<div class="hours"><b style="font-size:13px">${d}</b><label style="display:flex;gap:6px;align-items:center;font-size:13px"><input type="checkbox" data-hd="${i}" ${h?'checked':''}>aberto</label><input type="time" data-ha="${i}" value="${fmtH(h?h[0]:8)}"><input type="time" data-hb="${i}" value="${fmtH(h?h[1]:18)}"></div>`; }).join('')}</div></div>
   <div class="card"><h2>Entrega</h2><div class="row"><label class="f">Bairros e taxas (um por linha)<textarea id="lb" style="min-height:140px" placeholder="Centro; 6&#10;Nova Parnamirim; 10">${esc(s.bairros.map(([b,t])=>`${b}; ${String(t).replace('.',',')}`).join('\n'))}</textarea><span class="h">Formato: Bairro; taxa</span></label>
-    <div class="row cols2"><label class="f">Pedido mínimo para entrega (R$)<input type="number" step="0.01" min="0" id="lm" value="${s.minimo||''}"></label><label class="f">Formas de pagamento<input type="text" id="lpg" value="${esc(s.pagamentos.join(', '))}"><span class="h">Separadas por vírgula.</span></label></div>
-    <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="lr" ${s.retirada?'checked':''}> Permitir retirada na loja (sem taxa)</label></div></div>
+    <div class="row cols2"><label class="f">Pedido mínimo para entrega (R$)<input type="number" step="0.01" min="0" id="lm" value="${s.minimo||''}"></label><label class="f">Formas de pagamento (na entrega/retirada)<input type="text" id="lpg" value="${esc(s.pagamentos.join(', '))}"><span class="h">Separadas por vírgula. Ex.: Pix na entrega, Cartão (maquininha), Dinheiro</span></label></div>
+    <div class="row cols2"><label class="f">Chave Pix da loja (opcional)<input type="text" id="lpx" value="${esc(s.pixChave||'')}" placeholder="CNPJ, telefone, e-mail ou chave aleatória"><span class="h">Aparece para quem escolher Pix, para adiantar o pagamento se quiser.</span></label><label class="f">Nome do titular da chave<input type="text" id="lpn" value="${esc(s.pixNome||'')}" placeholder="Ex.: Potengi Rações LTDA"></label></div>
+    <p class="help">O sistema não cobra nada online: o cliente paga na entrega ou na retirada. Pagamento online (Mercado Pago, Asaas) pode ser ligado depois.</p>
+    <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="lr" ${s.retirada?'checked':''}> Permitir retirada na loja (sem taxa)</label>
+    <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="lpa" ${s.pixAntecipado?'checked':''}> Aceitar <b>Pix antecipado</b>: o cliente paga pela chave acima e o pedido só vai para a cozinha quando você confirmar o pagamento</label></div></div>
   <div class="card"><h2>Promoção do dia</h2><p class="help" style="margin-top:-6px">O tema aparece no story <b>Hoje</b>. Os preços de cada dia ficam no próprio produto (aba Cardápio).</p><div class="row cols2" style="margin-top:8px">${DIAS.map((d,i)=>`<label class="f">${d}<input type="text" data-pt="${i}" value="${esc(s.promoTemas[i]||'')}"></label>`).join('')}</div></div>
   <div class="card"><h2>Curtidas</h2><div class="row cols3"><label class="f">Curtidas para ganhar desconto<input type="number" min="0" id="cm" value="${s.curtidas.meta}"><span class="h">0 desliga.</span></label><label class="f">Desconto por curtir (%)<input type="number" min="0" max="50" id="cd" value="${s.curtidas.desconto}"></label><label class="f">Desconto do campeão da semana (%)<input type="number" min="0" max="80" id="cc" value="${s.curtidas.campeao}"></label></div></div>
   <div class="card"><h2>Robô do direct</h2><div class="row cols2"><label class="f">Nome do robô<input type="text" id="rn" value="${esc(s.robo.nome)}"></label><label style="display:flex;gap:8px;align-items:center;align-self:end;height:40px"><input type="checkbox" id="ra" ${s.robo.ativo?'checked':''}> Mostrar o direct com o robô</label></div></div>
@@ -366,12 +625,14 @@ async function loja(){
   $('#save').onclick=async()=>{
     const horario={}; DIAS.forEach((_,i)=>{ const a=parseH($(`[data-ha="${i}"]`).value), b=parseH($(`[data-hb="${i}"]`).value); horario[i]=$(`[data-hd="${i}"]`).checked&&a!=null&&b!=null&&b>a?[a,b]:null; });
     const bairros=$('#lb').value.split('\n').map(l=>l.split(';')).filter(x=>x[0]&&x[0].trim()).map(([b,t])=>[b.trim(),+(String(t||'0').replace(',','.').trim())||0]);
-    const settings={subtitulo:$('#lsub').value.trim(),cidade:$('#lci').value.trim(),logo:$('#llogo').value,tema:{cor:$('#tc').value,destaque:$('#td').value,acento:$('#ta').value,fonte:$('#tf').value},
+    const mensagens={}; $$('[data-msg]').forEach(t=>mensagens[t.dataset.msg]=t.value.trim());
+    const settings={subtitulo:$('#lsub').value.trim(),cidade:$('#lci').value.trim(),logo:$('#llogo').value,endereco:$('#lend').value.trim(),telefone:$('#ltel').value.trim(),tempoPreparo:Math.max(0,+$('#ltp').value||0),tempoEntrega:Math.max(0,+$('#lte').value||0),mensagens,tema:{cor:$('#tc').value,destaque:$('#td').value,acento:$('#ta').value,fonte:$('#tf').value},
       whatsapp:$('#lw').value,atendente:$('#lat').value.trim(),enviarWhats:$('#lew').checked,horario,bairros,minimo:+$('#lm').value||0,retirada:$('#lr').checked,
-      pagamentos:$('#lpg').value.split(',').map(x=>x.trim()).filter(Boolean),promoTemas:DIAS.map((_,i)=>$(`[data-pt="${i}"]`).value.trim()),
+      pagamentos:$('#lpg').value.split(',').map(x=>x.trim()).filter(Boolean),pixAntecipado:$('#lpa').checked,pixChave:$('#lpx').value.trim(),pixNome:$('#lpn').value.trim(),promoTemas:DIAS.map((_,i)=>$(`[data-pt="${i}"]`).value.trim()),
       curtidas:{meta:Math.max(0,+$('#cm').value|0),desconto:Math.max(0,+$('#cd').value||0),campeao:Math.max(0,+$('#cc').value||0)},robo:{nome:$('#rn').value.trim()||'Atendente',ativo:$('#ra').checked}};
     if(settings.enviarWhats&&settings.whatsapp.replace(/\D/g,'').length<12) return toast('Coloque o WhatsApp com 55 + DDD');
     if(!settings.pagamentos.length) return toast('Coloque pelo menos uma forma de pagamento');
+    if(settings.pixAntecipado&&!settings.pixChave) return toast('Para o Pix antecipado, cadastre a chave Pix');
     try{ await api('/api/p/loja','PUT',{name:$('#ln').value.trim()||LOJA.name,settings}); toast('Loja salva'); loadLoja(); }catch(e){ toast(e.message); } };
 }
 
