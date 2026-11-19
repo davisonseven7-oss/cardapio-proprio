@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Minhas entregas · Huntix</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+<link rel="icon" href="/static/huntix-mark.svg" type="image/svg+xml">
+<style>
+/* Página do entregador: link secreto, sem login. Mostra as entregas dele e o botão "Entreguei". */
+:root{--bg:#F4F4F6;--card:#fff;--ink:#111218;--muted:#676B78;--line:#E5E6EB;--hx:#F26A21;--ok:#1F9D55;color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0D0E12;--card:#16171D;--ink:#ECEDF2;--muted:#9A9DAA;--line:#262832;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0D0E12;--card:#16171D;--ink:#ECEDF2;--muted:#9A9DAA;--line:#262832;color-scheme:dark}
+*{box-sizing:border-box}html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:15px/1.45 Inter,system-ui,sans-serif}
+.app{max-width:520px;margin:0 auto;padding:max(14px,env(safe-area-inset-top,0px)) 14px calc(24px + env(safe-area-inset-bottom,0px))}
+header{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+header img{width:40px;height:40px;border-radius:50%;object-fit:cover;background:#fff;border:1px solid var(--line)}
+header b{display:block;font-size:17px}header small{color:var(--muted)}
+.sum{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.sum div{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px 12px}
+.sum small{color:var(--muted);font-size:12px;font-weight:600}.sum b{display:block;font-size:22px}
+h2{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:16px 2px 8px}
+.o{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:10px;display:grid;gap:8px}
+.o.now{border-color:var(--hx);box-shadow:0 0 0 3px color-mix(in srgb,var(--hx) 18%,transparent)}
+.o .h{display:flex;justify-content:space-between;align-items:center}.o .h b{font-size:18px}
+.badge{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;padding:3px 8px;border-radius:99px;background:color-mix(in srgb,var(--hx) 15%,transparent);color:var(--hx)}
+.badge.ok{background:color-mix(in srgb,var(--ok) 15%,transparent);color:var(--ok)}
+.addr{font-weight:700;font-size:16px}.muted{color:var(--muted);font-size:13px}
+.cob{background:color-mix(in srgb,var(--hx) 10%,transparent);border-radius:10px;padding:8px 10px;font-weight:700}
+.cob.pago{background:color-mix(in srgb,var(--ok) 12%,transparent);color:var(--ok)}
+.btns{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.btn{height:46px;border-radius:12px;border:0;font:inherit;font-weight:800;display:flex;align-items:center;justify-content:center;text-decoration:none;cursor:pointer;background:#ECEDF1;color:#111}
+.btn.go{background:var(--hx);color:#fff;grid-column:1/-1;height:52px;font-size:16px}
+.btn.map{background:#1a73e8;color:#fff}.btn.wa{background:#1FA855;color:#fff}
+.empty{text-align:center;color:var(--muted);padding:30px 10px;background:var(--card);border-radius:16px;border:1px dashed var(--line)}
+.full{min-height:80vh;display:grid;place-items:center;text-align:center;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="app" id="app"><div class="full">Carregando…</div></div>
+<script>
+const TOKEN=location.pathname.split('/').filter(Boolean)[1];
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const BRL=v=>(+v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+const hh=iso=>new Date(iso).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+const tel=p=>{ let d=String(p||'').replace(/\D/g,''); if(d.length<=11) d='55'+d; return d; };
+async function load(){
+  let r; try{ r=await fetch('/api/e/'+TOKEN); }catch{ return; }
+  if(!r.ok){ $('#app').innerHTML='<div class="full"><div><b style="color:var(--ink)">Link inválido</b><br>Peça um novo link para a loja.</div></div>'; return; }
+  const d=await r.json(), ab=d.pedidos.filter(o=>o.status!=='concluido'), feitas=d.pedidos.filter(o=>o.status==='concluido');
+  document.title=`Entregas · ${d.loja}`;
+  const card=o=>{ const fim=o.status==='concluido'; return `<div class="o ${o.status==='saiu'?'now':''}">
+    <div class="h"><b>#${o.num}</b><span class="badge ${fim?'ok':''}">${fim?'Entregue':o.status==='saiu'?'Em rota':'Preparando'}</span></div>
+    <div><div class="addr">${esc(o.address)}</div><div class="muted">${esc(o.bairro)}${o.km!=null?` · ${String(o.km).replace('.',',')} km`:''}</div></div>
+    <div><b>${esc(o.customer)}</b> <span class="muted">· ${o.items.map(i=>i.qty+'× '+esc(i.nome)).join(', ')}</span></div>
+    ${o.notes?`<div class="muted">Obs.: ${esc(o.notes)}</div>`:''}
+    <div class="cob ${o.cobrar?'':'pago'}">${o.cobrar?`Cobrar ${BRL(o.cobrar)} · ${esc(o.payment)}`:'Já pago (Pix antecipado)'}</div>
+    ${fim?'':`<div class="btns"><a class="btn map" href="${esc(o.mapa)}" target="_blank" rel="noopener">Abrir mapa</a><a class="btn wa" href="https://wa.me/${tel(o.phone)}?text=${encodeURIComponent(`Oi ${String(o.customer).split(' ')[0]}! Aqui é o entregador da ${d.loja}, estou a caminho com seu pedido #${o.num}.`)}" target="_blank" rel="noopener">Avisar cliente</a>
+      <button class="btn go" data-ok="${o.id}">✓ Entreguei</button></div>`}</div>`; };
+  $('#app').innerHTML=`<header>${d.logo?`<img src="${esc(d.logo)}" alt="">`:''}<div><b>Olá, ${esc(d.nome.split(' ')[0])}!</b><small>${esc(d.loja)} · suas entregas</small></div></header>
+    <div class="sum"><div><small>Entregas feitas</small><b>${d.feitas}</b></div><div><small>A receber (36h)</small><b>${BRL(d.ganho)}</b></div></div>
+    <h2>Para entregar (${ab.length})</h2>${ab.map(card).join('')||'<div class="empty">Nenhuma entrega com você agora.<br>Esta página atualiza sozinha.</div>'}
+    ${feitas.length?`<h2>Entregues</h2>${feitas.map(card).join('')}`:''}`;
+}
+document.addEventListener('click',async e=>{ const b=e.target.closest('[data-ok]'); if(!b) return; if(!confirm('Confirmar que entregou este pedido?')) return; b.disabled=true; b.textContent='Salvando…';
+  const r=await fetch(`/api/e/${TOKEN}/entregue/${b.dataset.ok}`,{method:'POST'}); if(!r.ok){ alert('Não deu para salvar. Tente de novo.'); } load(); });
+load(); setInterval(()=>{ if(document.visibilityState==='visible') load(); },20000);
+</script>
+</body>
+</html>

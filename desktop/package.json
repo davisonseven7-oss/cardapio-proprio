@@ -1,0 +1,46 @@
+{
+  "name": "huntix-pedidos",
+  "productName": "Huntix Pedidos",
+  "version": "1.0.0",
+  "description": "Huntix Pedidos: painel da loja com impressão direta na impressora térmica",
+  "author": "Hunte Marketing",
+  "main": "main.js",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "icone": "electron gerar-icone.js",
+    "build": "electron-builder --win nsis --x64"
+  },
+  "devDependencies": {
+    "electron": "33.2.1",
+    "electron-builder": "25.1.8"
+  },
+  "build": {
+    "appId": "br.com.huntemarketing.huntix",
+    "productName": "Huntix Pedidos",
+    "artifactName": "Huntix-Pedidos-Setup.${ext}",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "icon.png",
+      "package.json"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "shortcutName": "Huntix Pedidos",
+      "runAfterFinish": true
+    }
+  },
+  "allowScripts": {
+    "electron@33.2.1": true
+  }
+}

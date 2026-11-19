@@ -123,6 +123,10 @@ main{max-width:1180px;margin:0 auto;padding:18px 16px 60px}
 .pc div.t{padding:8px 10px;font-size:12px;color:var(--muted)}
 .linkbox{display:flex;gap:8px;align-items:center;background:var(--soft);border-radius:10px;padding:8px 10px;font-size:13px;word-break:break-all}
 .help{font-size:12px;color:var(--muted);margin:4px 0 0}
+.ent{display:flex;gap:10px;align-items:center;border:1px solid var(--line);border-radius:12px;padding:10px 12px;cursor:pointer}
+.ent:has(input:checked){border-color:var(--hx);background:var(--hx-soft)}
+.ent b{display:block}.ent small{color:var(--muted);font-size:12px}
+.ent-tag{font-size:12px;font-weight:700;margin-top:3px}
 .fidp{margin-top:10px;background:var(--hx-soft);border-radius:10px;padding:8px 12px;font-size:13px}
 </style>
 </head>
@@ -142,6 +146,7 @@ main{max-width:1180px;margin:0 auto;padding:18px 16px 60px}
   <button data-tab="stories">Stories</button>
   <button data-tab="feed">Feed</button>
   <button data-tab="loja">Loja</button>
+  <button data-tab="entregadores">Entregadores</button>
   <button data-tab="marketing">Marketing</button>
   <button data-tab="pixel">Pixel Meta</button>
   <button data-tab="conta">Conta</button>
@@ -153,6 +158,7 @@ main{max-width:1180px;margin:0 auto;padding:18px 16px 60px}
 <script src="/static/icons.js"></script>
 <script>
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const DESK=window.huntixDesktop||null; /* presente quando o painel roda dentro do app Huntix Pedidos */
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const BRL=v=>(+v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 const DIAS=['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
@@ -191,10 +197,10 @@ let ME,LOJA,tab='pedidos';
 async function loadLoja(){ LOJA=await api('/api/p/loja'); $('#sName').textContent=LOJA.name; const url=location.origin+'/'+LOJA.slug; $('#sLink').textContent=url.replace(/^https?:\/\//,'')+(LOJA.status==='pausado'?' · pausado':''); $('#ver').href='/'+LOJA.slug; const lg=$('#sLogo'); lg.hidden=!LOJA.settings.logo; lg.src=LOJA.settings.logo||''; document.title=LOJA.name+' · Huntix'; }
 $('#sair').onclick=async()=>{ await fetch('/api/logout',{method:'POST'}); location.replace('/login'); };
 $('#tabs').onclick=e=>{ const b=e.target.closest('[data-tab]'); if(b) show(b.dataset.tab); };
-function show(t){ tab=t; location.hash=t; $$('#tabs [data-tab]').forEach(b=>b.classList.toggle('on',b.dataset.tab===t)); $('#main').innerHTML='<p class="muted">Carregando…</p>'; ({pedidos,clientes:clientesTab,marketing,relatorios,cardapio,stories,feed,loja,pixel,conta})[t]().catch(e=>{ $('#main').innerHTML=`<p class="err">${esc(e.message)}</p>`; }); }
+function show(t){ tab=t; location.hash=t; $$('#tabs [data-tab]').forEach(b=>b.classList.toggle('on',b.dataset.tab===t)); $('#main').innerHTML='<p class="muted">Carregando…</p>'; ({pedidos,clientes:clientesTab,entregadores,marketing,relatorios,cardapio,stories,feed,loja,pixel,conta})[t]().catch(e=>{ $('#main').innerHTML=`<p class="err">${esc(e.message)}</p>`; }); }
 let lastNew=null;
 async function pollNew(){ try{ const j=await api('/api/p/orders/novos'); $('#newDot').hidden=!j.n; $('#newDot').textContent=j.n; document.title=(j.n?`(${j.n}) `:'')+LOJA.name+' · Huntix';
-  if(lastNew!==null&&j.ultimo&&j.ultimo>lastNew){ toast('Pedido novo!'); beep(); const prev=lastNew;
+  if(lastNew!==null&&j.ultimo&&j.ultimo>lastNew){ toast('Pedido novo!'); beep(); const prev=lastNew; if(DESK) DESK.notify('Pedido novo · '+LOJA.name, j.n>1?`${j.n} pedidos esperando`:'Toque para abrir o painel');
     if(pref('imprimirNovo',false)){ try{ const ns=(await api('/api/p/orders?ativos=1')).filter(o=>o.id>prev&&o.status==='novo').sort((x,y)=>x.id-y.id); for(const o of ns){ printOrder(o); await new Promise(r=>setTimeout(r,1500)); } }catch{} }
     if(tab==='pedidos') pedidos(); } lastNew=j.ultimo||0; }catch{} }
 function beep(){ try{ const a=new AudioContext(),o=a.createOscillator(),g=a.createGain(); o.connect(g); g.connect(a.destination); o.frequency.value=880; g.gain.value=.08; o.start(); o.stop(a.currentTime+.25); }catch{} }
@@ -223,7 +229,7 @@ async function pedidos(){
   <div class="bar ptools">
     <label class="tg"><input type="checkbox" id="pAv" ${avisar?'checked':''}> Avisar o cliente no WhatsApp ao mudar o status</label>
     <label class="tg"><input type="checkbox" id="pSom" ${som?'checked':''}> Alarme de pedido novo</label>
-    <button class="btn ghost sm" id="pPrn">🖨 Impressora${pref('imprimirNovo',false)||pref('imprimir',false)?' · automática':''}</button>
+    <button class="btn ghost sm" id="pPrn">🖨 Impressora${pref('imprimirNovo',false)||pref('imprimir',false)?' · automática':''}${DESK?' · app':''}</button>
     <span class="muted" style="margin-left:auto;font-size:12px">Tempo estimado: preparo ${s.tempoPreparo||30} min · entrega ${s.tempoEntrega||40} min <a href="#loja" data-goloja>alterar</a></span></div>
   <div id="obody"></div>`;
   $('#ovw').onclick=e=>{ const b=e.target.closest('[data-v]'); if(b){ OV.view=b.dataset.v; pedidos(); } };
@@ -241,7 +247,7 @@ function cardHtml(o){
   const nx=nextOf(o), late=['novo','preparando','saiu'].includes(o.status)&&mins(o)>=((LOJA.settings.tempoPreparo||30)+(isRet(o)?0:(LOJA.settings.tempoEntrega||40)));
   return `<div class="ord ${o.status}" draggable="${['concluido','cancelado'].includes(o.status)?'false':'true'}" data-id="${o.id}">
     <div class="h"><div><b>#${o.num}</b> <span class="badge ${isRet(o)?'':'hx'}">${isRet(o)?'Retirada':'Entrega'}</span></div><span class="tm ${late?'late':''}" title="Pedido às ${hhmm(o.created_at)}">⏱ ${elapsed(o)}</span></div>
-    <div><b style="font-size:14px">${esc(o.customer)}</b> ${cliBadge(o)}<div class="muted" style="font-size:12px">${hhmm(o.created_at)} · ${esc(o.payment)}${isRet(o)?'':' · '+esc(o.bairro)}</div></div>
+    <div><b style="font-size:14px">${esc(o.customer)}</b> ${cliBadge(o)}<div class="muted" style="font-size:12px">${hhmm(o.created_at)} · ${esc(o.payment)}${isRet(o)?'':' · '+esc(o.bairro)}</div>${o.courier_nome?`<div class="ent-tag">🛵 ${esc(o.courier_nome)}</div>`:''}</div>
     <ul>${o.items.slice(0,4).map(i=>`<li>${i.qty}× ${esc(i.nome)}${i.opts.length?` <small>(${esc(i.opts.map(x=>x.split(': ')[1]||x).join(', '))})</small>`:''}</li>`).join('')}${o.items.length>4?`<li class="muted">+ ${o.items.length-4} item(ns)</li>`:''}</ul>
     ${o.notes?`<div class="obs">Obs.: ${esc(o.notes)}</div>`:''}
     <div class="tt"><span>Total</span><span class="num">${BRL(o.total)}</span></div>
@@ -268,7 +274,7 @@ function drawOrders(){
     $('#oSt').onclick=e=>{ const b=e.target.closest('[data-st]'); if(b){OV.status=b.dataset.st;pedidos()} };
   }
   box.onclick=e=>{
-    const mv=e.target.closest('[data-mv]'); if(mv) return moveOrder(+mv.dataset.mv,mv.dataset.to);
+    const mv=e.target.closest('[data-mv]'); if(mv){ const oo=ORD.find(x=>x.id===+mv.dataset.mv); if(mv.dataset.to==='saiu'&&oo&&!isRet(oo)) return saidaEntrega(oo.id); return moveOrder(+mv.dataset.mv,mv.dataset.to); }
     const c=e.target.closest('[data-cancel]'); if(c) return cancelOrder(+c.dataset.cancel);
     const d=e.target.closest('[data-det]'); if(d) return orderDetail(+d.dataset.det);
     const p=e.target.closest('[data-print]'); if(p) return printOrder(ORD.find(o=>o.id===+p.dataset.print));
@@ -308,7 +314,7 @@ function orderDetail(id){
   modal(`<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px"><div><h2 style="margin:0">Pedido #${o.num}</h2><div class="muted">${new Date(o.created_at).toLocaleString('pt-BR')} · há ${elapsed(o)}</div></div><span class="badge ${ST[o.status][1]}">${stLabel(o)}</span></div>
     <div class="steps">${o.status==='cancelado'?`<div class="stp bad"><i></i><span>Cancelado ${when('cancelado')}</span></div>`:steps.map(([st,n])=>`<div class="stp ${when(st)?'done':''}"><i></i><span>${n}<small>${when(st)}</small></span></div>`).join('')}</div>
     <div class="row cols2" style="margin-top:14px"><div><div class="muted" style="font-size:12px;font-weight:600">CLIENTE</div><b>${esc(o.customer)}</b> ${cliBadge(o)}<br><a href="${waUrl(o.phone,'')}" target="_blank" rel="noopener">${esc(o.phone)}</a><div class="muted" style="font-size:12px;margin-top:4px">${o.cli_pedidos} pedido(s) · ${BRL(o.cli_total)} no total · desde ${fmtD(o.cli_desde)}</div></div>
-      <div><div class="muted" style="font-size:12px;font-weight:600">${isRet(o)?'RETIRADA':'ENTREGA'}</div>${isRet(o)?'Retirar na loja':`${esc(o.address)}<br>${esc(o.bairro)}`}</div></div>
+      <div><div class="muted" style="font-size:12px;font-weight:600">${isRet(o)?'RETIRADA':'ENTREGA'}</div>${isRet(o)?'Retirar na loja':`${esc(o.address)}<br>${esc(o.bairro)}`}${!isRet(o)?`<div style="margin-top:6px;font-size:13px">🛵 ${o.courier_nome?`<b>${esc(o.courier_nome)}</b>`:'<span class="muted">sem entregador</span>'}${['preparando','saiu'].includes(o.status)?` · <a href="#" id="dent" onclick="return false">${o.courier_nome?'trocar':'escolher'}</a>`:''}</div>`:''}</div></div>
     <table style="margin-top:12px">${o.items.map(i=>`<tr><td>${i.qty}×</td><td>${esc(i.nome)}${i.opts.length?`<br><small class="muted">${esc(i.opts.join(' · '))}</small>`:''}</td><td class="num" style="text-align:right">${BRL(i.total)}</td></tr>`).join('')}
       <tr><td></td><td class="muted">Subtotal</td><td class="num" style="text-align:right">${BRL(o.subtotal)}</td></tr>${(o.descontos&&o.descontos.length?o.descontos:o.discount?[{label:'Desconto',valor:o.discount}]:[]).map(d=>`<tr><td></td><td class="muted">${esc(d.label)}</td><td class="num" style="text-align:right">− ${BRL(d.valor)}</td></tr>`).join('')}
       <tr><td></td><td class="muted">Entrega${o.km!=null?` (${String(o.km).replace('.',',')} km)`:''}</td><td class="num" style="text-align:right">${o.fee?BRL(o.fee):'grátis'}</td></tr><tr><td></td><td><b>Total · ${esc(o.payment)}</b></td><td class="num" style="text-align:right"><b>${BRL(o.total)}</b></td></tr></table>
@@ -318,7 +324,8 @@ function orderDetail(id){
   $('#cpl').onclick=()=>navigator.clipboard.writeText(link).then(()=>toast('Link copiado'));
   $('#dp').onclick=()=>printOrder(o);
   $('#dc')&&($('#dc').onclick=()=>{ closeModal(); cancelOrder(id); });
-  $('#dn')&&($('#dn').onclick=()=>{ closeModal(); moveOrder(id,nx[0]); });
+  $('#dn')&&($('#dn').onclick=()=>{ closeModal(); if(nx[0]==='saiu'&&!isRet(o)) saidaEntrega(id); else moveOrder(id,nx[0]); });
+  $('#dent')&&($('#dent').onclick=()=>{ closeModal(); saidaEntrega(id); });
 }
 /* ---------- impressão (térmica 58/80 mm ou comum) ----------
    Usa um quadro escondido e o print() do navegador. Com o Chrome aberto pelo atalho
@@ -332,7 +339,7 @@ function receiptHtml(o){
   <div class="c">Pedido <b style="font-size:1.6em">#${o.num}</b></div>
   <div class="c">${new Date(o.created_at).toLocaleString('pt-BR')}${via?' · '+via:''}</div><hr>
   <div class="c"><b>${isRet(o)?'*** RETIRADA NA LOJA ***':'*** ENTREGA ***'}</b></div>
-  <div>Cliente: <b>${esc(o.customer)}</b></div><div>Tel.: ${esc(fmtTel(o.phone))}</div>${o.ordem?`<div><b>${o.ordem===1?'*** CLIENTE NOVO ***':o.ordem+'º pedido do cliente'}</b></div>`:''}${isRet(o)?'':`<hr><div><b>ENDEREÇO DE ENTREGA</b></div><div>${esc(o.address)}</div><div>Bairro: <b>${esc(o.bairro)}</b></div>`}<hr><div><b>ITENS (${o.items.reduce((a,i)=>a+i.qty,0)})</b></div>
+  <div>Cliente: <b>${esc(o.customer)}</b></div><div>Tel.: ${esc(fmtTel(o.phone))}</div>${o.ordem?`<div><b>${o.ordem===1?'*** CLIENTE NOVO ***':o.ordem+'º pedido do cliente'}</b></div>`:''}${isRet(o)?'':`<hr><div><b>ENDEREÇO DE ENTREGA</b></div><div>${esc(o.address)}</div><div>Bairro: <b>${esc(o.bairro)}</b></div>${o.courier_nome?`<div>Entregador: <b>${esc(o.courier_nome)}</b></div>`:''}`}<hr><div><b>ITENS (${o.items.reduce((a,i)=>a+i.qty,0)})</b></div>
   ${o.items.map(i=>`<div class="it"><div class="r"><span><b>${i.qty}x</b> ${esc(i.nome)}</span><span>${BRL(i.total)}</span></div>${i.desc?`<div class="op">${esc(i.desc)}</div>`:''}${i.opts.length?`<div class="op">» ${esc(i.opts.join(' | '))}</div>`:''}${i.qty>1&&i.unit?`<div class="op">${i.qty} x ${BRL(i.unit)}</div>`:''}</div>`).join('')}<hr>
   <div class="r"><span>Subtotal</span><span>${BRL(o.subtotal)}</span></div>${(o.descontos&&o.descontos.length?o.descontos:o.discount?[{label:'Desconto',valor:o.discount}]:[]).map(d=>`<div class="r"><span>${esc(d.label)}</span><span>-${BRL(d.valor)}</span></div>`).join('')}
   <div class="r"><span>Entrega${o.km!=null?` (${String(o.km).replace('.',',')} km)`:''}</span><span>${o.fee?BRL(o.fee):'grátis'}</span></div>
@@ -347,7 +354,8 @@ function receiptHtml(o){
   </style>${names.slice(0,vias).map(one).join('')}`;
 }
 function printOrder(o){
-  if(!o) return; let fr=$('#prnFrame'); if(fr) fr.remove();
+  if(!o) return;
+  if(DESK){ DESK.print(receiptHtml(o)).then(r=>{ if(!r.ok) toast('Impressora: '+r.erro); }).catch(()=>toast('Não deu para imprimir')); return; } let fr=$('#prnFrame'); if(fr) fr.remove();
   fr=document.createElement('iframe'); fr.id='prnFrame'; fr.style.cssText='position:fixed;width:0;height:0;border:0;right:0;bottom:0'; document.body.appendChild(fr);
   const d=fr.contentWindow.document; d.open(); d.write(receiptHtml(o)); d.close();
   setTimeout(()=>{ try{ fr.contentWindow.focus(); fr.contentWindow.print(); }catch{ toast('Não deu para imprimir'); } },250);
@@ -366,6 +374,9 @@ function printerSetup(){
     <li>Para imprimir <b>sem a janela de confirmação</b>: crie um atalho do Chrome na área de trabalho, clique com o botão direito → Propriedades, e no fim de <b>Destino</b> acrescente <code>--kiosk-printing</code>. Feche todos os Chrome e abra o painel por esse atalho.</li>
     <li>Clique em <b>Imprimir teste</b> abaixo.</li></ol></div></div>
   <div class="foot"><button class="btn sec" id="pt">Imprimir teste</button><button class="btn sec" onclick="closeModal()">Fechar</button><button class="btn" id="ok">Salvar</button></div>`);
+  if(DESK){ const box=document.querySelector('#mbox .card'); if(box) box.innerHTML='<b>✓ App Huntix Pedidos conectado</b><p class="help" style="margin:6px 0 0">A comanda vai direto para a impressora escolhida, sem janela de confirmação. Mesmo minimizado, o app avisa e imprime.</p><label class="f" style="margin-top:10px">Impressora<select id="pdev"><option value="">Padrão do Windows</option></select></label>';
+    DESK.printers().then(p=>{ const s=$('#pdev'); if(!s) return; p.lista.forEach(x=>{ const o=document.createElement('option'); o.value=x.nome; o.textContent=x.nome+(x.padrao?' (padrão)':''); s.appendChild(o); }); s.value=p.atual; s.onchange=()=>DESK.setPrinter(s.value).then(()=>toast('Impressora escolhida')); }); }
+  else { const box=document.querySelector('#mbox .card'); if(box) box.insertAdjacentHTML('afterbegin','<div style="background:var(--hx-soft);border-radius:10px;padding:10px 12px;margin-bottom:10px"><b>Recomendado: app Huntix Pedidos para Windows</b><br>Imprime direto na térmica, avisa pedido novo e abre junto com o computador. <a class="btn sm" href="/download" style="margin-top:8px">⬇ Baixar o app</a></div><b style="font-size:12px;color:var(--muted)">OU PELO CHROME:</b>'); }
   $('#pp').value=prnGet('papel','80'); $('#pv').value=prnGet('vias','1');
   const save=()=>{ prnSet('papel',$('#pp').value); prnSet('vias',$('#pv').value); setPref('imprimirNovo',$('#pn').checked); setPref('imprimir',$('#pa').checked); };
   $('#pt').onclick=()=>{ save(); printOrder({num:0,created_at:new Date().toISOString(),customer:'Teste de impressão',phone:'84 99999-0000',bairro:'Centro',address:'Rua Exemplo, 123',payment:'Pix',notes:'Sem cebola',items:[{qty:2,nome:'Produto de exemplo',opts:['Tamanho: G'],total:39.8},{qty:1,nome:'Outro produto',opts:[],total:12}],subtotal:51.8,discount:0,fee:6,total:57.8}); };
@@ -471,6 +482,69 @@ async function relatorios(){
   $('#rDe')&&($('#rDe').onchange=e=>{RF.de=e.target.value;relatorios()}); $('#rAte')&&($('#rAte').onchange=e=>{RF.ate=e.target.value;relatorios()});
 }
 let RF={de:today(),ate:today()};
+
+/* ---------------- entregadores ---------------- */
+let ENT=[];
+async function loadEnt(){ try{ ENT=await api('/api/p/entregadores'); }catch{ ENT=[]; } return ENT; }
+/* "Saiu p/ entrega": escolhe quem leva, avisa o cliente e manda a rota ao entregador */
+async function saidaEntrega(id){
+  const o=ORD.find(x=>x.id===id); await loadEnt(); const at=ENT.filter(c=>c.ativo);
+  if(!at.length) return moveOrder(id,'saiu');
+  modal(`<h2>Saiu para entrega · #${o.num}</h2><p class="muted" style="margin-top:-8px">${esc(o.customer)} · ${esc(o.bairro)}${o.km!=null?` · ${String(o.km).replace('.',',')} km`:''} · taxa ${BRL(o.fee)}</p>
+    <div class="row" id="elist">${at.map(c=>`<label class="ent"><input type="radio" name="ent" value="${c.id}" ${c.id===o.courier_id?'checked':''}><span><b>${esc(c.name)}</b><small>${esc(c.veiculo||'')} · recebe ${c.pagamento==='fixo'?BRL(c.valor)+' por entrega':'a taxa ('+BRL(o.fee)+')'}</small></span></label>`).join('')}
+      <label class="ent"><input type="radio" name="ent" value="" ${o.courier_id?'':'checked'}><span><b>Sem entregador</b><small>a própria loja leva</small></span></label></div>
+    <div class="foot"><button class="btn sec" onclick="closeModal()">Cancelar</button><button class="btn" id="ok">Confirmar saída →</button></div>`);
+  $('#ok').onclick=async()=>{ const cid=(document.querySelector('[name=ent]:checked')||{}).value||null;
+    const avisar=pref('avisar',true)&&o.phone, win=avisar?window.open('about:blank','_blank'):null;
+    try{ const a=await api(`/api/p/orders/${id}/entregador`,'PUT',{courier_id:cid}); const j=await api('/api/p/orders/'+id,'PUT',{status:'saiu'});
+      if(win){ if(j.aviso) win.location.href=waUrl(o.phone,j.aviso); else win.close(); }
+      const c=ENT.find(x=>String(x.id)===String(cid));
+      if(a.whats&&c){ modal(`<h2>Mandar a rota para ${esc(c.name)}?</h2><p class="muted" style="margin-top:-8px">Abre o WhatsApp dele com endereço, mapa, telefone do cliente, valor a cobrar e o link das entregas.</p>
+          <div class="foot"><button class="btn sec" onclick="closeModal()">Agora não</button><a class="btn" id="rota" href="${esc(a.whats)}" target="_blank" rel="noopener">📲 Mandar rota no WhatsApp</a></div>`);
+        $('#rota').onclick=()=>setTimeout(closeModal,300); }
+      else closeModal();
+      toast(`#${o.num}: saiu para entrega${c?' com '+c.name:''}`);
+    }catch(e){ win&&win.close(); toast(e.message); }
+    pollNew(); if(tab==='pedidos') pedidos(); };
+}
+async function entregadores(){
+  await loadEnt(); const t=today();
+  $('#main').innerHTML=`<div class="bar"><h1>Entregadores</h1><button class="btn sm" id="nent">+ Entregador</button></div>
+  <div class="grid"><div class="card"><h2>Equipe</h2>
+    ${ENT.length?`<div class="tw"><table><tr><th>Entregador</th><th>Recebe</th><th>Link das entregas</th><th>Ativo</th><th></th></tr>${ENT.map(c=>`<tr>
+      <td><b>${esc(c.name)}</b><br><small class="muted">${esc(c.veiculo||'')}${c.phone?' · '+esc(fmtTel(c.phone)):''}</small></td>
+      <td>${c.pagamento==='fixo'?BRL(c.valor)+' por entrega':'A taxa de entrega'}</td>
+      <td><button class="btn ghost sm" data-elink="${esc(c.token)}">Copiar link</button>${c.phone?` <a class="btn ghost sm" target="_blank" rel="noopener" href="${waUrl(c.phone,`Oi ${c.name.split(' ')[0]}! Este é o seu link de entregas da ${LOJA.name}: ${location.origin}/e/${c.token}`)}">Enviar no WhatsApp</a>`:''}</td>
+      <td><label class="sw"><input type="checkbox" data-eat="${c.id}" ${c.ativo?'checked':''} aria-label="Ativo"><span></span></label></td>
+      <td><button class="btn sec sm" data-eed="${c.id}">Editar</button></td></tr>`).join('')}</table></div>`
+    :'<p class="muted">Cadastre quem faz as entregas. Cada um recebe um link no celular com as entregas dele e o botão "Entreguei".</p>'}</div>
+  <div class="card"><div class="bar" style="margin-bottom:8px"><h2 style="margin:0 auto 0 0">Acerto</h2><input type="date" id="ade" value="${t.slice(0,8)}01" style="width:auto"><span class="muted">até</span><input type="date" id="aat" value="${t}" style="width:auto"></div><div id="acerto"><p class="muted">Carregando…</p></div></div></div>`;
+  $('#nent').onclick=()=>editEnt({pagamento:'taxa',ativo:1,veiculo:'Moto'});
+  $$('[data-eed]').forEach(b=>b.onclick=()=>editEnt(ENT.find(c=>c.id===+b.dataset.eed)));
+  $$('[data-eat]').forEach(i=>i.onchange=async()=>{ await api('/api/p/entregadores/'+i.dataset.eat,'PUT',{ativo:i.checked}); toast(i.checked?'Entregador ativo':'Entregador desativado'); });
+  $$('[data-elink]').forEach(b=>b.onclick=()=>navigator.clipboard.writeText(`${location.origin}/e/${b.dataset.elink}`).then(()=>toast('Link copiado')));
+  const ac=async()=>{ const r=await api(`/api/p/entregadores/acerto?de=${$('#ade').value}&ate=${$('#aat').value}`);
+    $('#acerto').innerHTML=r.entregadores.length?`<div class="tw"><table><tr><th>Entregador</th><th>Entregas</th><th>Km</th><th>Total no período</th><th>A pagar</th><th></th></tr>${r.entregadores.map(c=>`<tr><td><b>${esc(c.name)}</b></td><td class="num">${c.entregas}</td><td class="num">${c.km?String(c.km).replace('.',','):'—'}</td><td class="num">${BRL(c.total)}</td><td class="num"><b>${BRL(c.aPagar)}</b></td>
+      <td>${c.aPagar>0?`<button class="btn sm" data-pg="${c.id}">Marcar como pago</button>`:'<span class="badge ok">Pago</span>'}</td></tr>`).join('')}</table></div><p class="help">Conta só pedidos <b>concluídos</b> com entregador. "Marcar como pago" registra a data do acerto nesses pedidos.</p>`
+      :'<p class="muted">Nenhuma entrega concluída com entregador nesse período.</p>';
+    $$('[data-pg]').forEach(b=>b.onclick=async()=>{ const c=r.entregadores.find(x=>x.id===+b.dataset.pg); if(!confirm(`Marcar ${BRL(c.aPagar)} como pago para ${c.name}?`)) return; await api(`/api/p/entregadores/${c.id}/pagar`,'POST',{pedidos:c.pendentes}); toast('Acerto registrado'); ac(); }); };
+  $('#ade').onchange=ac; $('#aat').onchange=ac; ac();
+}
+function editEnt(c){
+  modal(`<h2>${c.id?'Editar entregador':'Novo entregador'}</h2><div class="row">
+    <div class="row cols2"><label class="f">Nome<input type="text" id="en" value="${esc(c.name||'')}"></label><label class="f">WhatsApp<input type="tel" id="ep" value="${esc(c.phone||'')}" placeholder="84999999999"></label></div>
+    <div class="row cols3"><label class="f">Veículo<select id="ev">${['Moto','Bicicleta','Carro','A pé'].map(v=>`<option ${c.veiculo===v?'selected':''}>${v}</option>`).join('')}</select></label>
+      <label class="f">Como recebe<select id="eg"><option value="taxa" ${c.pagamento!=='fixo'?'selected':''}>A taxa de entrega do pedido</option><option value="fixo" ${c.pagamento==='fixo'?'selected':''}>Valor fixo por entrega</option></select></label>
+      <label class="f" id="evl">Valor por entrega (R$)<input type="number" min="0" step="0.5" id="ex" value="${c.valor||''}"></label></div>
+    <label class="tg"><input type="checkbox" id="ea" ${c.ativo!==0?'checked':''}> Ativo (aparece na hora de despachar)</label>
+    ${c.id?`<label class="tg"><input type="checkbox" id="enl"> Gerar link novo (o antigo para de funcionar)</label>`:''}</div><div class="err" id="me"></div>
+    <div class="foot">${c.id?'<button class="btn danger" id="del">Excluir</button>':''}<button class="btn sec" onclick="closeModal()">Cancelar</button><button class="btn" id="ok">Salvar</button></div>`);
+  const tv=()=>$('#evl').hidden=$('#eg').value!=='fixo'; $('#eg').onchange=tv; tv();
+  $('#ok').onclick=async()=>{ const b={name:$('#en').value,phone:$('#ep').value,veiculo:$('#ev').value,pagamento:$('#eg').value,valor:+$('#ex').value||0,ativo:$('#ea').checked,novoLink:$('#enl')?.checked};
+    if(!b.name.trim()) return $('#me').textContent='Coloque o nome';
+    try{ await api('/api/p/entregadores'+(c.id?'/'+c.id:''),c.id?'PUT':'POST',b); closeModal(); toast('Entregador salvo'); entregadores(); }catch(e){ $('#me').textContent=e.message; } };
+  $('#del')&&($('#del').onclick=async()=>{ if(!confirm(`Excluir ${c.name}? O histórico de entregas fica nos pedidos.`)) return; await api('/api/p/entregadores/'+c.id,'DELETE'); closeModal(); entregadores(); });
+}
 
 /* ---------------- marketing: cupons e fidelidade ---------------- */
 const CTIPO={percent:'% de desconto',valor:'R$ de desconto',frete:'Frete grátis'};

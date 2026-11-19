@@ -146,6 +146,19 @@ addCol('orders', 'cashback_usado', 'REAL DEFAULT 0');
 addCol('orders', 'km', 'REAL');
 addCol('orders', 'cep', "TEXT DEFAULT ''");
 
+/* ---- Fase 2: entregadores ---- */
+db.exec(`CREATE TABLE IF NOT EXISTS couriers(
+  id INTEGER PRIMARY KEY,
+  tenant_id INTEGER NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  name TEXT NOT NULL, phone TEXT DEFAULT '', veiculo TEXT DEFAULT 'Moto',
+  pagamento TEXT DEFAULT 'taxa',          -- taxa (recebe a taxa de entrega) | fixo (valor por entrega)
+  valor REAL DEFAULT 0, ativo INTEGER DEFAULT 1, token TEXT UNIQUE NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+)`);
+addCol('orders', 'courier_id', 'INTEGER');
+addCol('orders', 'courier_valor', 'REAL DEFAULT 0');
+addCol('orders', 'courier_pago', 'TEXT');         // data do acerto
+
 /* ---- backup: uma cópia por dia (guarda 14) ---- */
 const BK = path.join(DATA_DIR, 'backups'); fs.mkdirSync(BK, { recursive: true });
 function backupNow(file) { const f = file || path.join(BK, `cardapio-${new Date().toISOString().slice(0, 10)}.db`); try { fs.unlinkSync(f); } catch {} db.exec(`VACUUM INTO '${f.replace(/'/g, "''")}'`); return f; }

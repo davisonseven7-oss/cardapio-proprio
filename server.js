@@ -17,7 +17,7 @@ const { seed } = require('./seed');
 const PORT = +process.env.PORT || 3000;
 const PROD = process.env.NODE_ENV === 'production' || !!process.env.RAILWAY_ENVIRONMENT;
 const TZ = -3; // horário de Brasília/Nordeste (sem horário de verão)
-const RESERVED = new Set(['login', 'logout', 'admin', 'painel', 'api', 'static', 'img', 'u', 'favicon.ico', 'robots.txt', 'prototipos', 'pausados']);
+const RESERVED = new Set(['e', 'download', 'login', 'logout', 'admin', 'painel', 'api', 'static', 'img', 'u', 'favicon.ico', 'robots.txt', 'prototipos', 'pausados']);
 
 /* ---------------- utilidades ---------------- */
 const nowLocal = () => new Date(Date.now() + TZ * 36e5);              // "relógio" local em campos UTC
@@ -516,7 +516,8 @@ app.get('/api/p/orders', P, (req, res) => {
       (SELECT COUNT(*) FROM orders x WHERE x.tenant_id=o.tenant_id AND x.phone=o.phone AND x.status!='cancelado' AND x.id<=o.id) ordem,
       (SELECT COUNT(*) FROM orders x WHERE x.tenant_id=o.tenant_id AND x.phone=o.phone AND x.status!='cancelado') cli_pedidos,
       (SELECT COALESCE(SUM(total),0) FROM orders x WHERE x.tenant_id=o.tenant_id AND x.phone=o.phone AND x.status!='cancelado') cli_total,
-      (SELECT MIN(created_at) FROM orders x WHERE x.tenant_id=o.tenant_id AND x.phone=o.phone) cli_desde
+      (SELECT MIN(created_at) FROM orders x WHERE x.tenant_id=o.tenant_id AND x.phone=o.phone) cli_desde,
+      (SELECT name FROM couriers c WHERE c.id=o.courier_id) courier_nome
     FROM orders o WHERE o.tenant_id=? AND ${when.replace(/status|created_at/g, m => 'o.' + m)} ${st ? 'AND o.status=?' : ''} ORDER BY o.created_at DESC LIMIT 500`).all(req.tid, r.a, r.b, ...(st ? [st] : []));
   res.json(rows.map(o => ({ ...o, items: J(o.items, []), log: J(o.log, []), descontos: J(o.descontos, []) })));
 });
@@ -547,6 +548,73 @@ app.get('/api/p/orders.csv', P, (req, res) => {
     ...rows.map(o => { const d = new Date(new Date(o.created_at).getTime() + TZ * 36e5).toISOString(); return [o.num, d.slice(0, 10), d.slice(11, 16), o.status, q(o.customer), o.phone, q(o.bairro), q(o.address), o.payment, q(J(o.items, []).map(i => `${i.qty}x ${i.nome}${i.opts.length ? ' (' + i.opts.join(', ') + ')' : ''}`).join(' | ')), n(o.subtotal), n(o.discount), n(o.fee), n(o.total)].join(';'); })].join('\r\n');
   res.setHeader('Content-Type', 'text/csv; charset=utf-8'); res.setHeader('Content-Disposition', `attachment; filename="vendas-${req.tenant.slug}-${r.de}-a-${r.ate}.csv"`); res.send('﻿' + csv);
 });
+
+/* ---------------- entregadores ---------------- */
+const courierPay = (c, o) => !c ? 0 : c.pagamento === 'fixo' ? round2(+c.valor || 0) : round2(+o.fee || 0);
+const mapsLink = o => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${String(o.address || '').replace(/\s*\(Ref\.:.*?\)/, '').replace(/ · CEP /, ', ')}, ${o.bairro || ''}`)}`;
+const fmtFone = v => { let d = String(v || '').replace(/\D/g, ''); if (d.length > 11 && d.startsWith('55')) d = d.slice(2); return d.length === 11 ? `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}` : d; };
+function courierMessage(t, c, o, req) {
+  const items = J(o.items, []).map(i => `${i.qty}× ${i.nome}`).join(', ');
+  const cobrar = /antecipado/i.test(o.payment) ? 'JÁ PAGO (Pix antecipado)' : `${brlS(o.total)} · ${o.payment}`;
+  return `🛵 *Entrega #${o.num} · ${t.name}*\n\nCliente: ${o.customer}\nWhatsApp: ${fmtFone(o.phone)}\nEndereço: ${o.address}\nBairro: ${o.bairro}\nMapa: ${mapsLink(o)}\n\nItens: ${items}\nCobrar: ${cobrar}${o.notes ? `\nObs.: ${o.notes}` : ''}\n\nSuas entregas: ${baseUrl(req)}/e/${c.token}`;
+}
+const CBODY = b => { const o = {}; if ('name' in b) o.name = String(b.name || '').trim().slice(0, 60); if ('phone' in b) o.phone = phoneNorm(b.phone); if ('veiculo' in b) o.veiculo = String(b.veiculo || '').slice(0, 30);
+  if ('pagamento' in b) o.pagamento = b.pagamento === 'fixo' ? 'fixo' : 'taxa'; if ('valor' in b) o.valor = Math.max(0, +b.valor || 0); if ('ativo' in b) o.ativo = b.ativo ? 1 : 0; return o; };
+app.get('/api/p/entregadores', P, (req, res) => res.json(db.prepare('SELECT * FROM couriers WHERE tenant_id=? ORDER BY ativo DESC, name').all(req.tid)));
+app.post('/api/p/entregadores', P, (req, res) => {
+  const o = CBODY(req.body || {}); if (!o.name) return res.status(400).json({ erro: 'Coloque o nome' });
+  const ks = Object.keys(o); const r = db.prepare(`INSERT INTO couriers(tenant_id,token${ks.map(k => ',' + k).join('')}) VALUES(?,?${ks.map(() => ',?').join('')})`).run(req.tid, crypto.randomBytes(9).toString('base64url'), ...ks.map(k => o[k]));
+  res.json({ id: r.lastInsertRowid });
+});
+app.put('/api/p/entregadores/:id', P, (req, res) => {
+  const c = db.prepare('SELECT * FROM couriers WHERE id=? AND tenant_id=?').get(+req.params.id, req.tid); if (!c) return res.status(404).end();
+  const o = CBODY(req.body || {}); if ((req.body || {}).novoLink) o.token = crypto.randomBytes(9).toString('base64url');
+  const ks = Object.keys(o); if (ks.length) db.prepare(`UPDATE couriers SET ${ks.map(k => k + '=?').join(',')} WHERE id=?`).run(...ks.map(k => o[k]), c.id); res.json({ ok: true });
+});
+app.delete('/api/p/entregadores/:id', P, (req, res) => { db.prepare('UPDATE orders SET courier_id=NULL WHERE courier_id=? AND tenant_id=? AND status IN (\'novo\',\'preparando\',\'saiu\',\'pix\')').run(+req.params.id, req.tid); db.prepare('DELETE FROM couriers WHERE id=? AND tenant_id=?').run(+req.params.id, req.tid); res.json({ ok: true }); });
+/* atribuir entregador ao pedido (e devolver a mensagem para o WhatsApp dele) */
+app.put('/api/p/orders/:id/entregador', P, (req, res) => {
+  const o = db.prepare('SELECT * FROM orders WHERE id=? AND tenant_id=?').get(+req.params.id, req.tid); if (!o) return res.status(404).end();
+  const cid = (req.body || {}).courier_id ? +req.body.courier_id : null;
+  const c = cid ? db.prepare('SELECT * FROM couriers WHERE id=? AND tenant_id=?').get(cid, req.tid) : null; if (cid && !c) return res.status(400).json({ erro: 'Entregador não encontrado' });
+  db.prepare('UPDATE orders SET courier_id=?, courier_valor=? WHERE id=?').run(c ? c.id : null, courierPay(c, o), o.id);
+  res.json({ ok: true, whats: c && c.phone ? waLink(c.phone, courierMessage(req.tenant, c, o, req)) : null });
+});
+/* acerto: entregas concluídas no período por entregador */
+app.get('/api/p/entregadores/acerto', P, (req, res) => {
+  const r = rangeOf(req.query);
+  const rows = db.prepare(`SELECT o.id, o.num, o.created_at, o.bairro, o.fee, o.total, o.km, o.courier_id, o.courier_valor, o.courier_pago FROM orders o
+    WHERE o.tenant_id=? AND o.courier_id IS NOT NULL AND o.status='concluido' AND o.created_at BETWEEN ? AND ? ORDER BY o.created_at`).all(req.tid, r.a, r.b);
+  const cs = db.prepare('SELECT id,name,pagamento,valor FROM couriers WHERE tenant_id=?').all(req.tid);
+  res.json({ de: r.de, ate: r.ate, entregadores: cs.map(c => { const mine = rows.filter(o => o.courier_id === c.id); const aPagar = mine.filter(o => !o.courier_pago);
+    return { ...c, entregas: mine.length, km: round2(mine.reduce((a, o) => a + (o.km || 0), 0)), total: round2(mine.reduce((a, o) => a + o.courier_valor, 0)), aPagar: round2(aPagar.reduce((a, o) => a + o.courier_valor, 0)), pendentes: aPagar.map(o => o.id), pedidos: mine }; }).filter(c => c.entregas) });
+});
+app.post('/api/p/entregadores/:id/pagar', P, (req, res) => {
+  const ids = (Array.isArray((req.body || {}).pedidos) ? req.body.pedidos : []).map(Number).filter(Boolean).slice(0, 2000);
+  const st = db.prepare(`UPDATE orders SET courier_pago=? WHERE id=? AND tenant_id=? AND courier_id=? AND courier_pago IS NULL`); let n = 0;
+  for (const id of ids) n += st.run(nowLocal().toISOString().slice(0, 10), id, req.tid, +req.params.id).changes;
+  res.json({ ok: true, pagos: n });
+});
+
+/* página do entregador (link secreto, sem login) */
+const courierBy = tok => db.prepare('SELECT c.*, t.slug, t.name tname, t.settings FROM couriers c JOIN tenants t ON t.id=c.tenant_id WHERE c.token=? AND c.ativo=1').get(String(tok || ''));
+app.get('/api/e/:token', (req, res) => {
+  const c = courierBy(req.params.token); if (!c) return res.status(404).json({ erro: 'Link inválido ou desativado' });
+  const since = new Date(Date.now() - 36 * 36e5).toISOString();
+  const os = db.prepare(`SELECT id,num,customer,phone,address,bairro,payment,total,notes,status,items,created_at,km FROM orders WHERE courier_id=? AND (status IN ('preparando','saiu') OR (status='concluido' AND created_at>?)) ORDER BY status='concluido', created_at`).all(c.id, since)
+    .map(o => ({ ...o, items: J(o.items, []), mapa: mapsLink(o), cobrar: /antecipado/i.test(o.payment) ? 0 : o.total }));
+  const hoje = os.filter(o => o.status === 'concluido');
+  res.json({ nome: c.name, loja: c.tname, logo: J(c.settings, {}).logo || '', pedidos: os, feitas: hoje.length, ganho: round2(db.prepare(`SELECT COALESCE(SUM(courier_valor),0) v FROM orders WHERE courier_id=? AND status='concluido' AND created_at>?`).get(c.id, since).v) });
+});
+app.post('/api/e/:token/entregue/:id', (req, res) => {
+  const c = courierBy(req.params.token); if (!c) return res.status(404).end();
+  const o = db.prepare(`SELECT * FROM orders WHERE id=? AND courier_id=? AND status IN ('preparando','saiu')`).get(+req.params.id, c.id); if (!o) return res.status(404).json({ erro: 'Pedido não está com você' });
+  const log = J(o.log, []); log.push({ s: 'concluido', t: new Date().toISOString(), por: 'entregador' });
+  db.prepare(`UPDATE orders SET status='concluido', log=? WHERE id=?`).run(JSON.stringify(log), o.id);
+  const t = tenantById(c.tenant_id); try { loyaltyOnStatus(t, o, 'concluido'); } catch {}
+  res.json({ ok: true });
+});
+app.get('/e/:token', (req, res) => res.sendFile(path.join(pub, 'entregador.html')));
 
 /* cadastro de clientes + números dos pedidos (pelo WhatsApp) */
 const phoneNorm = v => String(v || '').replace(/\D/g, '').replace(/^55(?=\d{10,11}$)/, '').slice(0, 13);
@@ -716,6 +784,8 @@ app.use('/u', express.static(path.join(DATA_DIR, 'uploads'), { maxAge: '30d' }))
 app.use('/prototipos', express.static(path.join(__dirname, 'prototipos')));
 app.use('/pausados', express.static(path.join(__dirname, 'pausados')));
 app.get('/', (req, res) => res.redirect('/login'));
+/* instalador do app Huntix Pedidos (Windows) */
+app.get('/download', (req, res) => res.redirect(process.env.APP_DOWNLOAD_URL || 'https://github.com/davisonseven7-oss/cardapio-proprio/releases/latest/download/Huntix-Pedidos-Setup.exe'));
 app.get('/login', (req, res) => res.sendFile(path.join(pub, 'login.html')));
 app.get('/painel', (req, res) => res.sendFile(path.join(pub, 'painel.html')));
 app.get('/admin', (req, res) => res.sendFile(path.join(pub, 'admin.html')));
