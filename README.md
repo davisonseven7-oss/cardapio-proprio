@@ -1,13 +1,25 @@
-# Cardápio próprio · modelo Boa Hora
+# Cardápio próprio
 
 Cardápio digital próprio para delivery local, pensado para vender junto com o serviço de tráfego pago.
-O modelo de exemplo é a **Boa Hora**, uma loja fictícia de água de coco em Natal/RN.
 
-- `index.html` é a versão principal (híbrida).
+- `index.html` é o cardápio **ativo**: Potengi Rações + Selaria Don Diego (Parnamirim/RN), duas lojas no mesmo link e uma sacola só.
+- `pausados/boa-hora.html` é o modelo da Boa Hora (água de coco, loja fictícia), pausado.
 - `prototipos/` guarda as versões anteriores: o feed estilo rede social e o primeiro protótipo do Sushi Real.
-- `img/` tem as fotos ilustrativas do Pexels (uso livre).
+- `img/` tem as fotos do Pexels (uso livre) e as logos da Potengi e da Don Diego.
 
-## O que já funciona (index.html)
+## Potengi Rações + Selaria Don Diego (index.html)
+
+- Duas lojas no mesmo cardápio, com filtro Tudo / Potengi / Don Diego e as cores de cada marca.
+- Categorias: Cavalos, Cães e Gatos, Aves e Rural (Potengi); Arreios, Acessórios, Roupas (Don Diego).
+- Preço de atacado por quantidade (`atacado:[qtd, preço]` em cada produto).
+- Promoção do dia pelo dia da semana (`PROMOS`), curtidas, "Curta e ganhe" e ranking.
+- Opções de tamanho, número, sabor e cor.
+- Sacola única separada por loja, retirada grátis ou entrega por bairro de Parnamirim, pedido formatado para WhatsApp.
+- Horário real (seg a sex 7h30–17h30, sáb 7h30–12h30) e aviso de aberto/fechado.
+- Tudo o que muda fica no topo do script: `CONFIG`, `LOJAS`, `CATS`, `P`, `PROMOS`.
+- **Falta:** produtos, preços e fotos reais (hoje são exemplos com ilustrações), confirmar bairros e taxas, e ligar `enviarWhatsReal: true`.
+
+## O que já funciona (Boa Hora, pausado)
 
 - **Três modos de ver o cardápio:** Vitrine (fotos grandes), Lista (cardápio normal) e Feed (posts estilo rede social). A página lembra a escolha de cada pessoa.
 - **Story de promoções do dia:** abre sozinho na primeira visita do dia. As promoções mudam conforme o dia da semana (`PROMOS` no código), e o preço de promoção vale na sacola.
