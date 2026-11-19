@@ -29,7 +29,8 @@ form h2{font-family:var(--f-brand);font-size:26px;letter-spacing:-.02em;margin:0
 .pw button{position:absolute;right:6px;top:50%;transform:translateY(-50%);border:0;background:none;color:var(--muted);font-size:12px;font-weight:600;padding:6px}
 .mob{display:none}
 @media (max-width:820px){body{grid-template-columns:1fr}.side{display:none}.mob{display:flex;justify-content:center;margin-bottom:8px}}
-.btn,.btn:hover{background:var(--hx);border-color:var(--hx);color:#fff}
+/* botão do login sempre laranja (também no modo escuro) */
+body .btn,body .btn:hover,:root:not([data-theme="light"]) body .btn:not(.sec):not(.ghost):not(.danger){background:var(--hx);border-color:var(--hx);color:#fff}
 </style>
 </head>
 <body>
