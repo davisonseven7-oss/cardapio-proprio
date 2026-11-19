@@ -11,7 +11,7 @@ const crypto = require('crypto');
 try { for (const l of fs.readFileSync(path.join(__dirname, '.env.local'), 'utf8').split(/\r?\n/)) { const m = l.match(/^\s*([A-Z_]+)\s*=\s*(.*)\s*$/); if (m && !process.env[m[1]]) process.env[m[1]] = m[2]; } } catch {}
 
 const express = require('express');
-const { db, DATA_DIR, J } = require('./db');
+const { db, DATA_DIR, J, backupNow } = require('./db');
 const { seed } = require('./seed');
 
 const PORT = +process.env.PORT || 3000;
@@ -36,7 +36,9 @@ const DEFAULTS = {
   whatsapp: '', enviarWhats: false, atendente: '',
   tema: { cor: '#17603A', destaque: '#FFC53D', acento: '#C9F25C', fonte: 'Shrikhand' },
   horario: { 0: [7, 19], 1: [7, 19], 2: [7, 19], 3: [7, 19], 4: [7, 19], 5: [7, 19], 6: [7, 19] },
-  bairros: [], retirada: true, minimo: 0, pagamentos: ['Pix na entrega', 'Cartão (maquininha)', 'Dinheiro'], pixChave: '', pixNome: '', pixAntecipado: false,
+  bairros: [], retirada: true, minimo: 0, pagamentos: ['Pix na entrega', 'Cartão (maquininha)', 'Dinheiro'], pixChave: '', pixNome: '', pixAntecipado: false, lojaLat: null, lojaLng: null,
+  entrega: { modo: 'bairro', faixas: [[2, 5], [4, 7], [6, 9], [8, 12]], raioMax: 10, fator: 1.3 },
+  fidelidade: { tipo: 'off', cashbackPct: 5, cashbackDias: 60, usoMax: 50, selosMeta: 10, selosPremio: 20 },
   promoTemas: ['', '', '', '', '', '', ''],
   curtidas: { meta: 3, desconto: 5, campeao: 20 },
   robo: { nome: 'Atendente', ativo: true },
@@ -63,7 +65,7 @@ function statusMessage(t, s, o, req) {
 }
 const waLink = (phone, text) => { let p = String(phone || '').replace(/\D/g, ''); if (p.length <= 11) p = '55' + p; return `https://wa.me/${p}?text=${encodeURIComponent(text)}`; };
 const OLD_PAY = 'Pix|Cartão|Dinheiro';
-const settingsOf = t => { const s = J(t.settings, {}); if (Array.isArray(s.pagamentos) && s.pagamentos.join('|') === OLD_PAY) s.pagamentos = DEFAULTS.pagamentos; return { ...DEFAULTS, ...s, tema: { ...DEFAULTS.tema, ...(s.tema || {}) }, curtidas: { ...DEFAULTS.curtidas, ...(s.curtidas || {}) }, robo: { ...DEFAULTS.robo, ...(s.robo || {}) }, mensagens: { ...DEFAULTS.mensagens, ...(s.mensagens || {}) } }; };
+const settingsOf = t => { const s = J(t.settings, {}); if (Array.isArray(s.pagamentos) && s.pagamentos.join('|') === OLD_PAY) s.pagamentos = DEFAULTS.pagamentos; return { ...DEFAULTS, ...s, tema: { ...DEFAULTS.tema, ...(s.tema || {}) }, curtidas: { ...DEFAULTS.curtidas, ...(s.curtidas || {}) }, robo: { ...DEFAULTS.robo, ...(s.robo || {}) }, mensagens: { ...DEFAULTS.mensagens, ...(s.mensagens || {}) }, entrega: { ...DEFAULTS.entrega, ...(s.entrega || {}) }, fidelidade: { ...DEFAULTS.fidelidade, ...(s.fidelidade || {}) } }; };
 
 const tenantBySlug = slug => db.prepare('SELECT * FROM tenants WHERE slug=?').get(String(slug || '').toLowerCase());
 const tenantById = id => db.prepare('SELECT * FROM tenants WHERE id=?').get(id);
@@ -153,7 +155,7 @@ function menuPayload(t, visitor) {
   const mine = visitor ? db.prepare('SELECT product_id FROM likes WHERE tenant_id=? AND week=? AND visitor=?').all(t.id, wk, visitor).map(r => r.product_id) : [];
   const stories = db.prepare('SELECT id,name,cover,slides FROM stories WHERE tenant_id=? AND active=1 ORDER BY sort,id').all(t.id).map(x => ({ ...x, slides: J(x.slides, []) }));
   const posts = db.prepare('SELECT id,img,product_id prod,caption,overlay,created_at FROM posts WHERE tenant_id=? AND active=1 ORDER BY created_at DESC LIMIT 30').all(t.id);
-  const pub = { pixChave: s.pixChave, pixNome: s.pixNome, pixAntecipado: !!(s.pixAntecipado && s.pixChave), subtitulo: s.subtitulo, cidade: s.cidade, logo: s.logo, endereco: s.endereco, tempoPreparo: s.tempoPreparo, tempoEntrega: s.tempoEntrega, tema: s.tema, horario: s.horario, bairros: s.bairros, retirada: s.retirada, minimo: s.minimo, pagamentos: payOptions(s), curtidas: s.curtidas, robo: s.robo, temaHoje: s.promoTemas[dow] || '', whatsapp: s.whatsapp ? true : false, atendente: s.atendente, pixelId: s.pixelId };
+  const pub = { entrega: { modo: s.entrega.modo, raioMax: s.entrega.raioMax }, fidelidade: { tipo: s.fidelidade.tipo, cashbackPct: s.fidelidade.cashbackPct, selosMeta: s.fidelidade.selosMeta, selosPremio: s.fidelidade.selosPremio }, temCupom: !!db.prepare('SELECT 1 FROM coupons WHERE tenant_id=? AND ativo=1').get(t.id), pixChave: s.pixChave, pixNome: s.pixNome, pixAntecipado: !!(s.pixAntecipado && s.pixChave), subtitulo: s.subtitulo, cidade: s.cidade, logo: s.logo, endereco: s.endereco, tempoPreparo: s.tempoPreparo, tempoEntrega: s.tempoEntrega, tema: s.tema, horario: s.horario, bairros: s.bairros, retirada: s.retirada, minimo: s.minimo, pagamentos: payOptions(s), curtidas: s.curtidas, robo: s.robo, temaHoje: s.promoTemas[dow] || '', whatsapp: s.whatsapp ? true : false, atendente: s.atendente, pixelId: s.pixelId };
   return { loja: { slug: t.slug, name: t.name, ...pub }, brands, cats, prods, stories, posts, likes: { counts, mine, week: wk }, champion: champ, dow, agora: nowLocal().toISOString() };
 }
 const visitorOk = v => typeof v === 'string' && /^[a-z0-9]{8,40}$/i.test(v);
@@ -173,75 +175,285 @@ app.post('/api/m/:slug/like', (req, res) => {
   const n = db.prepare('SELECT COUNT(*) n FROM likes WHERE tenant_id=? AND product_id=? AND week=?').get(t.id, p.id, wk).n;
   res.json({ n });
 });
-const EV = new Set(['PageView', 'ViewContent', 'AddToCart', 'InitiateCheckout', 'Contact', 'Story']);
+const EV = new Set(['PageView', 'ViewContent', 'AddToCart', 'InitiateCheckout', 'AddPaymentInfo', 'Contact', 'Story', 'Like']);
 app.post('/api/m/:slug/ev', (req, res) => {
   const t = tenantBySlug(req.params.slug); if (!t) return res.status(404).end();
-  const { type, info } = req.body || {}; if (!EV.has(type)) return res.status(400).end();
+  const { type, info, eventId, data, fbp, fbc, url } = req.body || {}; if (!EV.has(type)) return res.status(400).end();
   db.prepare('INSERT INTO events(tenant_id,type,info) VALUES(?,?,?)').run(t.id, type, String(info || '').slice(0, 120));
+  if (t.status === 'ativo' && /^[\w-]{6,80}$/.test(String(eventId || ''))) {
+    const cd = data && typeof data === 'object' ? Object.fromEntries(Object.entries(data).filter(([k]) => ['value', 'currency', 'content_ids', 'content_type', 'content_name', 'num_items'].includes(k)).slice(0, 6)) : undefined;
+    sendCapiEvent(t, settingsOf(t), { name: type, eventId: String(eventId), req, fbp: typeof fbp === 'string' ? fbp.slice(0, 120) : '', fbc: typeof fbc === 'string' ? fbc.slice(0, 200) : '', url: typeof url === 'string' && url.startsWith(baseUrl(req)) ? url.slice(0, 300) : '', user: visitorOk(req.body.visitor) ? { externalId: req.body.visitor } : {}, custom: cd }).catch(() => {});
+  }
   res.json({ ok: true });
+});
+
+/* =====================================================================
+   PREÇO DO PEDIDO (usado para mostrar o total na sacola e para gravar o pedido)
+   - complementos com mínimo/máximo e regra de preço (soma, maior, média = meio a meio)
+   - curtidas, cupom, selos de fidelidade, cashback
+   - taxa por bairro ou por distância (CEP + mapa)
+   ===================================================================== */
+/* grupo de opções: min/max/regra (pedidos antigos: escolha 1 obrigatória) */
+const groupOf = g => ({ nome: g.nome, itens: g.itens || [], min: g.min ?? 1, max: g.max ?? 1, regra: g.regra || 'soma' });
+function pickOptions(p, raw) {
+  const groups = J(p.options, []).map(groupOf); let extra = 0; const labels = [], sel = [];
+  for (let gi = 0; gi < groups.length; gi++) {
+    const g = groups[gi]; let s = raw && raw[gi]; s = Array.isArray(s) ? s : s == null || s === '' ? [] : [s];
+    s = [...new Set(s.map(Number).filter(i => Number.isInteger(i) && g.itens[i]))];
+    if (s.length < g.min) return { erro: `Escolha ${g.min > 1 ? 'pelo menos ' + g.min + ' opções' : 'uma opção'} em "${g.nome}" (${p.name})` };
+    if (s.length > g.max) return { erro: `Escolha no máximo ${g.max} em "${g.nome}" (${p.name})` };
+    const ex = s.map(i => +g.itens[i][1] || 0);
+    extra += !ex.length ? 0 : g.regra === 'maior' ? Math.max(...ex) : g.regra === 'media' ? ex.reduce((a, b) => a + b, 0) / ex.length : ex.reduce((a, b) => a + b, 0);
+    if (s.length) labels.push(`${g.nome}: ${s.map(i => g.itens[i][0]).join(g.regra === 'soma' ? ', ' : ' + ')}`);
+    sel.push(s);
+  }
+  return { extra: round2(extra), labels, sel };
+}
+
+/* ---- endereço: CEP (ViaCEP) e mapa (OpenStreetMap / Nominatim), com cache ---- */
+const UA = 'Huntix/1.0 (+https://huntixdelivery.up.railway.app)';
+let geoQueue = Promise.resolve();
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+async function viaCep(cep) {
+  const c = String(cep || '').replace(/\D/g, ''); if (c.length !== 8) return null;
+  try { const r = await fetch(`https://viacep.com.br/ws/${c}/json/`, { signal: AbortSignal.timeout(6000) }); const j = await r.json(); return j.erro ? null : j; } catch { return null; }
+}
+async function geocode(params) {
+  const key = JSON.stringify(params); const hit = db.prepare('SELECT lat,lng,created_at FROM geocache WHERE q=?').get(key);
+  /* resultado vazio fica guardado só 1 dia (o mapa do OpenStreetMap é atualizado) */
+  if (hit && (hit.lat != null || Date.now() - new Date(hit.created_at) < 864e5)) return hit.lat == null ? null : { lat: hit.lat, lng: hit.lng };
+  /* Nominatim pede no máximo 1 consulta por segundo */
+  const job = geoQueue.then(async () => {
+    const u = new URL('https://nominatim.openstreetmap.org/search'); u.searchParams.set('format', 'json'); u.searchParams.set('limit', '1'); u.searchParams.set('countrycodes', 'br');
+    Object.entries(params).forEach(([k, v]) => v && u.searchParams.set(k, v));
+    try { const r = await fetch(u, { headers: { 'User-Agent': UA, 'Accept-Language': 'pt-BR' }, signal: AbortSignal.timeout(8000) }); const j = await r.json(); return j[0] ? { lat: +j[0].lat, lng: +j[0].lon } : null; }
+    catch { return undefined; } finally { await sleep(1100); }
+  });
+  geoQueue = job.catch(() => {});
+  const res = await job; if (res !== undefined) db.prepare('INSERT OR REPLACE INTO geocache(q,lat,lng) VALUES(?,?,?)').run(key, res ? res.lat : null, res ? res.lng : null);
+  return res || null;
+}
+async function locate({ cep, rua, numero, bairro, cidade, uf }) {
+  const tries = [
+    rua && cidade ? { street: `${numero ? numero + ' ' : ''}${rua}`, city: cidade, state: uf, country: 'Brasil' } : null,
+    rua && cidade ? { street: rua, city: cidade, state: uf, country: 'Brasil' } : null,
+    cep ? { postalcode: cep, country: 'Brasil' } : null,
+    bairro && cidade ? { q: `${bairro}, ${cidade}, ${uf || ''}, Brasil` } : null];
+  for (const t of tries.filter(Boolean)) { const g = await geocode(t); if (g) return g; }
+  return null;
+}
+const haversine = (a, b) => { const R = 6371, r = x => x * Math.PI / 180, dLa = r(b.lat - a.lat), dLo = r(b.lng - a.lng); const h = Math.sin(dLa / 2) ** 2 + Math.cos(r(a.lat)) * Math.cos(r(b.lat)) * Math.sin(dLo / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(h)); };
+
+/* ---- fidelidade ---- */
+const nowIso = () => new Date().toISOString();
+function cashbackSaldo(tid, phone) {
+  if (!phone) return 0;
+  const r = db.prepare(`SELECT COALESCE(SUM(valor),0) v FROM cashback WHERE tenant_id=? AND phone=? AND tipo!='selo' AND (expira IS NULL OR expira>?)`).get(tid, phone, nowIso());
+  return Math.max(0, round2(r.v));
+}
+function selosInfo(tid, phone, meta) {
+  if (!phone || !meta) return { feitos: 0, faltam: meta, premio: false };
+  const feitos = db.prepare(`SELECT COUNT(*) n FROM orders WHERE tenant_id=? AND phone=? AND status='concluido'`).get(tid, phone).n;
+  const usados = db.prepare(`SELECT COUNT(*) n FROM cashback WHERE tenant_id=? AND phone=? AND tipo='selo'`).get(tid, phone).n;
+  const ciclo = feitos - usados * meta;
+  return { feitos: Math.max(0, ciclo % meta + (ciclo >= meta ? meta : 0)), faltam: Math.max(0, meta - ciclo), premio: ciclo >= meta };
+}
+
+/* ---- cupom ---- */
+function checkCoupon(t, code, subtotal, phone) {
+  const c = db.prepare('SELECT * FROM coupons WHERE tenant_id=? AND code=? COLLATE NOCASE').get(t.id, String(code || '').trim().toUpperCase());
+  if (!c || !c.ativo) return { erro: 'Cupom não encontrado' };
+  const hoje = nowLocal().toISOString().slice(0, 10);
+  if (c.inicio && hoje < c.inicio) return { erro: 'Esse cupom ainda não começou' };
+  if (c.fim && hoje > c.fim) return { erro: 'Esse cupom expirou' };
+  if (c.minimo && subtotal < c.minimo) return { erro: `Cupom válido para pedidos a partir de R$ ${c.minimo.toFixed(2).replace('.', ',')}` };
+  const usos = db.prepare(`SELECT COUNT(*) n FROM orders WHERE tenant_id=? AND coupon=? AND status!='cancelado'`).get(t.id, c.code).n;
+  if (c.max_usos && usos >= c.max_usos) return { erro: 'Esse cupom já esgotou' };
+  if (phone) {
+    if (c.por_cliente) { const meus = db.prepare(`SELECT COUNT(*) n FROM orders WHERE tenant_id=? AND coupon=? AND phone=? AND status!='cancelado'`).get(t.id, c.code, phone).n; if (meus >= c.por_cliente) return { erro: 'Você já usou esse cupom' }; }
+    if (c.primeira) { const n = db.prepare(`SELECT COUNT(*) n FROM orders WHERE tenant_id=? AND phone=? AND status!='cancelado'`).get(t.id, phone).n; if (n > 0) return { erro: 'Cupom só para a primeira compra' }; }
+  } else if (c.primeira || c.por_cliente) return { cupom: c, precisaFone: true };
+  return { cupom: c };
+}
+
+/* ---- cotação completa ---- */
+async function quote(t, b) {
+  const s = settingsOf(t), dow = nowLocal().getUTCDay(), champ = champion(t.id), E = s.entrega, F = s.fidelidade;
+  const fone = phoneNorm(b.telefone), phone = fone.length >= 10 ? fone : '';
+  const raw = Array.isArray(b.itens) ? b.itens.slice(0, 60) : []; if (!raw.length) return { erro: 'Sacola vazia' };
+  const prodQty = {}, lines = [];
+  for (const it of raw) {
+    const p = db.prepare('SELECT * FROM products WHERE id=? AND tenant_id=? AND active=1').get(+it.id, t.id); if (!p) return { erro: 'Um produto saiu do cardápio. Atualize a página.' };
+    const qty = Math.max(1, Math.min(999, +it.qty | 0)), o = pickOptions(p, it.opts); if (o.erro) return { erro: o.erro };
+    prodQty[p.id] = (prodQty[p.id] || 0) + qty; lines.push({ p, qty, ...o });
+  }
+  const items = lines.map(({ p, qty, extra, labels }) => { const info = priceInfo(p, dow, champ, s), unit = round2(unitFor(p, info, prodQty[p.id]) + extra); return { id: p.id, nome: p.name, desc: p.descr || '', qty, unit, opts: labels, total: round2(unit * qty) }; });
+  const subtotal = round2(items.reduce((a, i) => a + i.total, 0));
+  const descontos = [], avisos = [];
+  /* curtidas */
+  if (visitorOk(b.visitor) && s.curtidas.meta > 0) { const n = db.prepare('SELECT COUNT(*) n FROM likes WHERE tenant_id=? AND visitor=? AND week=?').get(t.id, b.visitor, weekKey()).n; if (n >= s.curtidas.meta) descontos.push({ tipo: 'curtidas', label: `Curtiu e ganhou (${s.curtidas.desconto}%)`, valor: round2(subtotal * s.curtidas.desconto / 100) }); }
+  /* entrega */
+  const retirada = b.bairro === '__retirada' && s.retirada;
+  let fee = 0, km = null, bairroLabel = '', cepInfo = null, erroEntrega = null;
+  const cep = String(b.cep || '').replace(/\D/g, '');
+  if (retirada) bairroLabel = 'Retirada na loja';
+  else if (E.modo === 'distancia') {
+    if (cep.length !== 8) erroEntrega = 'Coloque o CEP para calcular a entrega';
+    else {
+      cepInfo = await viaCep(cep);
+      if (!cepInfo) erroEntrega = 'CEP não encontrado';
+      else if (!(s.lojaLat && s.lojaLng)) erroEntrega = 'A loja ainda não configurou a localização para entrega';
+      else {
+        bairroLabel = cepInfo.bairro || b.bairroTxt || cepInfo.localidade;
+        const g = await locate({ cep, rua: b.endereco || cepInfo.logradouro, numero: b.numero, bairro: cepInfo.bairro, cidade: cepInfo.localidade, uf: cepInfo.uf });
+        if (!g) { const bb = s.bairros.find(x => x[0].toLowerCase() === String(cepInfo.bairro || '').toLowerCase()); if (bb) { fee = +bb[1] || 0; avisos.push('Taxa pelo bairro (endereço não achado no mapa)'); } else erroEntrega = 'Não achamos esse endereço no mapa. Confira a rua e o número.'; }
+        else {
+          km = round2(haversine({ lat: s.lojaLat, lng: s.lojaLng }, g) * (+E.fator || 1.3));
+          if (E.raioMax && km > E.raioMax) erroEntrega = `Endereço fora da área de entrega (${km.toFixed(1).replace('.', ',')} km; até ${E.raioMax} km)`;
+          else { const f = (E.faixas || []).slice().sort((a, b) => a[0] - b[0]).find(x => km <= x[0]); if (f) fee = +f[1] || 0; else erroEntrega = `Endereço fora da área de entrega (${km.toFixed(1).replace('.', ',')} km)`; }
+        }
+      }
+    }
+  } else {
+    const bb = s.bairros.find(x => x[0] === b.bairro); if (!bb) erroEntrega = 'Escolha o bairro de entrega'; else { fee = +bb[1] || 0; bairroLabel = bb[0]; }
+  }
+  /* cupom */
+  let coupon = '', cupomErro = null;
+  if (b.cupom) {
+    const r = checkCoupon(t, b.cupom, subtotal, phone);
+    if (r.erro) cupomErro = r.erro;
+    else { const c = r.cupom; coupon = c.code; if (r.precisaFone) avisos.push('Coloque seu WhatsApp para validar o cupom');
+      const v = c.tipo === 'frete' ? fee : c.tipo === 'valor' ? Math.min(c.valor, subtotal) : round2(subtotal * c.valor / 100);
+      descontos.push({ tipo: 'cupom', label: `Cupom ${c.code}${c.tipo === 'frete' ? ' (frete grátis)' : c.tipo === 'percent' ? ` (${c.valor}%)` : ''}`, valor: round2(v) }); }
+  }
+  /* fidelidade: selos (a cada N pedidos, um prêmio) */
+  let selos = null;
+  if (F.tipo === 'selos' && F.selosMeta > 0) {
+    selos = selosInfo(t.id, phone, F.selosMeta);
+    if (selos.premio) descontos.push({ tipo: 'selo', label: `Prêmio fidelidade (${F.selosMeta} pedidos)`, valor: round2(Math.min(+F.selosPremio || 0, subtotal)) });
+  }
+  /* cashback */
+  let saldo = 0, cashbackUsado = 0;
+  if (F.tipo === 'cashback') {
+    saldo = cashbackSaldo(t.id, phone);
+    if (b.usarCashback && saldo > 0) {
+      const jaDesc = descontos.reduce((a, d) => a + d.valor, 0), base = Math.max(0, subtotal - jaDesc), teto = round2(base * (+F.usoMax || 100) / 100);
+      cashbackUsado = round2(Math.min(saldo, teto)); if (cashbackUsado > 0) descontos.push({ tipo: 'cashback', label: 'Cashback usado', valor: cashbackUsado });
+    }
+  }
+  const discount = round2(Math.min(subtotal + fee, descontos.reduce((a, d) => a + d.valor, 0)));
+  const total = round2(subtotal - discount + fee);
+  const ganhaCashback = F.tipo === 'cashback' ? round2(Math.max(0, subtotal - discount) * (+F.cashbackPct || 0) / 100) : 0;
+  return { ok: true, items, subtotal, descontos, discount, fee, km, total, retirada, bairroLabel, cep, cepInfo, coupon, cupomErro, erroEntrega, avisos,
+    minimoErro: !retirada && s.minimo && subtotal < s.minimo ? `Pedido mínimo para entrega: R$ ${s.minimo.toFixed(2).replace('.', ',')}` : null,
+    fidelidade: { tipo: F.tipo, saldo, cashbackUsado, ganhaCashback, selos, meta: F.selosMeta, premio: F.selosPremio }, phone, s };
+}
+
+app.post('/api/m/:slug/cotar', async (req, res) => {
+  const t = tenantBySlug(req.params.slug); if (!t || t.status !== 'ativo') return res.status(404).json({ erro: 'Cardápio indisponível' });
+  const q = await quote(t, req.body || {}); if (q.erro) return res.status(400).json({ erro: q.erro });
+  const { s, cepInfo, ...out } = q;
+  res.json({ ...out, endereco: cepInfo ? { rua: cepInfo.logradouro, bairro: cepInfo.bairro, cidade: cepInfo.localidade, uf: cepInfo.uf } : null });
 });
 
 app.post('/api/m/:slug/order', async (req, res) => {
   const t = tenantBySlug(req.params.slug); if (!t || t.status !== 'ativo') return res.status(404).json({ erro: 'Cardápio indisponível' });
-  const s = settingsOf(t), b = req.body || {}, dow = nowLocal().getUTCDay(), champ = champion(t.id);
-  const nome = String(b.nome || '').trim().slice(0, 80), fone = phoneNorm(b.telefone);
+  const b = req.body || {}, nome = String(b.nome || '').trim().slice(0, 80), fone = phoneNorm(b.telefone);
   if (!nome) return res.status(400).json({ erro: 'Coloque seu nome' });
   if (fone.length < 10) return res.status(400).json({ erro: 'Coloque um WhatsApp com DDD' });
-  const raw = Array.isArray(b.itens) ? b.itens.slice(0, 60) : []; if (!raw.length) return res.status(400).json({ erro: 'Sacola vazia' });
-  const prodQty = {};
-  const lines = [];
-  for (const it of raw) {
-    const p = db.prepare('SELECT * FROM products WHERE id=? AND tenant_id=? AND active=1').get(+it.id, t.id); if (!p) return res.status(400).json({ erro: 'Um produto saiu do cardápio. Atualize a página.' });
-    const qty = Math.max(1, Math.min(999, +it.qty | 0)), groups = J(p.options, []);
-    let extra = 0; const opts = [];
-    (Array.isArray(it.opts) ? it.opts : []).forEach((oi, gi) => { const g = groups[gi], o = g && g.itens[+oi]; if (o) { extra += +o[1] || 0; opts.push(`${g.nome}: ${o[0]}`); } });
-    prodQty[p.id] = (prodQty[p.id] || 0) + qty;
-    lines.push({ p, qty, extra, opts });
-  }
-  const items = lines.map(({ p, qty, extra, opts }) => { const info = priceInfo(p, dow, champ, s), unit = round2(unitFor(p, info, prodQty[p.id]) + extra); return { id: p.id, nome: p.name, desc: p.descr || '', qty, unit, opts, total: round2(unit * qty) }; });
-  const subtotal = round2(items.reduce((a, i) => a + i.total, 0));
-  let discount = 0;
-  if (visitorOk(b.visitor) && s.curtidas.meta > 0) { const n = db.prepare('SELECT COUNT(*) n FROM likes WHERE tenant_id=? AND visitor=? AND week=?').get(t.id, b.visitor, weekKey()).n; if (n >= s.curtidas.meta) discount = round2(subtotal * s.curtidas.desconto / 100); }
-  const bi = s.bairros.findIndex(x => x[0] === b.bairro), retirada = b.bairro === '__retirada' && s.retirada;
-  if (!retirada && bi < 0) return res.status(400).json({ erro: 'Escolha o bairro de entrega' });
-  const fee = retirada ? 0 : +s.bairros[bi][1] || 0;
-  if (!retirada && s.minimo && subtotal < s.minimo) return res.status(400).json({ erro: `Pedido mínimo para entrega: R$ ${s.minimo.toFixed(2).replace('.', ',')}` });
+  const q = await quote(t, b); if (q.erro) return res.status(400).json({ erro: q.erro });
+  const s = q.s, retirada = q.retirada;
+  if (q.erroEntrega) return res.status(400).json({ erro: q.erroEntrega });
+  if (q.minimoErro) return res.status(400).json({ erro: q.minimoErro });
+  if (b.cupom && q.cupomErro) return res.status(400).json({ erro: q.cupomErro });
   /* endereço em partes: rua, número, complemento, referência */
   const cut = (v, n) => String(v || '').trim().slice(0, n);
   const rua = cut(b.endereco, 140), numero = cut(b.numero, 12), compl = cut(b.complemento, 60), ref = cut(b.referencia, 100);
   if (!retirada && !rua) return res.status(400).json({ erro: 'Coloque a rua do endereço' });
   if (!retirada && !numero && !/\d/.test(rua)) return res.status(400).json({ erro: 'Coloque o número da casa (ou S/N)' });
-  const endereco = retirada ? '' : `${rua}${numero ? ', ' + numero : ''}${compl ? ' - ' + compl : ''}${ref ? ' (Ref.: ' + ref + ')' : ''}`;
+  const cidadeTxt = q.cepInfo ? `, ${q.cepInfo.localidade}` : '';
+  const endereco = retirada ? '' : `${rua}${numero ? ', ' + numero : ''}${compl ? ' - ' + compl : ''}${ref ? ' (Ref.: ' + ref + ')' : ''}${q.cep ? ` · CEP ${q.cep.replace(/(\d{5})(\d{3})/, '$1-$2')}` : ''}`;
   const opts = payOptions(s), pixFirst = b.pagamento === PIX_AGORA && opts.includes(PIX_AGORA);
   let pay = pixFirst ? 'Pix antecipado' : s.pagamentos.includes(b.pagamento) ? b.pagamento : s.pagamentos[0];
   const status0 = pixFirst ? 'pix' : 'novo';
   const troco = +String(b.troco || '').replace(/[^\d,.]/g, '').replace(',', '.');
   if (/dinheiro/i.test(pay) && troco > 0) pay += ` (troco p/ R$ ${troco.toFixed(2).replace('.', ',')})`;
-  const total = round2(subtotal - discount + fee);
+  const { items, subtotal, discount, fee, total, descontos } = q;
+  const bairro = retirada ? 'Retirada na loja' : q.bairroLabel;
   const num = (db.prepare('SELECT MAX(num) m FROM orders WHERE tenant_id=?').get(t.id).m || 0) + 1;
   const track = crypto.randomBytes(8).toString('base64url'), trackUrl = `${baseUrl(req)}/${t.slug}/pedido/${track}`;
-  const r = db.prepare('INSERT INTO orders(tenant_id,num,customer,phone,address,bairro,payment,notes,items,subtotal,discount,fee,total,visitor,source,track,log,status) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)')
-    .run(t.id, num, nome, fone, endereco, retirada ? 'Retirada na loja' : b.bairro, pay, String(b.obs || '').slice(0, 300), JSON.stringify(items), subtotal, discount, fee, total, visitorOk(b.visitor) ? b.visitor : null, String(b.origem || '').slice(0, 120), track, JSON.stringify([{ s: status0, t: new Date().toISOString() }]), status0);
+  db.exec('BEGIN');
+  let r;
+  try {
+    r = db.prepare('INSERT INTO orders(tenant_id,num,customer,phone,address,bairro,payment,notes,items,subtotal,discount,fee,total,visitor,source,track,log,status,coupon,descontos,cashback_usado,km,cep) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)')
+      .run(t.id, num, nome, fone, endereco, bairro, pay, String(b.obs || '').slice(0, 300), JSON.stringify(items), subtotal, discount, fee, total, visitorOk(b.visitor) ? b.visitor : null, String(b.origem || '').slice(0, 120), track, JSON.stringify([{ s: status0, t: nowIso() }]), status0, q.coupon, JSON.stringify(descontos), q.fidelidade.cashbackUsado, q.km, q.cep);
+    const oid = r.lastInsertRowid;
+    if (q.fidelidade.cashbackUsado > 0) db.prepare(`INSERT INTO cashback(tenant_id,phone,valor,tipo,order_id) VALUES(?,?,?,'uso',?)`).run(t.id, fone, -q.fidelidade.cashbackUsado, oid);
+    if (descontos.some(d => d.tipo === 'selo')) db.prepare(`INSERT INTO cashback(tenant_id,phone,valor,tipo,order_id) VALUES(?,?,0,'selo',?)`).run(t.id, fone, oid);
+    db.exec('COMMIT');
+  } catch (e) { db.exec('ROLLBACK'); console.error('pedido', e); return res.status(500).json({ erro: 'Não deu para salvar o pedido. Tente de novo.' }); }
   const brl = v => 'R$ ' + v.toFixed(2).replace('.', ',');
   const msg = `*Pedido #${num} · ${t.name}*\n\n` + items.map(i => `${i.qty}× ${i.nome} — ${brl(i.total)}${i.opts.length ? `\n   ${i.opts.join(' · ')}` : ''}`).join('\n') +
-    `\n\nSubtotal: ${brl(subtotal)}${discount ? `\nDesconto curtidas: − ${brl(discount)}` : ''}\n${retirada ? 'Retirada na loja' : `Entrega (${b.bairro}): ${brl(fee)}`}\n*Total: ${brl(total)}*\n\nNome: ${nome}\nWhatsApp: ${fone}${retirada ? '' : `\nEndereço: ${endereco}, ${b.bairro}`}\nPagamento: ${pay} ${pixFirst ? ' — aguardando confirmação da loja' : ` (na ${retirada ? 'retirada' : 'entrega'})`}${/pix/i.test(pay) && s.pixChave ? `\nChave Pix da loja: ${s.pixChave}${s.pixNome ? ' · ' + s.pixNome : ''}` : ''}${b.obs ? `\nObs.: ${String(b.obs).slice(0, 300)}` : ''}\n\nAcompanhar pedido: ${trackUrl}`;
-  try { upsertCustomer(t.id, { phone: fone, name: nome, address: endereco, bairro: retirada ? '' : b.bairro }); } catch (e) { console.error('cliente', e.message); }
+    `\n\nSubtotal: ${brl(subtotal)}${descontos.map(d => `\n${d.label}: − ${brl(d.valor)}`).join('')}\n${retirada ? 'Retirada na loja' : `Entrega (${bairro}${q.km != null ? ` · ${q.km.toFixed(1).replace('.', ',')} km` : ''}): ${brl(fee)}`}\n*Total: ${brl(total)}*\n\nNome: ${nome}\nWhatsApp: ${fone}${retirada ? '' : `\nEndereço: ${endereco}, ${bairro}${cidadeTxt}`}\nPagamento: ${pay}${pixFirst ? ' — aguardando confirmação da loja' : /entrega|retirada/i.test(pay) ? '' : ` (na ${retirada ? 'retirada' : 'entrega'})`}${/pix/i.test(pay) && s.pixChave ? `\nChave Pix da loja: ${s.pixChave}${s.pixNome ? ' · ' + s.pixNome : ''}` : ''}${b.obs ? `\nObs.: ${String(b.obs).slice(0, 300)}` : ''}\n\nAcompanhar pedido: ${trackUrl}`;
+  try { upsertCustomer(t.id, { phone: fone, name: nome, address: endereco, bairro: retirada ? '' : bairro }); } catch (e) { console.error('cliente', e.message); }
   const eventId = `${t.slug}-${num}`;
-  if (s.pixelId && s.capiToken) sendCapi(t, s, { eventId, total, items, fone, nome, req, fbp: b.fbp, fbc: b.fbc }).catch(() => {});
-  res.json({ ok: true, id: r.lastInsertRowid, num, total, eventId, msg, track, trackUrl, status: status0, pix: pixFirst ? { chave: s.pixChave, nome: s.pixNome, whatsapp: s.whatsapp || '' } : null, whats: s.whatsapp && s.enviarWhats ? `https://wa.me/${s.whatsapp.replace(/\D/g, '')}?text=${encodeURIComponent(msg)}` : null });
+  if (s.pixelId && s.capiToken) sendCapi(t, s, { eventId, total, items, fone, nome, req, fbp: b.fbp, fbc: b.fbc, num, cupom: q.coupon, pagamento: pay, cidade: q.cepInfo && q.cepInfo.localidade, uf: q.cepInfo && q.cepInfo.uf, cep: q.cep, visitor: visitorOk(b.visitor) ? b.visitor : null }).catch(() => {});
+  res.json({ ok: true, id: r.lastInsertRowid, num, total, eventId, msg, track, trackUrl, status: status0, ganhaCashback: q.fidelidade.ganhaCashback, pix: pixFirst ? { chave: s.pixChave, nome: s.pixNome, whatsapp: s.whatsapp || '' } : null, whats: s.whatsapp && s.enviarWhats ? `https://wa.me/${s.whatsapp.replace(/\D/g, '')}?text=${encodeURIComponent(msg)}` : null });
 });
 
-/* API de Conversões da Meta (Purchase pelo servidor, com o mesmo event_id do Pixel para não contar duas vezes) */
-async function sendCapi(t, s, o) {
-  const [fn, ...ln] = o.nome.toLowerCase().split(/\s+/);
-  const body = { data: [{ event_name: 'Purchase', event_time: Math.floor(Date.now() / 1000), event_id: o.eventId, action_source: 'website', event_source_url: `${o.req.protocol}://${o.req.headers.host}/${t.slug}`,
-    user_data: { ph: [sha(o.fone.startsWith('55') ? o.fone : '55' + o.fone)], fn: [sha(fn)], ...(ln.length ? { ln: [sha(ln.join(' '))] } : {}), client_ip_address: o.req.ip, client_user_agent: o.req.headers['user-agent'] || '', ...(o.fbp ? { fbp: o.fbp } : {}), ...(o.fbc ? { fbc: o.fbc } : {}) },
-    custom_data: { currency: 'BRL', value: o.total, content_type: 'product', contents: o.items.map(i => ({ id: String(i.id), quantity: i.qty, item_price: i.unit })) } }],
+/* fidelidade ao mudar status: credita cashback ao concluir; devolve ao cancelar */
+function loyaltyOnStatus(t, o, st) {
+  const F = settingsOf(t).fidelidade;
+  if (st === 'concluido' && F.tipo === 'cashback' && +F.cashbackPct > 0 && o.phone && !db.prepare(`SELECT 1 FROM cashback WHERE order_id=? AND tipo='ganho'`).get(o.id)) {
+    const v = round2(Math.max(0, o.subtotal - o.discount) * F.cashbackPct / 100);
+    if (v > 0) { db.prepare(`INSERT INTO cashback(tenant_id,phone,valor,tipo,order_id,expira) VALUES(?,?,?,'ganho',?,?)`).run(t.id, o.phone, v, o.id, F.cashbackDias ? new Date(Date.now() + F.cashbackDias * 864e5).toISOString() : null); return v; }
+  }
+  if (st === 'cancelado') {
+    db.prepare(`DELETE FROM cashback WHERE order_id=? AND tipo IN ('selo','ganho')`).run(o.id);
+    const uso = db.prepare(`SELECT COALESCE(SUM(valor),0) v FROM cashback WHERE order_id=? AND tipo IN ('uso','estorno')`).get(o.id).v;
+    if (uso < 0) db.prepare(`INSERT INTO cashback(tenant_id,phone,valor,tipo,order_id) VALUES(?,?,?,'estorno',?)`).run(t.id, o.phone, -uso, o.id);
+  }
+  return 0;
+}
+
+/* =====================================================================
+   API de Conversões da Meta: todos os eventos do funil também pelo servidor.
+   Cada evento usa o MESMO event_id do Pixel no navegador, então a Meta junta os
+   dois e não conta em dobro. Isso recupera vendas que o bloqueador de anúncios
+   ou o iPhone escondem do Pixel.
+   ===================================================================== */
+const CAPI_STD = new Set(['PageView', 'ViewContent', 'AddToCart', 'InitiateCheckout', 'AddPaymentInfo', 'Contact', 'Purchase']);
+const normTxt = v => String(v || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]/g, '');
+async function sendCapiEvent(t, s, ev) {
+  if (!s.pixelId || !s.capiToken || !CAPI_STD.has(ev.name)) return;
+  const u = ev.user || {}, req = ev.req;
+  const user_data = {
+    client_ip_address: req.ip, client_user_agent: req.headers['user-agent'] || '',
+    ...(ev.fbp ? { fbp: ev.fbp } : {}), ...(ev.fbc ? { fbc: ev.fbc } : {}),
+    ...(u.phone ? { ph: [sha(u.phone.startsWith('55') ? u.phone : '55' + u.phone)] } : {}),
+    ...(u.fn ? { fn: [sha(normTxt(u.fn))] } : {}), ...(u.ln ? { ln: [sha(normTxt(u.ln))] } : {}),
+    ...(u.ct ? { ct: [sha(normTxt(u.ct))] } : {}), ...(u.st ? { st: [sha(normTxt(u.st))] } : {}),
+    ...(u.zp ? { zp: [sha(String(u.zp).replace(/\D/g, ''))] } : {}), country: [sha('br')],
+    ...(u.externalId ? { external_id: [sha(u.externalId)] } : {})
+  };
+  const body = { data: [{ event_name: ev.name, event_time: Math.floor(Date.now() / 1000), event_id: ev.eventId, action_source: 'website',
+    event_source_url: ev.url || `${baseUrl(req)}/${t.slug}`, user_data, ...(ev.custom ? { custom_data: ev.custom } : {}) }],
     ...(s.capiTeste ? { test_event_code: s.capiTeste } : {}) };
   let info;
-  try { const r = await fetch(`https://graph.facebook.com/v21.0/${encodeURIComponent(s.pixelId)}/events?access_token=${encodeURIComponent(s.capiToken)}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }); info = r.ok ? 'ok' : `erro ${r.status}: ${(await r.text()).slice(0, 100)}`; }
+  if (process.env.CAPI_DRYRUN === '1') info = 'teste local (não enviado)';
+  else try { const r = await fetch(`https://graph.facebook.com/v21.0/${encodeURIComponent(s.pixelId)}/events?access_token=${encodeURIComponent(s.capiToken)}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body), signal: AbortSignal.timeout(8000) }); info = r.ok ? 'ok' : `erro ${r.status}: ${(await r.text()).slice(0, 100)}`; }
   catch (e) { info = 'erro: ' + e.message; }
-  db.prepare('INSERT INTO events(tenant_id,type,info) VALUES(?,?,?)').run(t.id, 'CAPI', `${o.eventId} · ${info}`);
+  db.prepare('INSERT INTO events(tenant_id,type,info) VALUES(?,?,?)').run(t.id, 'CAPI', `${ev.name} · ${ev.name === 'Purchase' ? ev.eventId + ' · ' + brlS(ev.custom && ev.custom.value) + ' · ' : ''}${info}`);
+  if (process.env.CAPI_DRYRUN === '1') console.log('[CAPI]', JSON.stringify(body.data[0]));
+}
+/* compra: dados completos para a Meta casar a venda com quem viu o anúncio */
+async function sendCapi(t, s, o) {
+  const [fn, ...ln] = String(o.nome || '').trim().split(/\s+/);
+  await sendCapiEvent(t, s, { name: 'Purchase', eventId: o.eventId, req: o.req, fbp: o.fbp, fbc: o.fbc,
+    user: { phone: o.fone, fn, ln: ln.join(' '), ct: o.cidade, st: o.uf, zp: o.cep, externalId: o.visitor || o.fone },
+    custom: { currency: 'BRL', value: o.total, content_type: 'product', order_id: String(o.num), num_items: o.items.reduce((a, i) => a + i.qty, 0),
+      content_ids: o.items.map(i => String(i.id)), contents: o.items.map(i => ({ id: String(i.id), quantity: i.qty, item_price: i.unit })),
+      ...(o.cupom ? { coupon: o.cupom } : {}), ...(o.pagamento ? { payment_method: o.pagamento } : {}) } });
 }
 
 /* ---------------- painel do cliente ---------------- */
@@ -249,7 +461,7 @@ const P = auth('painel');
 app.get('/api/p/loja', P, (req, res) => { const t = req.tenant; res.json({ id: t.id, slug: t.slug, name: t.name, status: t.status, settings: settingsOf(t) }); });
 app.put('/api/p/loja', P, (req, res) => {
   const b = req.body || {}, cur = settingsOf(req.tenant), n = b.settings || {};
-  const keep = ['subtitulo', 'cidade', 'logo', 'endereco', 'telefone', 'tempoPreparo', 'tempoEntrega', 'whatsapp', 'enviarWhats', 'atendente', 'tema', 'horario', 'bairros', 'retirada', 'minimo', 'pagamentos', 'promoTemas', 'curtidas', 'robo', 'pixelId', 'capiToken', 'capiTeste', 'mensagens', 'pixChave', 'pixNome', 'pixAntecipado'];
+  const keep = ['subtitulo', 'cidade', 'logo', 'endereco', 'telefone', 'tempoPreparo', 'tempoEntrega', 'whatsapp', 'enviarWhats', 'atendente', 'tema', 'horario', 'bairros', 'retirada', 'minimo', 'pagamentos', 'promoTemas', 'curtidas', 'robo', 'pixelId', 'capiToken', 'capiTeste', 'mensagens', 'pixChave', 'pixNome', 'pixAntecipado', 'entrega', 'fidelidade', 'lojaLat', 'lojaLng'];
   const out = { ...cur }; keep.forEach(k => { if (k in n) out[k] = n[k]; });
   out.minimo = +out.minimo || 0; out.bairros = (out.bairros || []).filter(x => x && x[0]).map(([a, v]) => [String(a).slice(0, 60), +v || 0]);
   out.pixelId = String(out.pixelId || '').replace(/\D/g, ''); out.whatsapp = String(out.whatsapp || '').replace(/\D/g, '');
@@ -306,7 +518,7 @@ app.get('/api/p/orders', P, (req, res) => {
       (SELECT COALESCE(SUM(total),0) FROM orders x WHERE x.tenant_id=o.tenant_id AND x.phone=o.phone AND x.status!='cancelado') cli_total,
       (SELECT MIN(created_at) FROM orders x WHERE x.tenant_id=o.tenant_id AND x.phone=o.phone) cli_desde
     FROM orders o WHERE o.tenant_id=? AND ${when.replace(/status|created_at/g, m => 'o.' + m)} ${st ? 'AND o.status=?' : ''} ORDER BY o.created_at DESC LIMIT 500`).all(req.tid, r.a, r.b, ...(st ? [st] : []));
-  res.json(rows.map(o => ({ ...o, items: J(o.items, []), log: J(o.log, []) })));
+  res.json(rows.map(o => ({ ...o, items: J(o.items, []), log: J(o.log, []), descontos: J(o.descontos, []) })));
 });
 app.get('/api/p/orders/novos', P, (req, res) => res.json(db.prepare(`SELECT COUNT(*) n, MAX(id) ultimo FROM orders WHERE tenant_id=? AND status IN ('novo','pix')`).get(req.tid)));
 app.put('/api/p/orders/:id', P, (req, res) => {
@@ -314,7 +526,10 @@ app.put('/api/p/orders/:id', P, (req, res) => {
   const o = db.prepare('SELECT * FROM orders WHERE id=? AND tenant_id=?').get(+req.params.id, req.tid); if (!o) return res.status(404).end();
   const log = J(o.log, []); if (o.status !== st) log.push({ s: st, t: new Date().toISOString() });
   db.prepare('UPDATE orders SET status=?, log=? WHERE id=?').run(st, JSON.stringify(log), o.id);
-  const msg = statusMessage(req.tenant, settingsOf(req.tenant), { ...o, status: st, prev: o.status }, req);
+  let ganhou = 0; if (o.status !== st) { try { ganhou = loyaltyOnStatus(req.tenant, o, st); } catch (e) { console.error('fidelidade', e.message); } }
+  let msg = statusMessage(req.tenant, settingsOf(req.tenant), { ...o, status: st, prev: o.status }, req);
+  if (msg && ganhou > 0) msg += `
+🎁 Você ganhou ${brlS(ganhou)} de cashback para o próximo pedido!`;
   res.json({ ok: true, aviso: msg, whats: msg && o.phone ? waLink(o.phone, msg) : null });
 });
 /* acompanhamento do pedido pelo cliente (link secreto) */
@@ -323,7 +538,7 @@ app.get('/api/m/:slug/pedido/:track', (req, res) => {
   const o = db.prepare('SELECT * FROM orders WHERE tenant_id=? AND track=?').get(t.id, String(req.params.track)); if (!o) return res.status(404).json({ erro: 'Pedido não encontrado' });
   const s = settingsOf(t);
   res.json({ loja: { name: t.name, slug: t.slug, logo: s.logo, tema: s.tema, whatsapp: s.whatsapp || '', pixChave: s.pixChave, pixNome: s.pixNome, endereco: s.endereco, tempoPreparo: +s.tempoPreparo || 30, tempoEntrega: +s.tempoEntrega || 40 }, address: o.address, num: o.num, status: o.status, retirada: isPickup(o), created_at: o.created_at, log: J(o.log, []),
-    items: J(o.items, []), subtotal: o.subtotal, discount: o.discount, fee: o.fee, total: o.total, payment: o.payment, bairro: o.bairro, customer: String(o.customer || '').split(' ')[0] });
+    items: J(o.items, []), descontos: J(o.descontos, []), km: o.km, subtotal: o.subtotal, discount: o.discount, fee: o.fee, total: o.total, payment: o.payment, bairro: o.bairro, customer: String(o.customer || '').split(' ')[0] });
 });
 app.get('/api/p/orders.csv', P, (req, res) => {
   const r = rangeOf(req.query), rows = db.prepare('SELECT * FROM orders WHERE tenant_id=? AND created_at BETWEEN ? AND ? ORDER BY created_at').all(req.tid, r.a, r.b);
@@ -357,7 +572,8 @@ app.get('/api/p/clientes/:id', P, (req, res) => {
   const c = clientes(req.tid, +req.params.id)[0]; if (!c) return res.status(404).end();
   const pedidos = db.prepare('SELECT id,num,created_at,status,total,payment,bairro,items FROM orders WHERE tenant_id=? AND phone=? ORDER BY id DESC LIMIT 100').all(req.tid, c.phone).map(o => ({ ...o, items: J(o.items, []) }));
   const fav = {}; pedidos.filter(o => o.status !== 'cancelado').forEach(o => o.items.forEach(i => fav[i.nome] = (fav[i.nome] || 0) + i.qty));
-  res.json({ ...c, historico: pedidos, favoritos: Object.entries(fav).sort((a, b) => b[1] - a[1]).slice(0, 5) });
+  const F = settingsOf(req.tenant).fidelidade;
+  res.json({ ...c, cashback: F.tipo === 'cashback' ? cashbackSaldo(req.tid, c.phone) : null, selos: F.tipo === 'selos' ? { ...selosInfo(req.tid, c.phone, F.selosMeta), meta: F.selosMeta } : null, historico: pedidos, favoritos: Object.entries(fav).sort((a, b) => b[1] - a[1]).slice(0, 5) });
 });
 const CUST = ['name', 'email', 'birthday', 'address', 'bairro', 'notes', 'tags'];
 function custBody(b) { const o = {}; CUST.forEach(k => { if (k in b) o[k] = String(b[k] ?? '').trim().slice(0, k === 'notes' ? 500 : 160); }); if (o.birthday && !/^\d{4}-\d{2}-\d{2}$|^$/.test(o.birthday)) o.birthday = ''; return o; }
@@ -383,6 +599,42 @@ app.get('/api/p/clientes.csv', P, (req, res) => {
   res.setHeader('Content-Type', 'text/csv; charset=utf-8'); res.setHeader('Content-Disposition', `attachment; filename="clientes-${req.tenant.slug}.csv"`); res.send('﻿' + csv);
 });
 
+/* cupons */
+const CUP = ['code', 'tipo', 'valor', 'minimo', 'inicio', 'fim', 'max_usos', 'por_cliente', 'primeira', 'ativo', 'descricao'];
+function cupBody(b) {
+  const o = {}; CUP.forEach(k => { if (k in b) o[k] = b[k]; });
+  if ('code' in o) o.code = String(o.code || '').trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '').slice(0, 24);
+  if ('tipo' in o && !['percent', 'valor', 'frete'].includes(o.tipo)) o.tipo = 'percent';
+  ['valor', 'minimo'].forEach(k => { if (k in o) o[k] = Math.max(0, +o[k] || 0); });
+  ['max_usos', 'por_cliente'].forEach(k => { if (k in o) o[k] = Math.max(0, +o[k] | 0); });
+  ['primeira', 'ativo'].forEach(k => { if (k in o) o[k] = o[k] ? 1 : 0; });
+  ['inicio', 'fim'].forEach(k => { if (k in o && !/^d{4}-d{2}-d{2}$/.test(o[k])) o[k] = ''; });
+  if ('descricao' in o) o.descricao = String(o.descricao || '').slice(0, 120);
+  return o;
+}
+app.get('/api/p/cupons', P, (req, res) => res.json(db.prepare(`SELECT c.*, (SELECT COUNT(*) FROM orders o WHERE o.tenant_id=c.tenant_id AND o.coupon=c.code AND o.status!='cancelado') usos,
+  (SELECT COALESCE(SUM(json_extract(d.value,'$.valor')),0) FROM orders o, json_each(o.descontos) d WHERE o.tenant_id=c.tenant_id AND o.coupon=c.code AND o.status!='cancelado' AND json_extract(d.value,'$.tipo')='cupom') desconto_total,
+  (SELECT COALESCE(SUM(total),0) FROM orders o WHERE o.tenant_id=c.tenant_id AND o.coupon=c.code AND o.status!='cancelado') vendas
+  FROM coupons c WHERE tenant_id=? ORDER BY ativo DESC, id DESC`).all(req.tid)));
+app.post('/api/p/cupons', P, (req, res) => {
+  const o = cupBody(req.body || {}); if (!o.code) return res.status(400).json({ erro: 'Coloque o código do cupom' });
+  if (db.prepare('SELECT 1 FROM coupons WHERE tenant_id=? AND code=?').get(req.tid, o.code)) return res.status(400).json({ erro: 'Já existe um cupom com esse código' });
+  const ks = Object.keys(o); const r = db.prepare(`INSERT INTO coupons(tenant_id${ks.map(k => ',' + k).join('')}) VALUES(?${ks.map(() => ',?').join('')})`).run(req.tid, ...ks.map(k => o[k])); res.json({ id: r.lastInsertRowid });
+});
+app.put('/api/p/cupons/:id', P, (req, res) => {
+  const c = db.prepare('SELECT * FROM coupons WHERE id=? AND tenant_id=?').get(+req.params.id, req.tid); if (!c) return res.status(404).end();
+  const o = cupBody(req.body || {}); delete o.code; const ks = Object.keys(o); if (ks.length) db.prepare(`UPDATE coupons SET ${ks.map(k => k + '=?').join(',')} WHERE id=?`).run(...ks.map(k => o[k]), c.id); res.json({ ok: true });
+});
+app.delete('/api/p/cupons/:id', P, (req, res) => { db.prepare('DELETE FROM coupons WHERE id=? AND tenant_id=?').run(+req.params.id, req.tid); res.json({ ok: true }); });
+
+/* localizar a loja no mapa pelo endereço (para a taxa por distância) */
+app.post('/api/p/localizar', P, async (req, res) => {
+  const b = req.body || {}, cep = String(b.cep || '').replace(/D/g, ''); let ci = cep ? await viaCep(cep) : null;
+  const g = await locate({ cep, rua: b.rua || (ci && ci.logradouro), numero: b.numero, bairro: ci && ci.bairro, cidade: b.cidade || (ci && ci.localidade), uf: b.uf || (ci && ci.uf) });
+  if (!g) return res.status(404).json({ erro: 'Não achei esse endereço no mapa. Confira ou coloque as coordenadas.' });
+  res.json({ ...g, endereco: ci ? `${ci.logradouro}, ${ci.bairro}, ${ci.localidade}/${ci.uf}` : '' });
+});
+
 /* relatório */
 app.get('/api/p/report', P, (req, res) => {
   const r = rangeOf(req.query);
@@ -398,7 +650,7 @@ app.get('/api/p/report', P, (req, res) => {
     bairros[o.bairro] = (bairros[o.bairro] || 0) + 1; pays[o.payment] = (pays[o.payment] || 0) + o.total;
     for (const i of J(o.items, [])) { const k = i.nome; prods[k] = prods[k] || { nome: k, qtd: 0, total: 0 }; prods[k].qtd += i.qty; prods[k].total += i.total; }
   }
-  const capi = db.prepare(`SELECT info, created_at FROM events WHERE tenant_id=? AND type='CAPI' ORDER BY id DESC LIMIT 5`).all(req.tid);
+  const capi = db.prepare(`SELECT info, created_at FROM events WHERE tenant_id=? AND type='CAPI' ORDER BY id DESC LIMIT 20`).all(req.tid);
   /* clientes novos x que voltaram, no período */
   const firstOf = db.prepare(`SELECT MIN(id) id FROM orders WHERE tenant_id=? AND phone=? AND status!='cancelado'`);
   let novos = 0, voltaram = 0; const vistos = new Set();
@@ -448,6 +700,11 @@ app.post('/api/a/tenants/:id/login', A, (req, res) => {
   if (u) db.prepare('UPDATE users SET pass_hash=? WHERE id=?').run(hashPass(senha), u.id), db.prepare('DELETE FROM sessions WHERE user_id=?').run(u.id);
   else db.prepare('INSERT INTO users(email,name,pass_hash,role,tenant_id) VALUES(?,?,?,?,?)').run(em, t.name, hashPass(senha), 'cliente', t.id);
   res.json({ ok: true, criado: !u });
+});
+/* backup: baixa uma cópia do banco (todos os clientes) */
+app.get('/api/a/backup', A, (req, res) => {
+  const f = path.join(require('os').tmpdir(), `huntix-${Date.now()}.db`); backupNow(f);
+  res.download(f, `huntix-backup-${new Date().toISOString().slice(0, 16).replace(/[T:]/g, '-')}.db`, () => { try { fs.unlinkSync(f); } catch {} });
 });
 app.post('/api/a/act', A, (req, res) => { const id = req.body && req.body.id ? +req.body.id : null; if (id && !tenantById(id)) return res.status(404).end(); db.prepare('UPDATE sessions SET acting_tenant=? WHERE token=?').run(id, req.s.token); res.json({ ok: true }); });
 

@@ -239,6 +239,13 @@ input[type=text],input[type=tel],select,textarea{width:100%;border:1.5px solid v
 .pay button{border:1.5px solid var(--line);border-radius:12px;height:42px;font-weight:600}
 .pay button.on{border-color:var(--green);background:var(--soft);font-weight:800}
 .pay button{font-size:13px;line-height:1.15;padding:4px;min-height:46px;height:auto}
+.ghd{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-top:16px;padding-bottom:4px;border-bottom:1px solid var(--line)}
+.ghd b{font-size:14px}.ghd span{font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;text-align:right}
+.ghd span.req{color:var(--heart)}
+.opt label:has(input:disabled){opacity:.45}
+.fidbox{display:block;margin-top:12px;background:color-mix(in srgb,var(--lime) 22%,var(--bg));border-radius:12px;padding:10px 12px;font-size:13px;line-height:1.45}
+.fidbox input{accent-color:var(--green);margin-right:6px;vertical-align:-2px}
+.selos{display:flex;gap:5px;flex-wrap:wrap;margin-top:6px}.selos i{width:18px;height:18px;border-radius:50%;border:2px solid var(--green)}.selos i.on{background:var(--green)}
 .pixbox{margin-top:10px;background:var(--soft);border-radius:12px;padding:10px 12px;font-size:13px;line-height:1.5}
 .pixbox .pk{font-weight:800;word-break:break-all}
 .pixbox small{color:var(--muted)}
@@ -316,9 +323,13 @@ const media=(src,icon)=>src&&!String(src).startsWith('icon:')?`<img src="${esc(s
 const pm=p=>media(p.img,p.icon);
 
 /* --------- eventos: Pixel Meta (se o cliente configurou) + contagem própria para os relatórios --------- */
+/* cada evento tem um id único: o Pixel (navegador) e a API de Conversões (servidor) mandam o mesmo id e a Meta não conta em dobro */
+const evId=t=>t.slice(0,4)+'-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,8);
 function track(type,info,extra){
-  if(['PageView','ViewContent','AddToCart','InitiateCheckout','Contact'].includes(type)) fetch(`/api/m/${SLUG}/ev`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({type,info})}).catch(()=>{});
-  if(window.fbq&&type!=='Story'){ const std=['PageView','ViewContent','AddToCart','InitiateCheckout','Purchase','Contact']; try{ std.includes(type)?fbq('track',type,extra?.data||{},extra?.opt||{}):fbq('trackCustom',type,{info}); }catch{} }
+  const std=['PageView','ViewContent','AddToCart','InitiateCheckout','AddPaymentInfo','Purchase','Contact'];
+  const eventId=(extra&&extra.opt&&extra.opt.eventID)||evId(type), data=(extra&&extra.data)||{};
+  if(type!=='Purchase') fetch(`/api/m/${SLUG}/ev`,{method:'POST',headers:{'content-type':'application/json'},keepalive:true,body:JSON.stringify({type,info,eventId,data,visitor:VIS,fbp:cookie('_fbp'),fbc:cookie('_fbc'),url:location.href})}).catch(()=>{});
+  if(window.fbq){ try{ std.includes(type)?fbq('track',type,data,{eventID:eventId}):fbq('trackCustom',type,{info}); }catch{} }
 }
 function loadPixel(id){ if(!id) return; !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js'); fbq('init',id); }
 const cookie=n=>(document.cookie.match('(^|;)\\s*'+n+'=([^;]*)')||[])[2]||'';
@@ -477,75 +488,126 @@ document.addEventListener('click',e=>{
 document.addEventListener('keydown',e=>{ if(e.key!=='Escape') return; if(!$('#story').hidden) closeStory(); else if(!$('#sheet').hidden) close(); });
 
 /* --------- sacola --------- */
+/* grupos de opções: mínimo, máximo e regra de preço (soma | maior | media = meio a meio) */
+const gOf=g=>({nome:g.nome,itens:g.itens||[],min:g.min??1,max:g.max??1,regra:g.regra||'soma'});
+const groups=p=>(p.opts||[]).map(gOf);
+const defaultSel=p=>groups(p).map(g=>g.min>0?[...Array(Math.min(g.min,g.itens.length)).keys()]:[]);
+function extraOf(p,sel){ return groups(p).reduce((tot,g,gi)=>{ const ex=(sel[gi]||[]).map(i=>+g.itens[i][1]||0); if(!ex.length) return tot;
+  return tot+(g.regra==='maior'?Math.max(...ex):g.regra==='media'?ex.reduce((a,b)=>a+b,0)/ex.length:ex.reduce((a,b)=>a+b,0)); },0); }
+const labelsOf=(p,sel)=>groups(p).map((g,gi)=>(sel[gi]||[]).length?`${g.nome}: ${(sel[gi]).map(i=>g.itens[i][0]).join(g.regra==='soma'?', ':' + ')}`:'').filter(Boolean);
 function unitOf(l){ const p=P[l.id], tot=cart.filter(x=>x.id===l.id).reduce((s,x)=>s+x.qty,0); return (p.bulk&&tot>=p.bulk[0]?Math.min(p.price,p.bulk[1]):p.price)+l.extra; }
 const sub=()=>cart.reduce((s,l)=>s+unitOf(l)*l.qty,0);
 const disc=()=>L.curtidas.meta>0&&mine.size>=L.curtidas.meta?Math.round(sub()*L.curtidas.desconto)/100:0;
 function refresh(){ const n=cart.reduce((s,l)=>s+l.qty,0); $('#bar').hidden=!n; $('#cnt').textContent=n; $('#barTotal').textContent=BRL(sub()-disc()); const b=$('#bagBadge'); if(b){ b.hidden=!n; b.textContent=n; } }
-function addToCart(id,qty,sel=[],via='vitrine'){ const p=P[id], key=id+'|'+sel.join(','), extra=sel.reduce((s,oi,gi)=>s+(+p.opts[gi].itens[oi][1]||0),0), labels=sel.map((oi,gi)=>`${p.opts[gi].nome}: ${p.opts[gi].itens[oi][0]}`);
+function addToCart(id,qty,sel,via='vitrine'){ const p=P[id]; sel=sel||defaultSel(p); const key=id+'|'+JSON.stringify(sel), extra=extraOf(p,sel), labels=labelsOf(p,sel);
   const same=cart.find(l=>l.key===key); if(same) same.qty+=qty; else cart.push({key,id,qty,sel,extra,labels});
   track('AddToCart',`${qty}× ${p.name} · via ${via}`,{data:{content_ids:[String(id)],content_type:'product',value:(p.price+extra)*qty,currency:'BRL'}}); refresh(); }
 function show(h){ $('#panel').innerHTML='<div class="grab"></div>'+h; $('#sheet').hidden=false; }
 function close(){ $('#sheet').hidden=true; }
 
 function openItem(id){
-  const p=P[id]; let q=1; const b=D.brands.length>1&&D.brands.find(x=>x.id===(CATS.find(c=>c.id===p.cat)||{}).brand_id);
+  const p=P[id], G=groups(p); let q=1; const b=D.brands.length>1&&D.brands.find(x=>x.id===(CATS.find(c=>c.id===p.cat)||{}).brand_id);
   track('ViewContent',p.name,{data:{content_ids:[String(id)],content_type:'product',value:p.price,currency:'BRL'}});
+  const rule=g=>g.max===1?(g.min?'Obrigatório · escolha 1':'Opcional · escolha 1'):`${g.min?`Escolha de ${g.min} a ${g.max}`:`Escolha até ${g.max}`}${g.regra==='maior'?' · cobra o mais caro':g.regra==='media'?' · cobra a média':''}`;
   show(`<div class="pimg">${pm(p)}<button class="heartbtn" data-like="${id}" aria-label="Curtir"></button></div>
   ${b?`<div class="from">${b.logo?`<img src="${esc(b.logo)}" alt="">`:''}${esc(b.name)}</div>`:''}
   <h3 style="margin-top:12px">${esc(p.name)}</h3><div style="color:var(--muted)">${esc(p.desc)}</div>
   <div style="margin-top:8px;font-size:20px;font-weight:800" class="num">${p.old?`<s style="font-size:13px;color:var(--muted);font-weight:500;margin-right:6px">${BRL(p.old)}</s>`:''}${BRL(p.price)}</div>
   ${p.bulk&&p.bulk[1]<p.price?`<div class="atabox">Atacado: levando <b>${p.bulk[0]} ou mais</b>, cada um sai por <b>${BRL(p.bulk[1])}</b>.</div>`:''}
-  ${p.opts.map((g,gi)=>`<div style="margin-top:12px;font-size:12px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">${esc(g.nome)}</div>${g.itens.map(([n,pr],oi)=>`<div class="opt"><label><input type="radio" name="g${gi}" value="${oi}" ${oi?'':'checked'}>${esc(n)}</label><span class="num" style="color:var(--muted)">${+pr?'+ '+BRL(+pr):''}</span></div>`).join('')}`).join('')}
+  ${G.map((g,gi)=>{ const radio=g.max===1&&g.min===1; return `<div class="ghd"><b>${esc(g.nome)}</b><span class="${g.min?'req':''}" id="gh${gi}">${rule(g)}</span></div>
+    ${g.itens.map(([n,pr],oi)=>`<div class="opt"><label><input type="${radio?'radio':'checkbox'}" name="g${gi}" value="${oi}" ${radio&&!oi?'checked':''}>${esc(n)}</label><span class="num" style="color:var(--muted)">${+pr?'+ '+BRL(+pr):''}</span></div>`).join('')}`; }).join('')}
+  <div class="err" id="oerr"></div>
   <div class="foot"><div class="qty"><button id="qm" aria-label="Menos">−</button><span id="qv" class="num">1</span><button id="qp" aria-label="Mais">+</button></div><button class="btn" id="add"><span>Adicionar</span><span class="num" id="ap"></span></button></div>`);
   renderLikes();
-  const sel=()=>p.opts.map((g,gi)=>+document.querySelector(`[name=g${gi}]:checked`).value);
-  const u=()=>{ const ex=sel().reduce((s,oi,gi)=>s+(+p.opts[gi].itens[oi][1]||0),0), un=(p.bulk&&q>=p.bulk[0]?Math.min(p.price,p.bulk[1]):p.price)+ex; $('#qv').textContent=q; $('#ap').textContent=BRL(un*q); };
+  const sel=()=>G.map((g,gi)=>[...document.querySelectorAll(`[name=g${gi}]:checked`)].map(x=>+x.value));
+  const u=()=>{ const s=sel(); if($('#oerr')) $('#oerr').textContent='';
+    G.forEach((g,gi)=>{ if(g.max>1||g.min===0){ const all=[...document.querySelectorAll(`[name=g${gi}]`)], n=s[gi].length; all.forEach(x=>{ if(!x.checked) x.disabled=g.max>0&&n>=g.max; }); } });
+    const un=(p.bulk&&q>=p.bulk[0]?Math.min(p.price,p.bulk[1]):p.price)+extraOf(p,s); $('#qv').textContent=q; $('#ap').textContent=BRL(un*q); };
   $('#panel').onchange=u; $('#qm').onclick=()=>{if(q>1){q--;u()}}; $('#qp').onclick=()=>{q++;u()};
-  $('#add').onclick=()=>{addToCart(id,q,sel(),'produto');close();toast(p.name+' na sacola')}; u();
+  $('#add').onclick=()=>{ const s=sel(), miss=G.findIndex((g,gi)=>s[gi].length<g.min);
+    if(miss>=0){ $('#oerr').textContent=`Escolha ${G[miss].min>1?G[miss].min+' opções':'uma opção'} em "${G[miss].nome}"`; document.getElementById('gh'+miss).scrollIntoView({block:'center',behavior:'smooth'}); return; }
+    addToCart(id,q,s,'produto');close();toast(p.name+' na sacola'); };
+  u();
 }
 
+/* checkout: o total vem do servidor (entrega por bairro ou CEP, cupom, cashback, selos) */
 function openCart(){
   track('InitiateCheckout',`${cart.length} itens`,{data:{value:sub()-disc(),currency:'BRL',num_items:cart.length}});
-  const saved=JSON.parse(LS('cliente')||'{}');
-  const opts=[...(L.retirada?[['__retirada','Retirar na loja · grátis']]:[]),...L.bairros.map(([b,t])=>[b,`${b} · entrega ${BRL(t)}`])];
+  const saved=JSON.parse(LS('cliente')||'{}'), dist=L.entrega&&L.entrega.modo==='distancia', F=L.fidelidade||{tipo:'off'};
+  const opts=[...(L.retirada?[['__retirada','Retirar na loja · grátis']]:[]),...(dist?[['__entrega','Entrega (taxa pelo CEP)']]:L.bairros.map(([b,t])=>[b,`${b} · entrega ${BRL(t)}`]))];
+  let cupom='', usarCb=false, Q=null, qTimer=null, qSeq=0;
   show(`<h3>Sua sacola</h3><div id="lines"></div>
   <div class="field"><label for="nome">Nome</label><input type="text" id="nome" autocomplete="name" value="${esc(saved.nome||'')}"></div>
   <div class="field"><label for="fone">WhatsApp com DDD</label><input type="tel" id="fone" autocomplete="tel" inputmode="tel" placeholder="(84) 9 9999-9999" value="${esc(saved.fone||'')}"></div>
+  <div id="fid"></div>
   <div class="field"><label for="bairro">Entrega ou retirada</label><select id="bairro">${opts.map(([v,t])=>`<option value="${esc(v)}" ${saved.bairro===v?'selected':''}>${esc(t)}</option>`).join('')}</select></div>
-  <div id="endF"><div class="field"><label for="end">Rua / Avenida</label><input type="text" id="end" autocomplete="address-line1" placeholder="Ex.: Rua das Flores" value="${esc(saved.end||'')}"></div>
+  <div id="endF">
+    <div class="field"><label for="cep">CEP${dist?'':' (opcional, preenche o endereço)'}</label><input type="text" id="cep" inputmode="numeric" autocomplete="postal-code" placeholder="00000-000" maxlength="9" value="${esc(saved.cep||'')}"><small id="cepMsg" style="color:var(--muted);font-size:12px"></small></div>
+    <div class="field"><label for="end">Rua / Avenida</label><input type="text" id="end" autocomplete="address-line1" placeholder="Ex.: Rua das Flores" value="${esc(saved.end||'')}"></div>
     <div style="display:grid;grid-template-columns:110px 1fr;gap:10px"><div class="field"><label for="num">Número</label><input type="text" id="num" inputmode="numeric" placeholder="123 ou S/N" value="${esc(saved.num||'')}"></div><div class="field"><label for="comp">Complemento</label><input type="text" id="comp" autocomplete="address-line2" placeholder="Apto, bloco, casa" value="${esc(saved.comp||'')}"></div></div>
     <div class="field"><label for="ref">Ponto de referência</label><input type="text" id="ref" placeholder="Ex.: perto da praça, portão azul" value="${esc(saved.ref||'')}"></div></div>
-  <div class="field"><span>Pagamento na ${'entrega ou retirada'}</span><small style="color:var(--muted);font-size:12px;margin-top:-2px">Você não paga nada agora: escolha como vai pagar quando receber.</small><div class="pay">${L.pagamentos.map(x=>`<button data-pay="${esc(x)}" class="${x===pay?'on':''}">${esc(x)}</button>`).join('')}</div></div>
+  ${L.temCupom?`<div class="field"><label for="cup">Cupom de desconto</label><div style="display:flex;gap:8px"><input type="text" id="cup" placeholder="Ex.: PRIMEIRA10" style="text-transform:uppercase" autocomplete="off"><button type="button" class="btn ghost" id="cupOk" style="flex:none;height:44px">Aplicar</button></div><small id="cupMsg" style="font-size:12px"></small></div>`:''}
+  <div class="field"><span>Pagamento na entrega ou retirada</span><small style="color:var(--muted);font-size:12px;margin-top:-2px">Você não paga nada agora: escolha como vai pagar quando receber.</small><div class="pay">${L.pagamentos.map(x=>`<button data-pay="${esc(x)}" class="${x===pay?'on':''}">${esc(x)}</button>`).join('')}</div></div>
   ${L.pixChave?`<div class="pixbox" id="pixF" hidden><span id="pixTx"></span><br>Chave Pix: <span class="pk">${esc(L.pixChave)}</span>${L.pixNome?` <small>(${esc(L.pixNome)})</small>`:''} <button type="button" class="cpx" data-copy="${esc(L.pixChave)}">Copiar chave</button></div>`:''}
   <div class="field" id="trocoF" hidden><label for="troco">Troco para quanto? (opcional)</label><input type="text" id="troco" inputmode="decimal" placeholder="Ex.: 100"></div>
   <div class="field"><label for="obs">Observação (opcional)</label><input type="text" id="obs" placeholder="Ex.: sem cebola, entregar depois das 18h"></div>
   <div class="tot num" id="tot"></div><div class="err" id="err"></div>
   <div class="foot"><button class="btn" id="send"><span>Enviar pedido</span><span class="num" id="sp"></span></button></div>`);
-  const fee=()=>{ const v=$('#bairro').value; if(v==='__retirada') return 0; const b=L.bairros.find(x=>x[0]===v); return b?+b[1]:0; };
-  const r=()=>{ $('#lines').innerHTML=cart.map((l,i)=>`<div class="line"><div><b>${l.qty}× ${esc(P[l.id].name)}</b>${l.labels.length?`<small>${esc(l.labels.join(' · '))}</small>`:''}${P[l.id].bulk&&unitOf(l)-l.extra<P[l.id].price?'<small style="color:var(--green);font-weight:700">Preço de atacado</small>':''}<button class="rm" data-rm="${i}">Remover</button></div><span class="num">${BRL(unitOf(l)*l.qty)}</span></div>`).join('');
-    const ret=$('#bairro').value==='__retirada', t=fee(), s=sub(), d=disc(); $('#endF').hidden=ret;
-    $('#tot').innerHTML=`<span>Subtotal</span><span>${BRL(s)}</span>${d?`<span class="disc">Curtiu e ganhou (${L.curtidas.desconto}%)</span><span class="disc">− ${BRL(d)}</span>`:L.curtidas.meta>0?`<span style="color:var(--muted)">Curta ${L.curtidas.meta-Math.min(mine.size,L.curtidas.meta)} produto(s) e ganhe ${L.curtidas.desconto}%</span><span></span>`:''}<span>${ret?'Retirada':'Entrega'}</span><span>${ret?'grátis':BRL(t)}</span><span class="big">Total</span><span class="big">${BRL(s-d+t)}</span>`;
-    $('#sp').textContent=BRL(s-d+t); $('#err').textContent=!ret&&L.minimo&&s<L.minimo?`Pedido mínimo para entrega: ${BRL(L.minimo)}. Faltam ${BRL(L.minimo-s)}.`:''; };
-  $('#panel').onclick=e=>{ const m=e.target.closest('[data-rm]'); if(m){cart.splice(+m.dataset.rm,1);refresh();if(!cart.length){close();return}r()}
-    const y=e.target.closest('[data-pay]'); if(y){pay=y.dataset.pay;document.querySelectorAll('[data-pay]').forEach(b=>b.classList.toggle('on',b===y)); payExtras();}
+  const body=()=>({nome:$('#nome').value,telefone:$('#fone').value,bairro:$('#bairro').value,cep:$('#cep').value,endereco:$('#end').value,numero:$('#num').value,complemento:$('#comp').value,referencia:$('#ref').value,pagamento:pay,troco:$('#troco').value,obs:$('#obs').value,cupom,usarCashback:usarCb,visitor:VIS,itens:cart.map(l=>({id:l.id,qty:l.qty,opts:l.sel}))});
+  const lines=()=>{ $('#lines').innerHTML=cart.map((l,i)=>`<div class="line"><div><b>${l.qty}× ${esc(P[l.id].name)}</b>${l.labels.length?`<small>${esc(l.labels.join(' · '))}</small>`:''}${P[l.id].bulk&&unitOf(l)-l.extra<P[l.id].price?'<small style="color:var(--green);font-weight:700">Preço de atacado</small>':''}<button class="rm" data-rm="${i}">Remover</button></div><span class="num">${BRL(unitOf(l)*l.qty)}</span></div>`).join(''); };
+  const ret=()=>$('#bairro').value==='__retirada';
+  /* totais vindos do servidor */
+  const draw=()=>{ if(!Q){ $('#tot').innerHTML=`<span>Subtotal</span><span>${BRL(sub())}</span><span class="big">Total</span><span class="big">…</span>`; return; }
+    const kmTxt=Q.km!=null?` (${String(Q.km.toFixed(1)).replace('.',',')} km)`:'';
+    $('#tot').innerHTML=`<span>Subtotal</span><span>${BRL(Q.subtotal)}</span>${Q.descontos.map(d=>`<span class="disc">${esc(d.label)}</span><span class="disc">− ${BRL(d.valor)}</span>`).join('')}
+      ${!Q.descontos.some(d=>d.tipo==='curtidas')&&L.curtidas.meta>0?`<span style="color:var(--muted)">Curta ${L.curtidas.meta-Math.min(mine.size,L.curtidas.meta)} produto(s) e ganhe ${L.curtidas.desconto}%</span><span></span>`:''}
+      <span>${Q.retirada?'Retirada':'Entrega'+kmTxt}</span><span>${Q.retirada?'grátis':Q.erroEntrega?'—':BRL(Q.fee)}</span><span class="big">Total</span><span class="big">${BRL(Q.total)}</span>
+      ${Q.fidelidade.ganhaCashback>0?`<span style="color:var(--green);grid-column:1/-1;font-size:12px;font-weight:700">🎁 Você ganha ${BRL(Q.fidelidade.ganhaCashback)} de cashback quando o pedido for entregue</span>`:''}`;
+    $('#sp').textContent=BRL(Q.total);
+    $('#err').textContent=Q.erroEntrega&&!ret()&&(dist?$('#cep').value.replace(/\D/g,'').length===8:true)?Q.erroEntrega:Q.minimoErro||'';
+    if($('#cupMsg')){ $('#cupMsg').style.color=Q.cupomErro?'var(--heart)':'var(--green)'; $('#cupMsg').textContent=cupom?(Q.cupomErro||`Cupom ${Q.coupon} aplicado ✓`):''; }
+    const f=Q.fidelidade; let fh='';
+    if(f.tipo==='cashback'&&f.saldo>0) fh=`<label class="fidbox"><input type="checkbox" id="useCb" ${usarCb?'checked':''}> Usar meu cashback: <b>${BRL(f.saldo)}</b> disponível</label>`;
+    else if(f.tipo==='cashback'&&L.fidelidade.cashbackPct) fh=`<div class="fidbox">🎁 Ganhe <b>${L.fidelidade.cashbackPct}% de cashback</b> em cada pedido entregue.</div>`;
+    if(f.tipo==='selos'&&f.selos){ const s=f.selos, m=L.fidelidade.selosMeta; fh=`<div class="fidbox">${s.premio?`🎉 <b>Prêmio liberado!</b> ${BRL(L.fidelidade.selosPremio)} de desconto neste pedido.`:`<b>Cartão fidelidade:</b> ${Math.min(s.feitos,m)} de ${m} pedidos · faltam ${s.faltam} para ganhar ${BRL(L.fidelidade.selosPremio)}`}<div class="selos">${Array.from({length:Math.min(m,12)},(_,i)=>`<i class="${i<s.feitos?'on':''}"></i>`).join('')}</div></div>`; }
+    $('#fid').innerHTML=fh; $('#useCb')&&($('#useCb').onchange=e=>{usarCb=e.target.checked;cotar(0)}); };
+  const cotar=(ms=450)=>{ clearTimeout(qTimer); $('#endF').hidden=ret(); qTimer=setTimeout(async()=>{ const my=++qSeq;
+    try{ const r=await fetch(`/api/m/${SLUG}/cotar`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body())}); const j=await r.json(); if(my!==qSeq) return; if(!r.ok){ $('#err').textContent=j.erro||''; return; } Q=j; draw(); }catch{} },ms); };
+  /* CEP → endereço (ViaCEP) */
+  const cepFill=async()=>{ const c=$('#cep').value.replace(/\D/g,''); $('#cep').value=c.length>5?c.slice(0,5)+'-'+c.slice(5,8):c; if(c.length!==8){ $('#cepMsg').textContent=''; return; }
+    $('#cepMsg').textContent='Buscando endereço…';
+    try{ const j=await (await fetch(`https://viacep.com.br/ws/${c}/json/`)).json(); if(j.erro) throw 0;
+      $('#cepMsg').textContent=[j.bairro,j.localidade+'/'+j.uf].filter(Boolean).join(' · '); if(j.logradouro&&!$('#end').value) $('#end').value=j.logradouro;
+      if(!dist){ const o=[...$('#bairro').options].find(o=>o.value.toLowerCase()===String(j.bairro||'').toLowerCase()); if(o) $('#bairro').value=o.value; }
+      if(!$('#num').value) $('#num').focus();
+    }catch{ $('#cepMsg').textContent='CEP não encontrado. Confira os números.'; }
+    cotar(0); };
+  $('#cep').oninput=()=>{ if($('#cep').value.replace(/\D/g,'').length===8) cepFill(); };
+  $('#cep').onblur=cepFill;
+  ['#end','#num'].forEach(s=>$(s).onchange=()=>dist&&cotar());
+  $('#fone').onchange=()=>cotar(0);
+  $('#bairro').onchange=()=>cotar(0);
+  $('#cupOk')&&($('#cupOk').onclick=()=>{ cupom=$('#cup').value.trim().toUpperCase(); cotar(0); });
+  $('#cup')&&($('#cup').onkeydown=e=>{ if(e.key==='Enter'){ e.preventDefault(); $('#cupOk').click(); } });
+  $('#panel').onclick=e=>{ const m=e.target.closest('[data-rm]'); if(m){cart.splice(+m.dataset.rm,1);refresh();if(!cart.length){close();return} lines(); cotar(0); }
+    const y=e.target.closest('[data-pay]'); if(y){pay=y.dataset.pay;document.querySelectorAll('[data-pay]').forEach(b=>b.classList.toggle('on',b===y)); payExtras(); track('AddPaymentInfo',pay,{data:{value:Q?Q.total:sub(),currency:'BRL'}});}
     const cp=e.target.closest('[data-copy]'); if(cp){ navigator.clipboard.writeText(cp.dataset.copy).then(()=>{cp.textContent='Copiada ✓'}).catch(()=>{}); } };
   const payExtras=()=>{ $('#trocoF').hidden=!/dinheiro/i.test(pay); const pf=$('#pixF'); if(!pf) return; const agora=/antecipado/i.test(pay);
     pf.hidden=!(agora||(/pix/i.test(pay)&&!L.pixAntecipado));
     $('#pixTx').innerHTML=agora?'<b>Pague o Pix agora</b> e envie o comprovante. Seu pedido vai para o preparo assim que a loja confirmar o pagamento.':'<b>Quer adiantar o Pix?</b> É opcional, pode pagar na entrega.'; };
   payExtras();
-  $('#bairro').onchange=r;
   $('#send').onclick=async()=>{
-    const body={nome:$('#nome').value,telefone:$('#fone').value,bairro:$('#bairro').value,endereco:$('#end').value,numero:$('#num').value,complemento:$('#comp').value,referencia:$('#ref').value,pagamento:pay,troco:$('#troco').value,obs:$('#obs').value,visitor:VIS,itens:cart.map(l=>({id:l.id,qty:l.qty,opts:l.sel})),fbp:cookie('_fbp'),fbc:cookie('_fbc'),origem:new URLSearchParams(location.search).get('utm_source')||document.referrer.slice(0,100)};
-    LS('cliente',JSON.stringify({nome:body.nome,fone:body.telefone,bairro:body.bairro,end:body.endereco,num:body.numero,comp:body.complemento,ref:body.referencia}));
+    const b={...body(),fbp:cookie('_fbp'),fbc:cookie('_fbc'),origem:new URLSearchParams(location.search).get('utm_source')||document.referrer.slice(0,100)};
+    LS('cliente',JSON.stringify({nome:b.nome,fone:b.telefone,bairro:b.bairro,cep:b.cep,end:b.endereco,num:b.numero,comp:b.complemento,ref:b.referencia}));
     const btn=$('#send'); btn.disabled=true; $('#err').textContent='';
-    let j; try{ const res=await fetch(`/api/m/${SLUG}/order`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)}); j=await res.json(); if(!res.ok) throw new Error(j.erro||'Erro'); }
+    let j; try{ const res=await fetch(`/api/m/${SLUG}/order`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(b)}); j=await res.json(); if(!res.ok) throw new Error(j.erro||'Erro'); }
     catch(err){ btn.disabled=false; $('#err').textContent=err.message||'Não deu pra enviar agora. Tente de novo.'; return; }
-    track('Purchase',`pedido #${j.num}`,{data:{value:j.total,currency:'BRL',content_type:'product',content_ids:cart.map(l=>String(l.id))},opt:{eventID:j.eventId}});
+    track('Purchase',`pedido #${j.num}`,{data:{value:j.total,currency:'BRL',content_type:'product',content_ids:cart.map(l=>String(l.id)),num_items:cart.reduce((a,l)=>a+l.qty,0),order_id:String(j.num)},opt:{eventID:j.eventId}});
     LS('ultimo',JSON.stringify({track:j.track,num:j.num,t:Date.now()}));
     if(j.whats) location.href=j.whats;
     const pixBox=j.pix?`<div class="pixbox" style="margin-top:12px"><b>Falta pagar o Pix: ${BRL(j.total)}</b><br>Chave: <span class="pk">${esc(j.pix.chave)}</span>${j.pix.nome?` <small>(${esc(j.pix.nome)})</small>`:''}<br><button type="button" class="cpx" id="cpk" style="margin:6px 0 0">Copiar chave Pix</button>${j.pix.whatsapp?` <a class="cpx" style="text-decoration:none;color:inherit" target="_blank" rel="noopener" href="https://wa.me/${esc(j.pix.whatsapp)}?text=${encodeURIComponent(`Oi! Segue o comprovante do Pix do pedido #${j.num} (${BRL(j.total)}).`)}">Enviar comprovante no WhatsApp</a>`:''}<br><small>Assim que a loja confirmar, o pedido vai para o preparo e você recebe o aviso.</small></div>`:'';
     show(`<div class="ok"><div class="big">${j.pix?'⏳':'✓'}</div><h3>Pedido #${j.num} ${j.pix?'reservado':'enviado'}</h3><p style="color:var(--muted);margin:0">${j.whats?'Abrimos o WhatsApp da loja com o pedido escrito. É só tocar em enviar.':`${esc(L.name)} recebeu seu pedido e vai te chamar no WhatsApp.`}</p></div>
-      ${pixBox}
+      ${pixBox}${j.ganhaCashback>0?`<div class="fidbox" style="margin-top:12px">🎁 Quando o pedido for entregue, você ganha <b>${BRL(j.ganhaCashback)}</b> de cashback para usar no próximo.</div>`:''}
       <a class="btn" href="${esc(j.trackUrl)}" style="justify-content:center;text-decoration:none;margin-top:14px;background:var(--lime);color:#14200A">Acompanhar meu pedido →</a>
       <p style="color:var(--muted);font-size:12px;text-align:center;margin:8px 0 0">A loja também te avisa no WhatsApp a cada etapa.</p>
       <div class="msg" id="msg" style="margin-top:12px"></div><div class="foot">${j.whats?`<a class="btn" href="${esc(j.whats)}" style="justify-content:center;text-decoration:none">Abrir WhatsApp</a>`:'<button class="btn ghost" id="cp">Copiar pedido</button>'}<button class="btn ${j.whats?'ghost':''}" id="nv" style="justify-content:center">Novo pedido</button></div>`);
@@ -554,7 +616,7 @@ function openCart(){
     $('#cp')&&($('#cp').onclick=()=>navigator.clipboard.writeText(j.msg).then(()=>$('#cp').textContent='Copiado').catch(()=>{}));
     $('#nv').onclick=()=>{cart=[];refresh();close();document.querySelectorAll('.addbtn.done').forEach(a=>{a.classList.remove('done');a.textContent='+ Sacola'})};
   };
-  r();
+  lines(); draw(); cotar(0); if($('#cep').value.replace(/\D/g,'').length===8&&!ret()) $('#cepMsg').textContent='';
 }
 
 /* --------- stories --------- */
@@ -611,8 +673,8 @@ function handle(raw){
   const found=findProducts(t);
   if(found.length&&/quanto|preco|valor|custa/.test(t)) return say(found.map(([id])=>`${P[id].name}: ${BRL(P[id].price)}${P[id].bulk?` (atacado ${P[id].bulk[0]}+ por ${BRL(P[id].bulk[1])})`:''}`).join('\n')+'\n\nQuer que eu coloque na sacola?',null,found[0][0]);
   if(found.length){ const withOpts=found.filter(([id])=>P[id].opts.length);
-    found.forEach(([id,q])=>addToCart(id,q,P[id].opts.map(()=>0),'robô'));
-    return say(`Coloquei na sacola:\n${found.map(([id,q])=>`• ${q}× ${P[id].name} — ${BRL(P[id].price*q)}`).join('\n')}${withOpts.length?`\n(${withOpts.map(([id])=>P[id].opts.map(g=>g.nome.toLowerCase()).join('/')).join(', ')}: escolhi a primeira opção, você troca na sacola)`:''}\n\nSubtotal: ${BRL(sub())}. Mais alguma coisa?`,['Fechar pedido','Ver preços','Tirar tudo']); }
+    found.forEach(([id,q])=>addToCart(id,q,defaultSel(P[id]),'robô'));
+    return say(`Coloquei na sacola:\n${found.map(([id,q])=>`• ${q}× ${P[id].name} — ${BRL(P[id].price*q)}`).join('\n')}${withOpts.length?`\n(${withOpts.map(([id])=>P[id].opts.map(g=>g.nome.toLowerCase()).join('/')).join(', ')}: escolhi a opção padrão; para trocar, remova e escolha no produto)`:''}\n\nSubtotal: ${BRL(sub())}. Mais alguma coisa?`,['Fechar pedido','Ver preços','Tirar tudo']); }
   if(/pedido|pedir|comprar|quero/.test(t)){ const ex=D.prods.slice(0,3); return say(`Pode escrever do seu jeito, tipo:\n"quero 2 ${ex[0]?.name||''}"`,ex.map(p=>`1 ${p.name}`)); }
   if(/preco|precos|cardapio|valor|quanto|tabela|produto/.test(t)) return say(`Nossos preços:\n${visProds().slice(0,25).map(p=>`• ${p.name}: ${BRL(p.price)}`).join('\n')}${D.prods.length>25?'\n…e mais no cardápio.':''}`);
   if(/taxa|entrega|frete|bairro|entregam/.test(t)){ waitingBairro=true; return say('Qual o seu bairro?',L.bairros.slice(0,5).map(b=>b[0])); }

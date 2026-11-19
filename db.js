@@ -118,5 +118,43 @@ db.exec(`CREATE TABLE IF NOT EXISTS customers(
 db.exec(`INSERT OR IGNORE INTO customers(tenant_id, phone, name, address, bairro, created_at)
   SELECT o.tenant_id, o.phone, o.customer, o.address, o.bairro, MIN(o.created_at) FROM orders o WHERE o.phone!='' GROUP BY o.tenant_id, o.phone`);
 
+/* ---- Fase 1: cupons, fidelidade, entrega por distância ---- */
+db.exec(`
+CREATE TABLE IF NOT EXISTS coupons(
+  id INTEGER PRIMARY KEY,
+  tenant_id INTEGER NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  code TEXT NOT NULL, tipo TEXT NOT NULL DEFAULT 'percent',   -- percent | valor | frete
+  valor REAL DEFAULT 0, minimo REAL DEFAULT 0, inicio TEXT DEFAULT '', fim TEXT DEFAULT '',
+  max_usos INTEGER DEFAULT 0, por_cliente INTEGER DEFAULT 1, primeira INTEGER DEFAULT 0, ativo INTEGER DEFAULT 1,
+  descricao TEXT DEFAULT '',
+  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+  UNIQUE(tenant_id, code)
+);
+CREATE TABLE IF NOT EXISTS cashback(                          -- extrato de cashback e selos por cliente
+  id INTEGER PRIMARY KEY,
+  tenant_id INTEGER NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  phone TEXT NOT NULL, valor REAL NOT NULL DEFAULT 0, tipo TEXT NOT NULL, -- ganho | uso | estorno | selo
+  order_id INTEGER, expira TEXT,
+  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
+CREATE INDEX IF NOT EXISTS cashback_p ON cashback(tenant_id, phone);
+CREATE TABLE IF NOT EXISTS geocache(q TEXT PRIMARY KEY, lat REAL, lng REAL, created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')));
+`);
+addCol('orders', 'coupon', "TEXT DEFAULT ''");
+addCol('orders', 'descontos', "TEXT DEFAULT '[]'");   // [{tipo, label, valor}]
+addCol('orders', 'cashback_usado', 'REAL DEFAULT 0');
+addCol('orders', 'km', 'REAL');
+addCol('orders', 'cep', "TEXT DEFAULT ''");
+
+/* ---- backup: uma cópia por dia (guarda 14) ---- */
+const BK = path.join(DATA_DIR, 'backups'); fs.mkdirSync(BK, { recursive: true });
+function backupNow(file) { const f = file || path.join(BK, `cardapio-${new Date().toISOString().slice(0, 10)}.db`); try { fs.unlinkSync(f); } catch {} db.exec(`VACUUM INTO '${f.replace(/'/g, "''")}'`); return f; }
+function dailyBackup() {
+  try { const f = path.join(BK, `cardapio-${new Date().toISOString().slice(0, 10)}.db`); if (!fs.existsSync(f)) backupNow(f);
+    fs.readdirSync(BK).filter(n => /^cardapio-\d{4}-\d{2}-\d{2}\.db$/.test(n)).sort().slice(0, -14).forEach(n => fs.unlinkSync(path.join(BK, n))); }
+  catch (e) { console.error('backup', e.message); }
+}
+dailyBackup(); setInterval(dailyBackup, 3 * 36e5).unref();
+
 const J = (s, d) => { try { return s ? JSON.parse(s) : d; } catch { return d; } };
-module.exports = { db, DATA_DIR, J };
+module.exports = { db, DATA_DIR, J, backupNow };

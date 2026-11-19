@@ -123,6 +123,7 @@ main{max-width:1180px;margin:0 auto;padding:18px 16px 60px}
 .pc div.t{padding:8px 10px;font-size:12px;color:var(--muted)}
 .linkbox{display:flex;gap:8px;align-items:center;background:var(--soft);border-radius:10px;padding:8px 10px;font-size:13px;word-break:break-all}
 .help{font-size:12px;color:var(--muted);margin:4px 0 0}
+.fidp{margin-top:10px;background:var(--hx-soft);border-radius:10px;padding:8px 12px;font-size:13px}
 </style>
 </head>
 <body>
@@ -141,6 +142,7 @@ main{max-width:1180px;margin:0 auto;padding:18px 16px 60px}
   <button data-tab="stories">Stories</button>
   <button data-tab="feed">Feed</button>
   <button data-tab="loja">Loja</button>
+  <button data-tab="marketing">Marketing</button>
   <button data-tab="pixel">Pixel Meta</button>
   <button data-tab="conta">Conta</button>
 </nav></header>
@@ -189,7 +191,7 @@ let ME,LOJA,tab='pedidos';
 async function loadLoja(){ LOJA=await api('/api/p/loja'); $('#sName').textContent=LOJA.name; const url=location.origin+'/'+LOJA.slug; $('#sLink').textContent=url.replace(/^https?:\/\//,'')+(LOJA.status==='pausado'?' · pausado':''); $('#ver').href='/'+LOJA.slug; const lg=$('#sLogo'); lg.hidden=!LOJA.settings.logo; lg.src=LOJA.settings.logo||''; document.title=LOJA.name+' · Huntix'; }
 $('#sair').onclick=async()=>{ await fetch('/api/logout',{method:'POST'}); location.replace('/login'); };
 $('#tabs').onclick=e=>{ const b=e.target.closest('[data-tab]'); if(b) show(b.dataset.tab); };
-function show(t){ tab=t; location.hash=t; $$('#tabs [data-tab]').forEach(b=>b.classList.toggle('on',b.dataset.tab===t)); $('#main').innerHTML='<p class="muted">Carregando…</p>'; ({pedidos,clientes:clientesTab,relatorios,cardapio,stories,feed,loja,pixel,conta})[t]().catch(e=>{ $('#main').innerHTML=`<p class="err">${esc(e.message)}</p>`; }); }
+function show(t){ tab=t; location.hash=t; $$('#tabs [data-tab]').forEach(b=>b.classList.toggle('on',b.dataset.tab===t)); $('#main').innerHTML='<p class="muted">Carregando…</p>'; ({pedidos,clientes:clientesTab,marketing,relatorios,cardapio,stories,feed,loja,pixel,conta})[t]().catch(e=>{ $('#main').innerHTML=`<p class="err">${esc(e.message)}</p>`; }); }
 let lastNew=null;
 async function pollNew(){ try{ const j=await api('/api/p/orders/novos'); $('#newDot').hidden=!j.n; $('#newDot').textContent=j.n; document.title=(j.n?`(${j.n}) `:'')+LOJA.name+' · Huntix';
   if(lastNew!==null&&j.ultimo&&j.ultimo>lastNew){ toast('Pedido novo!'); beep(); const prev=lastNew;
@@ -308,8 +310,8 @@ function orderDetail(id){
     <div class="row cols2" style="margin-top:14px"><div><div class="muted" style="font-size:12px;font-weight:600">CLIENTE</div><b>${esc(o.customer)}</b> ${cliBadge(o)}<br><a href="${waUrl(o.phone,'')}" target="_blank" rel="noopener">${esc(o.phone)}</a><div class="muted" style="font-size:12px;margin-top:4px">${o.cli_pedidos} pedido(s) · ${BRL(o.cli_total)} no total · desde ${fmtD(o.cli_desde)}</div></div>
       <div><div class="muted" style="font-size:12px;font-weight:600">${isRet(o)?'RETIRADA':'ENTREGA'}</div>${isRet(o)?'Retirar na loja':`${esc(o.address)}<br>${esc(o.bairro)}`}</div></div>
     <table style="margin-top:12px">${o.items.map(i=>`<tr><td>${i.qty}×</td><td>${esc(i.nome)}${i.opts.length?`<br><small class="muted">${esc(i.opts.join(' · '))}</small>`:''}</td><td class="num" style="text-align:right">${BRL(i.total)}</td></tr>`).join('')}
-      <tr><td></td><td class="muted">Subtotal</td><td class="num" style="text-align:right">${BRL(o.subtotal)}</td></tr>${o.discount?`<tr><td></td><td class="muted">Desconto curtidas</td><td class="num" style="text-align:right">− ${BRL(o.discount)}</td></tr>`:''}
-      <tr><td></td><td class="muted">Entrega</td><td class="num" style="text-align:right">${o.fee?BRL(o.fee):'grátis'}</td></tr><tr><td></td><td><b>Total · ${esc(o.payment)}</b></td><td class="num" style="text-align:right"><b>${BRL(o.total)}</b></td></tr></table>
+      <tr><td></td><td class="muted">Subtotal</td><td class="num" style="text-align:right">${BRL(o.subtotal)}</td></tr>${(o.descontos&&o.descontos.length?o.descontos:o.discount?[{label:'Desconto',valor:o.discount}]:[]).map(d=>`<tr><td></td><td class="muted">${esc(d.label)}</td><td class="num" style="text-align:right">− ${BRL(d.valor)}</td></tr>`).join('')}
+      <tr><td></td><td class="muted">Entrega${o.km!=null?` (${String(o.km).replace('.',',')} km)`:''}</td><td class="num" style="text-align:right">${o.fee?BRL(o.fee):'grátis'}</td></tr><tr><td></td><td><b>Total · ${esc(o.payment)}</b></td><td class="num" style="text-align:right"><b>${BRL(o.total)}</b></td></tr></table>
     ${o.notes?`<div class="obs" style="margin-top:10px">Obs.: ${esc(o.notes)}</div>`:''}
     <label class="f" style="margin-top:12px">Link de acompanhamento do cliente<div class="linkbox"><span style="flex:1">${esc(link)}</span><button class="btn sec sm" id="cpl" type="button">Copiar</button></div></label>
     <div class="foot">${!['concluido','cancelado'].includes(o.status)?`<button class="btn danger" id="dc">Cancelar</button>`:''}<button class="btn sec" id="dp">Imprimir</button><button class="btn sec" onclick="closeModal()">Fechar</button>${nx?`<button class="btn" id="dn">${nx[1]} →</button>`:''}</div>`);
@@ -332,8 +334,8 @@ function receiptHtml(o){
   <div class="c"><b>${isRet(o)?'*** RETIRADA NA LOJA ***':'*** ENTREGA ***'}</b></div>
   <div>Cliente: <b>${esc(o.customer)}</b></div><div>Tel.: ${esc(fmtTel(o.phone))}</div>${o.ordem?`<div><b>${o.ordem===1?'*** CLIENTE NOVO ***':o.ordem+'º pedido do cliente'}</b></div>`:''}${isRet(o)?'':`<hr><div><b>ENDEREÇO DE ENTREGA</b></div><div>${esc(o.address)}</div><div>Bairro: <b>${esc(o.bairro)}</b></div>`}<hr><div><b>ITENS (${o.items.reduce((a,i)=>a+i.qty,0)})</b></div>
   ${o.items.map(i=>`<div class="it"><div class="r"><span><b>${i.qty}x</b> ${esc(i.nome)}</span><span>${BRL(i.total)}</span></div>${i.desc?`<div class="op">${esc(i.desc)}</div>`:''}${i.opts.length?`<div class="op">» ${esc(i.opts.join(' | '))}</div>`:''}${i.qty>1&&i.unit?`<div class="op">${i.qty} x ${BRL(i.unit)}</div>`:''}</div>`).join('')}<hr>
-  <div class="r"><span>Subtotal</span><span>${BRL(o.subtotal)}</span></div>${o.discount?`<div class="r"><span>Desconto</span><span>-${BRL(o.discount)}</span></div>`:''}
-  <div class="r"><span>Entrega</span><span>${o.fee?BRL(o.fee):'grátis'}</span></div>
+  <div class="r"><span>Subtotal</span><span>${BRL(o.subtotal)}</span></div>${(o.descontos&&o.descontos.length?o.descontos:o.discount?[{label:'Desconto',valor:o.discount}]:[]).map(d=>`<div class="r"><span>${esc(d.label)}</span><span>-${BRL(d.valor)}</span></div>`).join('')}
+  <div class="r"><span>Entrega${o.km!=null?` (${String(o.km).replace('.',',')} km)`:''}</span><span>${o.fee?BRL(o.fee):'grátis'}</span></div>
   <div class="r big"><b>TOTAL</b><b>${BRL(o.total)}</b></div><div>Pagamento: <b>${esc(o.payment)}</b>${/antecipado/i.test(o.payment)?(o.status==='pix'?' <b>(A CONFIRMAR)</b>':' <b>— PAGO</b>'):` (cobrar na ${isRet(o)?'retirada':'entrega'})`}</div>
   ${o.notes?`<hr><div><b>OBS:</b> ${esc(o.notes)}</div>`:''}<hr><div class="c" style="font-size:.85em">Impresso em ${new Date().toLocaleString('pt-BR')}<br>Pedido feito pelo cardápio digital · Huntix</div></div>`;
   const vias=+prnGet('vias','1'), names=vias>1?['Cozinha','Entrega','Caixa']:[''];
@@ -416,6 +418,7 @@ function drawCli(){
 async function fichaCliente(id){
   const c=await api('/api/p/clientes/'+id);
   modal(`<div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start"><div><h2 style="margin:0">${esc(c.name||'Sem nome')}</h2><div class="muted">${esc(c.phone)} · cliente desde ${fmtD(c.primeiro||c.created_at)}</div></div><span class="badge ${SEG[c.seg][1]}">${SEG[c.seg][0]}</span></div>
+    ${c.cashback!=null?`<div class="fidp">🎁 Saldo de cashback: <b>${BRL(c.cashback)}</b></div>`:""}${c.selos?`<div class="fidp">🏷 Cartão fidelidade: <b>${c.selos.premio?"prêmio liberado no próximo pedido":`${c.selos.feitos} de ${c.selos.meta} pedidos`}</b></div>`:""}
     <div class="kpis" style="margin:14px 0"><div class="kpi"><small>Pedidos</small><b class="num">${c.pedidos}</b></div><div class="kpi"><small>Total gasto</small><b class="num">${BRL(c.total)}</b></div><div class="kpi"><small>Ticket médio</small><b class="num">${BRL(c.ticket)}</b></div></div>
     <div class="row cols2"><div><div class="muted" style="font-size:12px;font-weight:600">ENDEREÇO</div>${esc(c.address||'—')}${c.bairro?`<br>${esc(c.bairro)}`:''}</div>
       <div><div class="muted" style="font-size:12px;font-weight:600">MAIS PEDE</div>${c.favoritos.length?c.favoritos.map(([n,q])=>`${q}× ${esc(n)}`).join('<br>'):'—'}</div></div>
@@ -469,10 +472,57 @@ async function relatorios(){
 }
 let RF={de:today(),ate:today()};
 
+/* ---------------- marketing: cupons e fidelidade ---------------- */
+const CTIPO={percent:'% de desconto',valor:'R$ de desconto',frete:'Frete grátis'};
+async function marketing(){
+  await loadLoja(); const cup=await api('/api/p/cupons'), F=LOJA.settings.fidelidade, hoje=today();
+  const st=c=>!c.ativo?['Pausado','']:c.fim&&c.fim<hoje?['Expirado','bad']:c.max_usos&&c.usos>=c.max_usos?['Esgotado','bad']:c.inicio&&c.inicio>hoje?['Agendado','warn']:['Ativo','ok'];
+  $('#main').innerHTML=`<div class="bar"><h1>Marketing</h1></div><div class="grid">
+  <div class="card"><div style="display:flex;align-items:center;gap:8px;margin-bottom:10px"><h2 style="margin:0">Cupons de desconto</h2><button class="btn sm" id="ncup" style="margin-left:auto">+ Novo cupom</button></div>
+    ${cup.length?`<div class="tw"><table><tr><th>Código</th><th>Desconto</th><th>Regras</th><th>Usos</th><th>Vendas com o cupom</th><th>Situação</th><th></th></tr>${cup.map(c=>{ const [sn,sc]=st(c); return `<tr>
+      <td><b style="font-family:monospace;font-size:14px">${esc(c.code)}</b>${c.descricao?`<br><small class="muted">${esc(c.descricao)}</small>`:''}</td>
+      <td>${c.tipo==='frete'?'Frete grátis':c.tipo==='valor'?BRL(c.valor):c.valor+'%'}</td>
+      <td style="font-size:12px">${[c.minimo?`mín. ${BRL(c.minimo)}`:'',c.primeira?'só 1ª compra':'',c.por_cliente?`${c.por_cliente}x por cliente`:'',c.max_usos?`até ${c.max_usos} usos`:'',c.fim?`até ${c.fim.split('-').reverse().join('/')}`:''].filter(Boolean).join(' · ')||'—'}</td>
+      <td class="num">${c.usos}</td><td class="num">${BRL(c.vendas)}<br><small class="muted">desconto dado ${BRL(c.desconto_total)}</small></td>
+      <td><span class="badge ${sc}">${sn}</span></td><td><button class="btn sec sm" data-ecup="${c.id}">Editar</button></td></tr>`; }).join('')}</table></div>`
+    :'<p class="muted">Nenhum cupom ainda. Ideias: <b>PRIMEIRA10</b> (10% na primeira compra), <b>FRETEGRATIS</b> (acima de R$ 100), <b>VOLTA15</b> para mandar aos clientes sumidos.</p>'}
+    <p class="help">O campo de cupom só aparece no cardápio quando existe pelo menos um cupom ativo.</p></div>
+  <div class="card"><h2>Programa de fidelidade</h2>
+    <div class="seg" id="ftipo" style="margin-bottom:12px">${[['off','Desligado'],['cashback','Cashback'],['selos','Cartão fidelidade (selos)']].map(([k,n])=>`<button data-ft="${k}" class="${F.tipo===k?'on':''}">${n}</button>`).join('')}</div>
+    <div id="fcb" ${F.tipo==='cashback'?'':'hidden'}><div class="row cols3"><label class="f">Cashback por pedido (%)<input type="number" min="0" max="50" step="0.5" id="fpct" value="${F.cashbackPct}"></label><label class="f">Validade do saldo (dias)<input type="number" min="0" id="fdias" value="${F.cashbackDias}"><span class="h">0 = não expira</span></label><label class="f">Pode pagar até (% do pedido)<input type="number" min="1" max="100" id="fuso" value="${F.usoMax}"></label></div>
+      <p class="help">O cliente ganha o crédito quando o pedido é <b>concluído</b>, recebe o aviso no WhatsApp e usa no próximo pedido, digitando o mesmo WhatsApp. Se o pedido for cancelado, o crédito volta.</p></div>
+    <div id="fse" ${F.tipo==='selos'?'':'hidden'}><div class="row cols2"><label class="f">Pedidos para ganhar o prêmio<input type="number" min="2" max="30" id="fmeta" value="${F.selosMeta}"></label><label class="f">Prêmio (R$ de desconto)<input type="number" min="0" step="0.01" id="fpremio" value="${F.selosPremio}"></label></div>
+      <p class="help">A cada ${F.selosMeta||10} pedidos concluídos, o próximo pedido ganha o desconto sozinho. O cliente vê o cartão de selos na sacola.</p></div>
+    <div style="margin-top:12px"><button class="btn" id="fsave">Salvar fidelidade</button></div></div>
+  </div>`;
+  let ft=F.tipo;
+  $('#ftipo').onclick=e=>{ const b=e.target.closest('[data-ft]'); if(!b) return; ft=b.dataset.ft; $$('#ftipo button').forEach(x=>x.classList.toggle('on',x===b)); $('#fcb').hidden=ft!=='cashback'; $('#fse').hidden=ft!=='selos'; };
+  $('#fsave').onclick=async()=>{ const fidelidade={tipo:ft,cashbackPct:Math.max(0,+$('#fpct').value||0),cashbackDias:Math.max(0,+$('#fdias').value|0),usoMax:Math.min(100,Math.max(1,+$('#fuso').value||100)),selosMeta:Math.max(2,+$('#fmeta').value|0),selosPremio:Math.max(0,+$('#fpremio').value||0)};
+    try{ await api('/api/p/loja','PUT',{name:LOJA.name,settings:{fidelidade}}); toast('Fidelidade salva'); marketing(); }catch(e){ toast(e.message); } };
+  $('#ncup').onclick=()=>editCupom({tipo:'percent',ativo:1,por_cliente:1});
+  $$('[data-ecup]').forEach(b=>b.onclick=()=>editCupom(cup.find(c=>c.id===+b.dataset.ecup)));
+}
+function editCupom(c){
+  modal(`<h2>${c.id?'Editar cupom':'Novo cupom'}</h2><div class="row">
+    <div class="row cols2"><label class="f">Código<input type="text" id="kc" value="${esc(c.code||'')}" ${c.id?'disabled':''} placeholder="Ex.: PRIMEIRA10" style="text-transform:uppercase;font-family:monospace"></label><label class="f">Descrição (só para você)<input type="text" id="kd" value="${esc(c.descricao||'')}" placeholder="Ex.: campanha do Instagram"></label></div>
+    <div class="row cols2"><label class="f">Tipo<select id="kt">${Object.entries(CTIPO).map(([k,n])=>`<option value="${k}" ${c.tipo===k?'selected':''}>${n}</option>`).join('')}</select></label><label class="f" id="kvl">Valor<input type="number" min="0" step="0.01" id="kv" value="${c.valor??''}"></label></div>
+    <div class="row cols3"><label class="f">Pedido mínimo (R$)<input type="number" min="0" step="0.01" id="km" value="${c.minimo||''}"></label><label class="f">Início<input type="date" id="ki" value="${esc(c.inicio||'')}"></label><label class="f">Fim<input type="date" id="kf" value="${esc(c.fim||'')}"></label></div>
+    <div class="row cols2"><label class="f">Limite total de usos<input type="number" min="0" id="kx" value="${c.max_usos||''}" placeholder="vazio = sem limite"></label><label class="f">Usos por cliente<input type="number" min="0" id="kp" value="${c.por_cliente??1}"><span class="h">0 = sem limite (identifica pelo WhatsApp)</span></label></div>
+    <label class="tg"><input type="checkbox" id="k1" ${c.primeira?'checked':''}> Só para a <b>primeira compra</b> do cliente</label>
+    <label class="tg"><input type="checkbox" id="ka" ${c.ativo!==0?'checked':''}> Cupom ativo</label></div><div class="err" id="me"></div>
+    <div class="foot">${c.id?'<button class="btn danger" id="del">Excluir</button>':''}<button class="btn sec" onclick="closeModal()">Cancelar</button><button class="btn" id="ok">Salvar</button></div>`);
+  const tv=()=>{ $('#kvl').hidden=$('#kt').value==='frete'; $('#kvl').firstChild.textContent=$('#kt').value==='percent'?'Desconto (%)':'Desconto (R$)'; }; $('#kt').onchange=tv; tv();
+  $('#ok').onclick=async()=>{ const b={code:$('#kc').value,descricao:$('#kd').value.trim(),tipo:$('#kt').value,valor:+$('#kv').value||0,minimo:+$('#km').value||0,inicio:$('#ki').value,fim:$('#kf').value,max_usos:+$('#kx').value||0,por_cliente:+$('#kp').value||0,primeira:$('#k1').checked,ativo:$('#ka').checked};
+    if(b.tipo!=='frete'&&!(b.valor>0)) return $('#me').textContent='Coloque o valor do desconto';
+    if(b.tipo==='percent'&&b.valor>100) return $('#me').textContent='O desconto em % vai até 100';
+    try{ await api('/api/p/cupons'+(c.id?'/'+c.id:''),c.id?'PUT':'POST',b); closeModal(); toast('Cupom salvo'); marketing(); }catch(e){ $('#me').textContent=e.message; } };
+  $('#del')&&($('#del').onclick=async()=>{ if(!confirm(`Excluir o cupom ${c.code}?`)) return; await api('/api/p/cupons/'+c.id,'DELETE'); closeModal(); marketing(); });
+}
+
 /* ---------------- cardápio ---------------- */
 let CATS=[],PRODS=[],BRANDS=[];
-const optsToText=o=>(o||[]).map(g=>`${g.nome}: ${g.itens.map(([n,x])=>n+(+x?` +${String(x).replace('.',',')}`:'')).join(', ')}`).join('\n');
-const textToOpts=t=>t.split('\n').map(l=>l.trim()).filter(l=>l.includes(':')).map(l=>{ const [nome,...r]=l.split(':'); return {nome:nome.trim(),itens:r.join(':').split(',').map(s=>s.trim()).filter(Boolean).map(s=>{ const m=s.match(/^(.*?)\s*\+\s*(\d+(?:[.,]\d+)?)$/); return m?[m[1],+m[2].replace(',','.')]:[s,0]; })}; }).filter(g=>g.nome&&g.itens.length);
+const optsToText=o=>(o||[]).map(g=>{ const mn=g.min??1, mx=g.max??1, rg=g.regra||'soma', tag=mn===1&&mx===1&&rg==='soma'?'':` [${mn}-${mx}${rg!=='soma'?', '+rg:''}]`; return `${g.nome}${tag}: ${g.itens.map(([n,x])=>n+(+x?` +${String(x).replace('.',',')}`:'')).join(', ')}`; }).join('\n');
+const textToOpts=t=>t.split('\n').map(l=>l.trim()).filter(l=>l.includes(':')).map(l=>{ const [cab,...r]=l.split(':'); const m=cab.match(/^(.*?)\s*\[\s*(\d+)\s*-\s*(\d+)\s*(?:,\s*(soma|maior|m[eé]dia))?\s*\]\s*$/i); const nome=(m?m[1]:cab).trim(), mn=m?+m[2]:1, mx=m?Math.max(1,+m[3]):1, rg=m&&m[4]?m[4].toLowerCase().replace('é','e'):'soma'; return {nome,min:Math.min(mn,mx),max:mx,regra:rg,itens:r.join(':').split(',').map(s=>s.trim()).filter(Boolean).map(s=>{ const m=s.match(/^(.*?)\s*\+\s*(\d+(?:[.,]\d+)?)$/); return m?[m[1],+m[2].replace(',','.')]:[s,0]; })}; }).filter(g=>g.nome&&g.itens.length);
 async function cardapio(){
   [CATS,PRODS,BRANDS]=await Promise.all([api('/api/p/categories'),api('/api/p/products'),api('/api/p/brands')]);
   const bn=id=>BRANDS.find(b=>b.id===id)?.name, sem=PRODS.filter(p=>!CATS.find(c=>c.id===p.category_id));
@@ -514,7 +564,7 @@ function editProduct(p){
     <div class="card" style="box-shadow:none;padding:12px"><b style="font-size:13px">Promoção do dia</b><div class="row cols2" style="margin-top:8px"><label class="f">Preço promocional<input type="number" step="0.01" min="0" id="ppp" value="${p.promo_price??''}" placeholder="vazio = sem promo"></label><label class="f">Chamada no story<input type="text" id="ppl" value="${esc(p.promo_label||'')}" placeholder="Ex.: Galão de 5 L"></label></div>
       <div class="days" style="margin-top:8px">${DIAS.map((d,i)=>`<label><input type="checkbox" data-day="${i}" ${days.includes(i)?'checked':''}>${d.slice(0,3)}</label>`).join('')}</div><p class="help">Sem dia marcado, a promoção vale todos os dias.</p></div>
     <div class="row cols2"><label class="f">Atacado: a partir de (qtd.)<input type="number" min="2" id="pbq" value="${p.bulk_qty??''}"></label><label class="f">Preço de atacado (cada)<input type="number" step="0.01" min="0" id="pbp" value="${p.bulk_price??''}"></label></div>
-    <label class="f">Opções (uma por linha)<textarea id="po" placeholder="Tamanho: P, M, G, GG&#10;Adicional: Bacon +4, Ovo +2">${esc(optsToText(p.options))}</textarea><span class="h">Formato: Nome: opção, opção +preço extra</span></label>
+    <label class="f">Opções / complementos (um grupo por linha)<textarea id="po" style="min-height:100px" placeholder="Tamanho: P, M, G, GG&#10;Adicionais [0-3]: Bacon +4, Ovo +2, Cheddar +3&#10;Sabores [1-2, maior]: Calabresa +45, Frango +50, Portuguesa +52">${esc(optsToText(p.options))}</textarea><span class="h">Formato: <b>Nome: opção, opção +preço</b>. Sem colchete = escolha 1 obrigatória. <b>[0-3]</b> = escolha até 3 (opcional). <b>[1-2]</b> = de 1 a 2. <b>maior</b> ou <b>media</b> = meio a meio (cobra o sabor mais caro ou a média); sem isso, os extras somam.</span></label>
     <label class="f">Palavras para o robô entender<input type="text" id="pk" value="${esc(p.keywords||'')}" placeholder="Ex.: xis, x-tudo, sanduíche"></label>
     <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="pa" ${p.active!==0?'checked':''}> Mostrar no cardápio</label></div><div class="err" id="me"></div>
     <div class="foot">${p.id?'<button class="btn danger" id="del">Excluir</button>':''}<button class="btn sec" onclick="closeModal()">Cancelar</button><button class="btn" id="ok">Salvar</button></div>`);
@@ -611,7 +661,17 @@ async function loja(){
   <div class="card"><h2>Mensagens de status no WhatsApp</h2><p class="help" style="margin-top:-6px">Enviadas ao cliente quando você move o pedido. Pode usar: {nome} {pedido} {loja} {total} {pagamento} {link} (acompanhamento) {cardapio}.</p><div class="row" style="margin-top:8px">
     ${[['pixConfirmado','Pix confirmado'],['preparando','Aceito / em preparo'],['saiu','Saiu para entrega'],['pronto','Pronto para retirada'],['concluido','Entregue'],['cancelado','Cancelado']].map(([k,n])=>`<label class="f">${n}<textarea data-msg="${k}" style="min-height:64px">${esc(s.mensagens[k]||'')}</textarea></label>`).join('')}</div></div>
   <div class="card"><h2>Horário de funcionamento</h2><div class="row">${DIAS.map((d,i)=>{ const h=s.horario[i]; return `<div class="hours"><b style="font-size:13px">${d}</b><label style="display:flex;gap:6px;align-items:center;font-size:13px"><input type="checkbox" data-hd="${i}" ${h?'checked':''}>aberto</label><input type="time" data-ha="${i}" value="${fmtH(h?h[0]:8)}"><input type="time" data-hb="${i}" value="${fmtH(h?h[1]:18)}"></div>`; }).join('')}</div></div>
-  <div class="card"><h2>Entrega</h2><div class="row"><label class="f">Bairros e taxas (um por linha)<textarea id="lb" style="min-height:140px" placeholder="Centro; 6&#10;Nova Parnamirim; 10">${esc(s.bairros.map(([b,t])=>`${b}; ${String(t).replace('.',',')}`).join('\n'))}</textarea><span class="h">Formato: Bairro; taxa</span></label>
+  <div class="card"><h2>Entrega</h2><div class="row">
+    <div class="seg" id="emodo">${[['bairro','Taxa por bairro'],['distancia','Taxa por distância (CEP)']].map(([k,n])=>`<button type="button" data-em="${k}" class="${(s.entrega.modo||'bairro')===k?'on':''}">${n}</button>`).join('')}</div>
+    <div id="edist" ${s.entrega.modo==='distancia'?'':'hidden'} class="row">
+      <div class="row cols3"><label class="f">CEP da loja<input type="text" id="lcep" placeholder="00000-000" inputmode="numeric"></label><label class="f">Número<input type="text" id="lnum" placeholder="123"></label><label class="f" style="align-self:end"><button type="button" class="btn sec" id="lloc">📍 Localizar a loja no mapa</button></label></div>
+      <div class="row cols2"><label class="f">Latitude<input type="text" id="llat" value="${s.lojaLat??''}"></label><label class="f">Longitude<input type="text" id="llng" value="${s.lojaLng??''}"></label></div>
+      <div id="lmap" class="help">${s.lojaLat?`Localização salva · <a target="_blank" rel="noopener" href="https://www.openstreetmap.org/?mlat=${s.lojaLat}&mlon=${s.lojaLng}#map=17/${s.lojaLat}/${s.lojaLng}">conferir no mapa ↗</a>`:'A loja ainda não foi localizada.'}</div>
+      <label class="f">Faixas de distância (uma por linha)<textarea id="lfx" style="min-height:110px" placeholder="3; 5&#10;6; 8&#10;10; 12">${esc((s.entrega.faixas||[]).map(([k,t])=>`${String(k).replace('.',',')}; ${String(t).replace('.',',')}`).join('\n'))}</textarea><span class="h">Formato: <b>até km; taxa</b>. Ex.: "3; 5" = até 3 km, R$ 5.</span></label>
+      <div class="row cols2"><label class="f">Distância máxima (km)<input type="number" min="0" step="0.5" id="lrm" value="${s.entrega.raioMax||''}"></label><label class="f">Ajuste de rota (×)<input type="number" min="1" max="2" step="0.05" id="lft" value="${s.entrega.fator||1.3}"><span class="h">A distância é em linha reta; 1,3 aproxima o caminho pelas ruas.</span></label></div>
+      <p class="help">O cliente digita o CEP, o endereço é preenchido sozinho e a taxa é calculada pela distância até a loja. Se o endereço não for achado no mapa, vale a taxa do bairro (lista abaixo).</p>
+    </div>
+    <label class="f">Bairros e taxas (um por linha)<textarea id="lb" style="min-height:140px" placeholder="Centro; 6&#10;Nova Parnamirim; 10">${esc(s.bairros.map(([b,t])=>`${b}; ${String(t).replace('.',',')}`).join('\n'))}</textarea><span class="h">Formato: Bairro; taxa</span></label>
     <div class="row cols2"><label class="f">Pedido mínimo para entrega (R$)<input type="number" step="0.01" min="0" id="lm" value="${s.minimo||''}"></label><label class="f">Formas de pagamento (na entrega/retirada)<input type="text" id="lpg" value="${esc(s.pagamentos.join(', '))}"><span class="h">Separadas por vírgula. Ex.: Pix na entrega, Cartão (maquininha), Dinheiro</span></label></div>
     <div class="row cols2"><label class="f">Chave Pix da loja (opcional)<input type="text" id="lpx" value="${esc(s.pixChave||'')}" placeholder="CNPJ, telefone, e-mail ou chave aleatória"><span class="h">Aparece para quem escolher Pix, para adiantar o pagamento se quiser.</span></label><label class="f">Nome do titular da chave<input type="text" id="lpn" value="${esc(s.pixNome||'')}" placeholder="Ex.: Potengi Rações LTDA"></label></div>
     <p class="help">O sistema não cobra nada online: o cliente paga na entrega ou na retirada. Pagamento online (Mercado Pago, Asaas) pode ser ligado depois.</p>
@@ -622,11 +682,21 @@ async function loja(){
   <div class="card"><h2>Robô do direct</h2><div class="row cols2"><label class="f">Nome do robô<input type="text" id="rn" value="${esc(s.robo.nome)}"></label><label style="display:flex;gap:8px;align-items:center;align-self:end;height:40px"><input type="checkbox" id="ra" ${s.robo.ativo?'checked':''}> Mostrar o direct com o robô</label></div></div>
   </div>`;
   $('#cplk').onclick=()=>navigator.clipboard.writeText($('#lk').textContent).then(()=>toast('Link copiado'));
+  let EMODO=s.entrega.modo||'bairro';
+  $('#emodo').onclick=e=>{ const b=e.target.closest('[data-em]'); if(!b) return; EMODO=b.dataset.em; $$('#emodo button').forEach(x=>x.classList.toggle('on',x===b)); $('#edist').hidden=EMODO!=='distancia'; };
+  $('#lloc').onclick=async()=>{ const bt=$('#lloc'); bt.disabled=true; bt.textContent='Procurando…';
+    try{ const j=await api('/api/p/localizar','POST',{cep:$('#lcep').value,numero:$('#lnum').value}); $('#llat').value=j.lat.toFixed(6); $('#llng').value=j.lng.toFixed(6);
+      $('#lmap').innerHTML=`Achei: ${esc(j.endereco||'')} · <a target="_blank" rel="noopener" href="https://www.openstreetmap.org/?mlat=${j.lat}&mlon=${j.lng}#map=17/${j.lat}/${j.lng}">conferir no mapa ↗</a> · depois clique em Salvar`; }
+    catch(e){ toast(e.message); } bt.disabled=false; bt.textContent='📍 Localizar a loja no mapa'; };
   $('#save').onclick=async()=>{
     const horario={}; DIAS.forEach((_,i)=>{ const a=parseH($(`[data-ha="${i}"]`).value), b=parseH($(`[data-hb="${i}"]`).value); horario[i]=$(`[data-hd="${i}"]`).checked&&a!=null&&b!=null&&b>a?[a,b]:null; });
+    const fx=$('#lfx').value.split('\n').map(l=>l.split(';')).filter(x=>x[0]&&x[0].trim()).map(([k,t])=>[+(k.replace(',','.').trim())||0,+(String(t||'0').replace(',','.').trim())||0]).filter(x=>x[0]>0);
+    const entrega={modo:EMODO,faixas:fx,raioMax:+$('#lrm').value||0,fator:+$('#lft').value||1.3}, lat=parseFloat(String($('#llat').value).replace(',','.')), lng=parseFloat(String($('#llng').value).replace(',','.'));
+    if(EMODO==='distancia'&&!(isFinite(lat)&&isFinite(lng))) return toast('Localize a loja no mapa para usar a taxa por distância');
+    if(EMODO==='distancia'&&!fx.length) return toast('Coloque pelo menos uma faixa de distância');
     const bairros=$('#lb').value.split('\n').map(l=>l.split(';')).filter(x=>x[0]&&x[0].trim()).map(([b,t])=>[b.trim(),+(String(t||'0').replace(',','.').trim())||0]);
     const mensagens={}; $$('[data-msg]').forEach(t=>mensagens[t.dataset.msg]=t.value.trim());
-    const settings={subtitulo:$('#lsub').value.trim(),cidade:$('#lci').value.trim(),logo:$('#llogo').value,endereco:$('#lend').value.trim(),telefone:$('#ltel').value.trim(),tempoPreparo:Math.max(0,+$('#ltp').value||0),tempoEntrega:Math.max(0,+$('#lte').value||0),mensagens,tema:{cor:$('#tc').value,destaque:$('#td').value,acento:$('#ta').value,fonte:$('#tf').value},
+    const settings={entrega,lojaLat:isFinite(lat)?lat:null,lojaLng:isFinite(lng)?lng:null,subtitulo:$('#lsub').value.trim(),cidade:$('#lci').value.trim(),logo:$('#llogo').value,endereco:$('#lend').value.trim(),telefone:$('#ltel').value.trim(),tempoPreparo:Math.max(0,+$('#ltp').value||0),tempoEntrega:Math.max(0,+$('#lte').value||0),mensagens,tema:{cor:$('#tc').value,destaque:$('#td').value,acento:$('#ta').value,fonte:$('#tf').value},
       whatsapp:$('#lw').value,atendente:$('#lat').value.trim(),enviarWhats:$('#lew').checked,horario,bairros,minimo:+$('#lm').value||0,retirada:$('#lr').checked,
       pagamentos:$('#lpg').value.split(',').map(x=>x.trim()).filter(Boolean),pixAntecipado:$('#lpa').checked,pixChave:$('#lpx').value.trim(),pixNome:$('#lpn').value.trim(),promoTemas:DIAS.map((_,i)=>$(`[data-pt="${i}"]`).value.trim()),
       curtidas:{meta:Math.max(0,+$('#cm').value|0),desconto:Math.max(0,+$('#cd').value||0),campeao:Math.max(0,+$('#cc').value||0)},robo:{nome:$('#rn').value.trim()||'Atendente',ativo:$('#ra').checked}};
@@ -641,11 +711,11 @@ async function pixel(){
   await loadLoja(); const s=LOJA.settings; let capi=[]; try{ capi=(await api(`/api/p/report?de=${addDays(today(),-30)}&ate=${today()}`)).capi; }catch{}
   $('#main').innerHTML=`<div class="bar"><h1>Pixel Meta</h1><button class="btn" id="save">Salvar</button></div><div class="grid">
   <div class="card"><h2>Pixel</h2><div class="row"><label class="f">ID do Pixel (conjunto de dados)<input type="text" id="px" value="${esc(s.pixelId)}" inputmode="numeric" placeholder="Ex.: 123456789012345"><span class="h">No Gerenciador de Eventos da Meta, em Fontes de dados.</span></label>
-    <p class="help">Com o ID preenchido, o cardápio envia sozinho: <b>PageView</b>, <b>ViewContent</b> (abriu produto), <b>AddToCart</b>, <b>InitiateCheckout</b> (abriu a sacola), <b>Contact</b> (abriu o direct) e <b>Purchase</b> (pedido enviado, com valor).</p></div></div>
+    <p class="help">Com o ID preenchido, o cardápio envia sozinho, pelo navegador <b>e</b> pelo servidor (API de Conversões): <b>PageView</b> (abriu o cardápio), <b>ViewContent</b> (abriu produto), <b>AddToCart</b> (pôs na sacola), <b>InitiateCheckout</b> (abriu a sacola), <b>AddPaymentInfo</b> (escolheu a forma de pagamento), <b>Contact</b> (abriu o direct) e <b>Purchase</b> (pedido enviado, com valor, nº do pedido, itens e cupom). Cada evento vai com o mesmo ID nos dois caminhos, então a Meta não conta em dobro.</p></div></div>
   <div class="card"><h2>API de Conversões (recomendado)</h2><div class="row"><label class="f">Token de acesso<input type="password" id="ct" value="${esc(s.capiToken)}" autocomplete="off" placeholder="Gerado no Gerenciador de Eventos → Configurações"></label>
     <label class="f">Código de teste (opcional)<input type="text" id="cte" value="${esc(s.capiTeste)}" placeholder="TEST12345"><span class="h">Use só enquanto testa em "Testar eventos"; depois apague.</span></label>
     <p class="help">A compra também é enviada pelo servidor, com o mesmo ID do evento do Pixel. Assim a Meta não conta duas vezes e as vendas aparecem mesmo com bloqueador de anúncio.</p></div></div>
-  <div class="card"><h2>Últimos envios para a Meta</h2>${capi.length?`<div class="tw"><table><tr><th>Quando</th><th>Resultado</th></tr>${capi.map(c=>`<tr><td>${new Date(c.created_at).toLocaleString('pt-BR')}</td><td>${esc(c.info)}</td></tr>`).join('')}</table></div>`:'<p class="muted">Nenhum envio ainda. Aparece aqui depois do primeiro pedido com o token preenchido.</p>'}</div></div>`;
+  <div class="card"><h2>Últimos eventos enviados pelo servidor</h2>${capi.length?`<div class="tw"><table><tr><th>Quando</th><th>Resultado</th></tr>${capi.map(c=>`<tr><td>${new Date(c.created_at).toLocaleString('pt-BR')}</td><td>${esc(c.info)}</td></tr>`).join('')}</table></div>`:'<p class="muted">Nenhum envio ainda. Aparece aqui depois do primeiro pedido com o token preenchido.</p>'}</div></div>`;
   $('#save').onclick=async()=>{ try{ await api('/api/p/loja','PUT',{name:LOJA.name,settings:{pixelId:$('#px').value.trim(),capiToken:$('#ct').value.trim(),capiTeste:$('#cte').value.trim()}}); toast('Pixel salvo'); }catch(e){ toast(e.message); } };
 }
 
