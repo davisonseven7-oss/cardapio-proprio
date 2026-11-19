@@ -7,10 +7,23 @@ function seed({ db, hashPass }) {
     if (email && pass.length >= 8) { db.prepare(`INSERT INTO users(email,name,pass_hash,role) VALUES(?,?,?,'admin')`).run(email, 'Administrador', hashPass(pass)); console.log('Admin criado:', email); }
     else console.warn('ATENÇÃO: defina ADMIN_EMAIL e ADMIN_PASSWORD (8+ caracteres) para criar o login de administrador.');
   }
-  if (db.prepare('SELECT 1 FROM tenants').get()) return;
+  if (db.prepare('SELECT 1 FROM tenants').get()) { demo(db); return; }
   db.exec('BEGIN');
   try { potengi(db); boaHora(db); db.exec('COMMIT'); console.log('Cardápios iniciais criados: /potengi e /boahora'); }
   catch (e) { db.exec('ROLLBACK'); throw e; }
+  demo(db);
+}
+
+/* login de demonstração do Boa Hora (para mostrar a clientes).
+   Só o hash da senha fica aqui; a senha não está no código. Na primeira vez,
+   também ativa o cardápio do Boa Hora. Para tirar, exclua o login no /admin. */
+const DEMO = { email: 'boahora@demo.huntix', hash: '122ef41b82d0aec72c53ec4507aafd82:9bda771191c7a938289a76e1e66ea77fd8d98b2f9401ec6e11f1b382079c23a3a073c2a7af560e25a27db9470456333f05b6acce2f6ced5c73ee9c44fb850c11' };
+function demo(db) {
+  const t = db.prepare("SELECT * FROM tenants WHERE slug='boahora'").get(); if (!t) return;
+  const s = JSON.parse(t.settings || '{}'); if (s.demoCriado) return;
+  if (!db.prepare('SELECT 1 FROM users WHERE email=?').get(DEMO.email)) db.prepare("INSERT INTO users(email,name,pass_hash,role,tenant_id) VALUES(?,?,?,'cliente',?)").run(DEMO.email, 'Boa Hora (demonstração)', DEMO.hash, t.id);
+  s.demoCriado = true; db.prepare("UPDATE tenants SET status='ativo', settings=? WHERE id=?").run(JSON.stringify(s), t.id);
+  console.log('Login de demonstração do Boa Hora pronto:', DEMO.email);
 }
 
 const ins = (db, tb, o) => { const ks = Object.keys(o); return db.prepare(`INSERT INTO ${tb}(${ks.join(',')}) VALUES(${ks.map(() => '?').join(',')})`).run(...ks.map(k => o[k] !== null && typeof o[k] === 'object' ? JSON.stringify(o[k]) : o[k])).lastInsertRowid; };
