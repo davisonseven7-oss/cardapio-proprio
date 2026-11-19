@@ -260,14 +260,14 @@ input[type=text],select{width:100%;border:1.5px solid var(--line);border-radius:
 
 <div class="app">
   <header class="appbar"><div class="gut">
-    <div class="logos"><img src="img/potengi-logo.jpg" alt="Potengi Rações"><img src="img/dondiego-logo.jpg" alt="Selaria Don Diego"><b>Potengi + Don Diego<small>Parnamirim/RN · varejo e atacado</small></b></div>
+    <div class="logos"><img src="../img/potengi-logo.jpg" alt="Potengi Rações"><img src="../img/dondiego-logo.jpg" alt="Selaria Don Diego"><b>Potengi + Don Diego<small>Parnamirim/RN · varejo e atacado</small></b></div>
     <button class="ic" id="bagOpen" aria-label="Sacola"><svg class="i" viewBox="0 0 24 24"><path d="M5 8h14l-1 12H6L5 8z"/><path d="M9 8a3 3 0 0 1 6 0"/></svg><span class="b num" id="bagBadge" hidden>0</span></button>
   </div></header>
 
   <div class="gut">
     <div class="duo">
-      <button class="store pt st-potengi" data-store="potengi"><span class="lg"><img src="img/potengi-logo.jpg" alt=""></span><span class="tx"><b>Potengi Rações</b><small>Cavalos, cães, gatos e aves</small></span></button>
-      <button class="store dd st-dondiego" data-store="dondiego"><span class="lg"><img src="img/dondiego-logo.jpg" alt=""></span><span class="tx"><b>Selaria Don Diego</b><small>Arreios, acessórios e roupas</small></span></button>
+      <button class="store pt st-potengi" data-store="potengi"><span class="lg"><img src="../img/potengi-logo.jpg" alt=""></span><span class="tx"><b>Potengi Rações</b><small>Cavalos, cães, gatos e aves</small></span></button>
+      <button class="store dd st-dondiego" data-store="dondiego"><span class="lg"><img src="../img/dondiego-logo.jpg" alt=""></span><span class="tx"><b>Selaria Don Diego</b><small>Arreios, acessórios e roupas</small></span></button>
     </div>
     <div class="info">
       <span class="open" id="open"><i></i><span></span></span>
@@ -312,8 +312,8 @@ const CONFIG={
   metaCurtidas:3, descCurtidas:.05
 };
 const LOJAS={
-  potengi:{nome:'Potengi Rações',curto:'Potengi',logo:'img/potengi-logo.jpg',sub:'Nutrição que gera resultados'},
-  dondiego:{nome:'Selaria Don Diego',curto:'Don Diego',logo:'img/dondiego-logo.jpg',sub:'Arreios · acessórios · roupas'},
+  potengi:{nome:'Potengi Rações',curto:'Potengi',logo:'../img/potengi-logo.jpg',sub:'Nutrição que gera resultados'},
+  dondiego:{nome:'Selaria Don Diego',curto:'Don Diego',logo:'../img/dondiego-logo.jpg',sub:'Arreios · acessórios · roupas'},
 };
 const CATS=[
   {id:'cavalos',loja:'potengi',nome:'Cavalos',icon:'horse'},
@@ -323,7 +323,7 @@ const CATS=[
   {id:'acess',loja:'dondiego',nome:'Acessórios',icon:'shoe'},
   {id:'roupas',loja:'dondiego',nome:'Roupas',icon:'hat'},
 ];
-/* Produtos. img:'arquivo.jpg' (na pasta img/) troca a ilustração pela foto real.
+/* Produtos. img:'arquivo.jpg' (na pasta ../img/) troca a ilustração pela foto real.
    atacado:[qtd, preço] = a partir dessa quantidade, cada unidade sai por esse preço. */
 const P={
   'racao-eq':{nome:'Ração para equinos 40 kg',cat:'cavalos',preco:129.9,icon:'sack',desc:'Para cavalos de lida e esporte.',atacado:[5,119.9],tag:'Mais vendido'},
@@ -389,7 +389,7 @@ const $=s=>document.querySelector(s);
 const HEART='<svg viewBox="0 0 24 24"><path d="M12 20s-7-4.4-9-9a4.8 4.8 0 0 1 9-3 4.8 4.8 0 0 1 9 3c-2 4.6-9 9-9 9z"/></svg>';
 const catOf=id=>CATS.find(c=>c.id===P[id].cat);
 const lojaOf=id=>catOf(id).loja;
-const tile=id=>{const p=P[id];return p.img?`<span class="tile ph-img"><img src="img/${p.img}" alt="" loading="lazy"></span>`:`<span class="tile">${ico(p.icon)}</span>`};
+const tile=id=>{const p=P[id];return p.img?`<span class="tile ph-img"><img src="../img/${p.img}" alt="" loading="lazy"></span>`:`<span class="tile">${ico(p.icon)}</span>`};
 
 const DOW=new Date().getDay(), HOJE=PROMOS[DOW], DIA=DIAS[DOW];
 HOJE.itens.forEach(([id,pr])=>{ P[id].old=P[id].preco; P[id].preco=pr; });
@@ -453,7 +453,7 @@ function listOf(c){ return idsOf(c).map(id=>{const p=P[id];return `<div class="l
 
 function renderPromo(){
   $('#promo').innerHTML=`<span class="pill">Promoção de ${DIA}</span><h2>${HOJE.tema}</h2><p>Preço especial só hoje. Já vale na sacola.</p>
-  <div class="pitems">${HOJE.itens.map(([id,,t])=>`<button class="pit" data-open="${id}"><span class="tl st-${lojaOf(id)}">${P[id].img?`<img src="img/${P[id].img}" alt="">`:ico(P[id].icon)}</span><span><b>${t}</b><small>${LOJAS[lojaOf(id)].nome}</small></span><span class="pr num"><s>${BRL(P[id].old)}</s>${BRL(P[id].preco)}</span></button>`).join('')}</div>`;
+  <div class="pitems">${HOJE.itens.map(([id,,t])=>`<button class="pit" data-open="${id}"><span class="tl st-${lojaOf(id)}">${P[id].img?`<img src="../img/${P[id].img}" alt="">`:ico(P[id].icon)}</span><span><b>${t}</b><small>${LOJAS[lojaOf(id)].nome}</small></span><span class="pr num"><s>${BRL(P[id].old)}</s>${BRL(P[id].preco)}</span></button>`).join('')}</div>`;
 }
 
 function ranked(){ return Object.keys(P).filter(k=>count(k)>0&&(filtro==='all'||lojaOf(k)===filtro)).sort((a,b)=>count(b)-count(a)); }

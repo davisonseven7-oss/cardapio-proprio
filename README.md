@@ -1,55 +1,51 @@
-# Cardápio próprio
+# Huntix · cardápios no padrão rede social
 
-Cardápio digital próprio para delivery local, pensado para vender junto com o serviço de tráfego pago.
+Sistema da **Hunte Marketing** para vários clientes. Cada loja tem um cardápio com cara de Instagram (stories, feed, curtidas, campeão da semana, robô no direct) e um painel próprio. Você administra todos pelo painel admin.
 
-- `index.html` é o cardápio **ativo**: Potengi Rações + Selaria Don Diego (Parnamirim/RN), duas lojas no mesmo link e uma sacola só.
-- `pausados/boa-hora.html` é o modelo da Boa Hora (água de coco, loja fictícia), pausado.
-- `prototipos/` guarda as versões anteriores: o feed estilo rede social e o primeiro protótipo do Sushi Real.
-- `img/` tem as fotos do Pexels (uso livre) e as logos da Potengi e da Don Diego.
+| Endereço | O que é |
+|---|---|
+| `/login` | Entrada Huntix (admin e clientes) |
+| `/admin` | Seus clientes: criar, pausar, trocar endereço, criar login, abrir o painel de qualquer um |
+| `/painel` | Painel do cliente: Pedidos, Relatórios, Cardápio, Stories, Feed, Loja, Pixel Meta, Conta |
+| `/<loja>` | Cardápio público (ex.: `/potengi`) |
 
-## Potengi Rações + Selaria Don Diego (index.html)
+## O que cada cliente tem no painel
 
-- Duas lojas no mesmo cardápio, com filtro Tudo / Potengi / Don Diego e as cores de cada marca.
-- Categorias: Cavalos, Cães e Gatos, Aves e Rural (Potengi); Arreios, Acessórios, Roupas (Don Diego).
-- Preço de atacado por quantidade (`atacado:[qtd, preço]` em cada produto).
-- Promoção do dia pelo dia da semana (`PROMOS`), curtidas, "Curta e ganhe" e ranking.
-- Opções de tamanho, número, sabor e cor.
-- Sacola única separada por loja, retirada grátis ou entrega por bairro de Parnamirim, pedido formatado para WhatsApp.
-- Horário real (seg a sex 7h30–17h30, sáb 7h30–12h30) e aviso de aberto/fechado.
-- Tudo o que muda fica no topo do script: `CONFIG`, `LOJAS`, `CATS`, `P`, `PROMOS`.
-- **Falta:** produtos, preços e fotos reais (hoje são exemplos com ilustrações), confirmar bairros e taxas, e ligar `enviarWhatsReal: true`.
+- **Pedidos:** chegam na hora (aviso com som), mudança de status (novo → preparando → saiu → concluído), botão para chamar o cliente no WhatsApp, filtro por data e **exportação das vendas em CSV** (abre no Excel).
+- **Relatórios:** faturamento, pedidos, ticket médio, visitas, funil (visita → sacola → pedido), vendas por dia e por horário, produtos mais vendidos, bairros, formas de pagamento, mais curtidos.
+- **Cardápio:** categorias, produtos com foto (ou ícone), preço, promoção do dia por dia da semana, preço de atacado, opções (tamanho, sabor, adicionais com preço), chave para pausar produto, várias lojas/marcas no mesmo cardápio.
+- **Stories e Feed:** destaques e posts editáveis. O story **Hoje** é criado sozinho com as promoções do dia.
+- **Loja:** nome, logo, cores, fonte, WhatsApp, horário, bairros e taxas, pedido mínimo, retirada, pagamentos, regras das curtidas, nome do robô.
+- **Pixel Meta:** ID do Pixel (eventos PageView, ViewContent, AddToCart, InitiateCheckout, Contact, Purchase) e **API de Conversões** com deduplicação.
 
-## O que já funciona (Boa Hora, pausado)
+## Rodar no computador
 
-- **Três modos de ver o cardápio:** Vitrine (fotos grandes), Lista (cardápio normal) e Feed (posts estilo rede social). A página lembra a escolha de cada pessoa.
-- **Story de promoções do dia:** abre sozinho na primeira visita do dia. As promoções mudam conforme o dia da semana (`PROMOS` no código), e o preço de promoção vale na sacola.
-- **Destaques em story:** Hoje, Promo, Garrafas, Eventos, Bastidores e Curta e ganhe.
-- **Curtidas:** coração em cada produto, ranking "Mais curtidos" e cartão "Campeão da semana" (o mais curtido até domingo fica 20% mais barato na semana seguinte).
-- **Curta e ganhe:** quem curte 3 produtos ganha 5% de desconto, com o cupom CURTIU5 aplicado sozinho.
-- **Sacola:** taxa por bairro, pedido mínimo, Pix/cartão/dinheiro, e o pedido sai formatado como mensagem de WhatsApp.
-- **Robô Coquinho (direct):** atendimento automático por regras, sem IA. Entende frases como "quero 2 garrafas de 1 litro e 1 coco", mostra a promo de hoje e o mais curtido, calcula a taxa por bairro e o orçamento de evento (300 ml por pessoa).
-- **Painel "Para o gestor":** simula os eventos do Pixel Meta que cada ação geraria (PageView, ViewContent, AddToCart, InitiateCheckout, Purchase, Contact, curtidas).
+```
+npm install
+npm start
+```
 
-## O que falta para virar produto
+Crie um arquivo `.env.local` (não vai para o GitHub) com:
 
-1. **Curtidas compartilhadas de verdade.** Hoje, fora do claude.ai, cada aparelho só vê as próprias curtidas. É preciso um banco de dados (sugestão: Supabase, gratuito no começo), com uma curtida por pessoa por produto por semana. O ranking ideal mistura curtidas e pedidos.
-2. **WhatsApp real.** Trocar a tela "Pedido pronto" por um link `https://wa.me/55DDDNUMERO?text=...` com a mensagem do pedido.
-3. **Pixel Meta + API de Conversões reais.** Trocar a função `track()` pelos eventos do Pixel e mandar o Purchase também pela CAPI, com deduplicação.
-4. **Painel do lojista.** Tela para o dono trocar preço, foto, promoção do dia e pausar item sozinho.
-5. **Dados reais do cliente.** Fotos próprias, produtos, preços, bairros e taxas, horário e número de WhatsApp.
-6. **Robô com IA (opcional).** O robô por regras se perde com frases fora do padrão; uma versão com IA entende tudo, mas tem custo por conversa.
-7. **Um cardápio por cliente.** Separar os dados (produtos, cores, logo) do código, para cada cliente ter o seu link (ex.: `/boahora`, `/sushireal`).
+```
+ADMIN_EMAIL=seu@email.com
+ADMIN_PASSWORD=uma-senha-forte
+```
 
-## Publicar no GitHub Pages
+Na primeira vez o sistema cria o admin e os cardápios iniciais: **Potengi Rações** (`/potengi`, ativo) e **Boa Hora** (`/boahora`, pausado).
 
-1. Crie um repositório no GitHub (ex.: `cardapio-proprio`) e envie esta pasta.
-2. No repositório: **Settings → Pages → Build and deployment → Deploy from a branch**, escolha a branch `main` e a pasta `/ (root)`.
-3. Em 1 ou 2 minutos o site fica em `https://SEU-USUARIO.github.io/cardapio-proprio/`.
+## Publicar no Railway
 
-No plano gratuito do GitHub, o Pages só funciona com repositório **público**: qualquer pessoa pode ver o código e as fotos.
+1. Crie o serviço a partir deste repositório (branch desejada).
+2. **Variables:** `ADMIN_EMAIL`, `ADMIN_PASSWORD` e `DATA_DIR=/data`.
+3. **Volume:** adicione um volume montado em `/data`. É onde ficam o banco (`cardapio.db`) e as fotos enviadas. Sem volume, tudo some a cada deploy.
+4. **Settings → Networking → Generate Domain** (depois dá para ligar um domínio próprio).
 
-## Observações
+O banco é SQLite embutido no Node (22.13 ou mais novo), sem instalar nada. Quando o volume de clientes crescer muito, dá para trocar por Postgres.
 
-- Loja, preços, promoções e curtidas iniciais são fictícios.
-- As fotos vêm do Pexels (licença livre). Para um cliente real, use as fotos do próprio cliente.
-- O código já tenta usar o banco de dados do claude.ai quando aberto lá (`window.claude.use('db')`). Fora dele, cai no modo local sem erro.
+## Pastas
+
+- `server.js`, `db.js`, `seed.js`: servidor, banco e dados iniciais.
+- `public/`: cardápio (`menu.html`), login, painel, admin, estilo Huntix e ícones.
+- `img/`: logos e fotos usadas pelos cardápios iniciais.
+- `prototipos/` e `pausados/`: versões estáticas antigas (referência).

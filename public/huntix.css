@@ -1,0 +1,59 @@
+/* Huntix · sistemas da Hunte Marketing — estilo dos painéis */
+:root{
+  --bg:#F6F6F8; --card:#FFFFFF; --ink:#111218; --muted:#676B78; --line:#E5E6EB; --soft:#F0F1F4;
+  --hx:#F26A21; --hx-ink:#FFFFFF; --hx-soft:#FDEBDF; --ok:#1F9D55; --warn:#C27A00; --bad:#D92D3A;
+  --shadow:0 1px 2px rgba(17,18,24,.06),0 8px 24px rgba(17,18,24,.06);
+  --f:"Inter","Segoe UI",system-ui,sans-serif; --f-brand:"Montserrat","Inter",system-ui,sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0D0E12; --card:#16171D; --ink:#ECEDF2; --muted:#9A9DAA; --line:#262832; --soft:#1D1F27; --hx-soft:#3A2214;
+  --shadow:0 1px 2px rgba(0,0,0,.4); color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0D0E12; --card:#16171D; --ink:#ECEDF2; --muted:#9A9DAA; --line:#262832; --soft:#1D1F27; --hx-soft:#3A2214; --shadow:0 1px 2px rgba(0,0,0,.4); color-scheme:dark}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:14px/1.45 var(--f)}
+[hidden]{display:none!important}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+a{color:inherit}
+:focus-visible{outline:2px solid var(--hx);outline-offset:2px}
+.num{font-variant-numeric:tabular-nums}
+
+.hx-logo{display:inline-flex;align-items:center;gap:9px;font-family:var(--f-brand);font-weight:800;font-size:19px;letter-spacing:.02em;text-decoration:none}
+.hx-logo em{font-style:normal;color:var(--hx)}
+.hx-logo i{width:30px;height:30px;border-radius:8px;background:#111;display:grid;place-items:center;color:var(--hx);font-style:normal;flex:none}
+.hx-logo i svg{width:22px;height:22px}
+.hx-logo small{font-family:var(--f);font-weight:500;font-size:12px;color:var(--muted);letter-spacing:0}
+
+.btn{height:40px;padding:0 16px;border-radius:10px;border:0;background:var(--hx);color:var(--hx-ink);font-weight:700;display:inline-flex;align-items:center;justify-content:center;gap:8px;white-space:nowrap;text-decoration:none}
+.btn.sec{background:var(--soft);color:var(--ink)}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.btn.danger{background:transparent;color:var(--bad);border:1px solid var(--line)}
+.btn.sm{height:32px;padding:0 12px;font-size:13px;border-radius:8px}
+.btn[disabled]{opacity:.55;cursor:default}
+input[type=text],input[type=email],input[type=password],input[type=number],input[type=tel],input[type=date],input[type=url],select,textarea{width:100%;border:1px solid var(--line);border-radius:10px;padding:9px 11px;background:var(--card);min-height:40px}
+textarea{min-height:80px;resize:vertical}
+label.f{display:grid;gap:5px;font-size:12px;font-weight:600;color:var(--muted)}
+label.f>span.h{font-weight:400}
+.row{display:grid;gap:12px}
+.cols2{grid-template-columns:1fr 1fr}.cols3{grid-template-columns:1fr 1fr 1fr}
+@media (max-width:640px){.cols2,.cols3{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;box-shadow:var(--shadow)}
+.card h2{font-size:15px;margin:0 0 12px}
+.muted{color:var(--muted)}
+.err{color:var(--bad);font-weight:600;font-size:13px;min-height:1em}
+.badge{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;padding:3px 8px;border-radius:99px;background:var(--soft);color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.badge.ok{background:color-mix(in srgb,var(--ok) 14%,transparent);color:var(--ok)}
+.badge.warn{background:color-mix(in srgb,var(--warn) 16%,transparent);color:var(--warn)}
+.badge.bad{background:color-mix(in srgb,var(--bad) 14%,transparent);color:var(--bad)}
+.badge.hx{background:var(--hx-soft);color:var(--hx)}
+.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-weight:600;z-index:100;box-shadow:var(--shadow);max-width:calc(100vw - 32px)}
+table{width:100%;border-collapse:collapse}
+th,td{text-align:left;padding:10px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:12px;color:var(--muted);font-weight:600}
+.tw{overflow-x:auto}
+.modal{position:fixed;inset:0;background:rgba(10,10,14,.5);display:flex;align-items:flex-start;justify-content:center;padding:4vh 12px;z-index:50;overflow:auto}
+.modal .box{background:var(--card);border-radius:16px;width:100%;max-width:640px;padding:20px;box-shadow:var(--shadow)}
+.modal .box h2{margin:0 0 14px;font-size:18px}
+.modal .foot{display:flex;gap:8px;justify-content:flex-end;margin-top:18px;flex-wrap:wrap}

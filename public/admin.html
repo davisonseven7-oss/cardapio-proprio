@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Admin · Huntix</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Montserrat:wght@700;800&display=swap">
+<link rel="stylesheet" href="/static/huntix.css">
+<link rel="icon" href="/static/huntix-mark.svg" type="image/svg+xml">
+<style>
+.top{background:#0B0B0D;color:#fff}
+.top .in{max-width:1180px;margin:0 auto;display:flex;align-items:center;gap:12px;padding:12px 16px}
+.top .hx-logo{margin-right:auto}
+.top .hx-logo i{border:1px solid #2A2A30}
+.top .who{color:#9A9DAA;font-size:13px}
+.top .btn.ghost{color:#fff;border-color:#2A2A30}
+main{max-width:1180px;margin:0 auto;padding:22px 16px 60px}
+.bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
+.bar h1{font-size:22px;margin:0 auto 0 0}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:16px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px}
+.kpi small{color:var(--muted);font-weight:600;font-size:12px}
+.kpi b{display:block;font-size:24px;margin-top:4px;font-family:var(--f-brand)}
+.list{display:grid;gap:10px}
+.cl{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center}
+.cl.paused{opacity:.7}
+.cl b{font-size:16px}
+.cl .meta{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;color:var(--muted);margin-top:4px}
+.cl .meta b{font-size:13px;color:var(--ink)}
+.cl .acts{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+@media (max-width:720px){.cl{grid-template-columns:1fr}.cl .acts{justify-content:flex-start}}
+</style>
+</head>
+<body>
+<header class="top"><div class="in">
+  <span class="hx-logo"><i><svg viewBox="0 0 24 24" fill="none" stroke-linecap="round"><g stroke="currentColor" stroke-width="2"><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3"/><circle cx="12" cy="12" r="6"/></g><circle cx="12" cy="12" r="2.6" stroke="#fff" stroke-width="1.8"/><circle cx="12" cy="12" r="1" fill="currentColor"/></svg></i><span>HUNT<em>IX</em></span></span>
+  <span class="who" id="who"></span><button class="btn ghost sm" id="sair">Sair</button>
+</div></header>
+<main>
+  <div class="bar"><h1>Seus clientes</h1><input type="text" id="busca" placeholder="Buscar cliente" style="width:220px"><button class="btn" id="novo">+ Novo cliente</button></div>
+  <div class="kpis" id="kpis"></div>
+  <div class="list" id="list"><p class="muted">Carregando…</p></div>
+</main>
+<div id="modal" class="modal" hidden><div class="box" id="mbox"></div></div>
+<div class="toast" id="toast" hidden></div>
+<script>
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const BRL=v=>(+v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+function toast(t){ const el=$('#toast'); el.textContent=t; el.hidden=false; clearTimeout(toast.t); toast.t=setTimeout(()=>el.hidden=true,2600); }
+async function api(url,method='GET',body){ const r=await fetch(url,{method,headers:body?{'content-type':'application/json'}:{},body:body?JSON.stringify(body):undefined}); if(r.status===401||r.status===403){ location.replace('/login'); throw new Error('login'); } const j=await r.json().catch(()=>({})); if(!r.ok) throw new Error(j.erro||'Erro'); return j; }
+function modal(h){ $('#mbox').innerHTML=h; $('#modal').hidden=false; $('#mbox').querySelector('input')?.focus(); }
+function closeModal(){ $('#modal').hidden=true; }
+$('#modal').addEventListener('mousedown',e=>{ if(e.target.id==='modal') closeModal(); });
+const slugify=s=>String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,40);
+const genPass=()=>{ const a='abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789', r=crypto.getRandomValues(new Uint32Array(12)); return [...r].map(x=>a[x%a.length]).join(''); };
+
+let ALL=[];
+(async()=>{ const me=await api('/api/me'); if(me.role!=='admin') return location.replace('/painel'); $('#who').textContent=me.email; load(); })();
+$('#sair').onclick=async()=>{ await fetch('/api/logout',{method:'POST'}); location.replace('/login'); };
+$('#busca').oninput=render;
+async function load(){ ALL=await api('/api/a/tenants'); render(); }
+function render(){
+  const q=slugify($('#busca').value), list=ALL.filter(t=>!q||slugify(t.name+' '+t.slug).includes(q));
+  const ativos=ALL.filter(t=>t.status==='ativo');
+  $('#kpis').innerHTML=`<div class="kpi"><small>Clientes ativos</small><b>${ativos.length}</b></div><div class="kpi"><small>Pausados</small><b>${ALL.length-ativos.length}</b></div>
+    <div class="kpi"><small>Pedidos (30 dias)</small><b class="num">${ALL.reduce((s,t)=>s+t.pedidos30,0)}</b></div><div class="kpi"><small>Vendas dos clientes (30 dias)</small><b class="num">${BRL(ALL.reduce((s,t)=>s+t.vendas30,0))}</b></div>`;
+  $('#list').innerHTML=list.map(t=>`<div class="cl ${t.status==='ativo'?'':'paused'}"><div><b>${esc(t.name)}</b> <span class="badge ${t.status==='ativo'?'ok':'warn'}">${t.status}</span>
+      <div class="meta"><span>/${esc(t.slug)}</span><span><b class="num">${t.pedidos30}</b> pedidos · <b class="num">${BRL(t.vendas30)}</b> em 30 dias</span><span>${t.produtos} produtos</span><span>Login: ${t.logins?esc(t.logins):'<b style="color:var(--bad)">sem login</b>'}</span></div></div>
+    <div class="acts"><button class="btn sm" data-act="${t.id}">Abrir painel</button><a class="btn sec sm" href="/${esc(t.slug)}" target="_blank" rel="noopener">Ver cardápio ↗</a><button class="btn ghost sm" data-login="${t.id}">Login do cliente</button><button class="btn ghost sm" data-edit="${t.id}">Editar</button></div></div>`).join('')||'<div class="card muted">Nenhum cliente encontrado.</div>';
+  $$('[data-act]').forEach(b=>b.onclick=async()=>{ await api('/api/a/act','POST',{id:+b.dataset.act}); location.href='/painel'; });
+  $$('[data-edit]').forEach(b=>b.onclick=()=>edit(ALL.find(t=>t.id===+b.dataset.edit)));
+  $$('[data-login]').forEach(b=>b.onclick=()=>loginModal(ALL.find(t=>t.id===+b.dataset.login)));
+}
+$('#novo').onclick=()=>{
+  const pw=genPass();
+  modal(`<h2>Novo cliente</h2><div class="row"><label class="f">Nome da loja<input type="text" id="n"></label>
+    <label class="f">Endereço do cardápio<div style="display:flex;align-items:center;gap:6px"><span class="muted">${esc(location.host)}/</span><input type="text" id="s" placeholder="nome-da-loja"></div></label>
+    <div class="card" style="box-shadow:none;padding:12px"><b style="font-size:13px">Login do cliente</b><div class="row cols2" style="margin-top:8px"><label class="f">E-mail<input type="email" id="e" autocomplete="off"></label><label class="f">Senha inicial<input type="text" id="p" value="${pw}" autocomplete="off"></label></div><p class="muted" style="font-size:12px;margin:6px 0 0">Mande e-mail e senha para o cliente. Ele pode trocar a senha no painel, em Conta. Dá para deixar em branco e criar depois.</p></div>
+    </div><div class="err" id="me"></div><div class="foot"><button class="btn sec" onclick="closeModal()">Cancelar</button><button class="btn" id="ok">Criar cliente</button></div>`);
+  let touched=false; $('#s').oninput=()=>touched=true; $('#n').oninput=()=>{ if(!touched) $('#s').value=slugify($('#n').value); };
+  $('#ok').onclick=async()=>{ try{ const j=await api('/api/a/tenants','POST',{name:$('#n').value.trim(),slug:$('#s').value,email:$('#e').value.trim(),senha:$('#e').value.trim()?$('#p').value:''}); closeModal(); toast(`Cliente criado em /${j.slug}`); load(); }catch(e){ $('#me').textContent=e.message; } };
+};
+function edit(t){
+  modal(`<h2>Editar ${esc(t.name)}</h2><div class="row"><label class="f">Nome<input type="text" id="n" value="${esc(t.name)}"></label>
+    <label class="f">Endereço do cardápio<div style="display:flex;align-items:center;gap:6px"><span class="muted">${esc(location.host)}/</span><input type="text" id="s" value="${esc(t.slug)}"></div><span class="h">Se mudar, o link antigo para de funcionar.</span></label>
+    <label class="f">Situação<select id="st"><option value="ativo" ${t.status==='ativo'?'selected':''}>Ativo · cardápio no ar</option><option value="pausado" ${t.status==='pausado'?'selected':''}>Pausado · cardápio mostra "pausado"</option></select></label></div>
+    <div class="err" id="me"></div><div class="foot"><button class="btn sec" onclick="closeModal()">Cancelar</button><button class="btn" id="ok">Salvar</button></div>`);
+  $('#ok').onclick=async()=>{ try{ await api('/api/a/tenants/'+t.id,'PUT',{name:$('#n').value.trim(),slug:$('#s').value,status:$('#st').value}); closeModal(); toast('Salvo'); load(); }catch(e){ $('#me').textContent=e.message; } };
+}
+function loginModal(t){
+  modal(`<h2>Login de ${esc(t.name)}</h2><p class="muted" style="margin-top:-8px">${t.logins?`Logins atuais: ${esc(t.logins)}. Com o mesmo e-mail, a senha é trocada (e o cliente sai das sessões abertas).`:'Este cliente ainda não tem login.'}</p>
+    <div class="row cols2"><label class="f">E-mail<input type="email" id="e" value="${esc((t.logins||'').split(', ')[0]||'')}" autocomplete="off"></label><label class="f">Nova senha<input type="text" id="p" value="${genPass()}" autocomplete="off"></label></div>
+    <div class="err" id="me"></div><div class="foot"><button class="btn sec" onclick="closeModal()">Cancelar</button><button class="btn" id="ok">Salvar login</button></div>`);
+  $('#ok').onclick=async()=>{ try{ const j=await api(`/api/a/tenants/${t.id}/login`,'POST',{email:$('#e').value.trim(),senha:$('#p').value}); closeModal(); toast(j.criado?'Login criado':'Senha trocada'); load(); }catch(e){ $('#me').textContent=e.message; } };
+}
+</script>
+</body>
+</html>

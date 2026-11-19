@@ -1,0 +1,399 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Painel · Huntix</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Montserrat:wght@700;800&display=swap">
+<link rel="stylesheet" href="/static/huntix.css">
+<link rel="icon" href="/static/huntix-mark.svg" type="image/svg+xml">
+<style>
+.top{position:sticky;top:0;z-index:20;background:var(--card);border-bottom:1px solid var(--line)}
+.top .in{max-width:1180px;margin:0 auto;display:flex;align-items:center;gap:12px;padding:10px 16px;flex-wrap:wrap}
+.store{display:flex;align-items:center;gap:10px;margin-right:auto;min-width:0}
+.store img{width:34px;height:34px;border-radius:50%;object-fit:cover;background:#fff;border:1px solid var(--line)}
+.store b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.store small{color:var(--muted)}
+.acting{background:var(--hx);color:#fff;font-weight:600;font-size:13px;text-align:center;padding:7px 12px}
+.acting a{color:#fff;font-weight:800}
+.tabs{max-width:1180px;margin:0 auto;display:flex;gap:4px;padding:0 12px;overflow-x:auto;scrollbar-width:none}
+.tabs button{border:0;background:none;padding:10px 12px;font-weight:600;color:var(--muted);border-bottom:2px solid transparent;white-space:nowrap}
+.tabs button.on{color:var(--ink);border-color:var(--hx)}
+.tabs .dot{display:inline-grid;place-items:center;min-width:18px;height:18px;border-radius:9px;background:var(--hx);color:#fff;font-size:11px;font-weight:800;padding:0 5px;margin-left:5px}
+main{max-width:1180px;margin:0 auto;padding:18px 16px 60px}
+.bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+.bar h1{font-size:20px;margin:0 auto 0 0}
+.seg{display:inline-flex;background:var(--soft);border-radius:10px;padding:3px;gap:2px;flex-wrap:wrap}
+.seg button{border:0;background:none;padding:6px 11px;border-radius:8px;font-weight:600;color:var(--muted);font-size:13px}
+.seg button.on{background:var(--card);color:var(--ink);box-shadow:var(--shadow)}
+.grid{display:grid;gap:14px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px}
+.kpi small{color:var(--muted);font-weight:600;font-size:12px}
+.kpi b{display:block;font-size:24px;margin-top:4px;font-family:var(--f-brand);letter-spacing:-.02em}
+.kpi span{font-size:12px;color:var(--muted)}
+.two{display:grid;grid-template-columns:1.4fr 1fr;gap:14px}
+@media (max-width:900px){.two{grid-template-columns:1fr}}
+.chart{display:flex;align-items:flex-end;gap:3px;height:180px;padding-top:10px}
+.chart .c{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;min-width:0;height:100%;position:relative}
+.chart .c i{display:block;width:100%;max-width:28px;background:var(--hx);border-radius:4px 4px 0 0;min-height:2px}
+.chart .c:hover i{opacity:.8}
+.chart .c span{font-size:10px;color:var(--muted);margin-top:4px;white-space:nowrap}
+.chart .c .tip{position:absolute;bottom:100%;background:var(--ink);color:var(--bg);font-size:11px;padding:4px 6px;border-radius:6px;white-space:nowrap;display:none;z-index:2}
+.chart .c:hover .tip{display:block}
+.hbar{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 10px;align-items:center;font-size:13px}
+.hbar .t{grid-column:1/-1;height:6px;background:var(--soft);border-radius:3px;overflow:hidden;margin-bottom:6px}
+.hbar .t i{display:block;height:100%;background:var(--hx);border-radius:3px}
+.funnel{display:grid;gap:8px}
+.funnel div{display:grid;grid-template-columns:120px 1fr 60px;gap:10px;align-items:center;font-size:13px}
+.funnel em{display:block;height:22px;background:var(--hx-soft);border-radius:6px;position:relative;overflow:hidden;font-style:normal}
+.funnel em i{position:absolute;inset:0 auto 0 0;background:var(--hx);border-radius:6px}
+
+.orders{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+.ord{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;display:grid;gap:8px}
+.ord.novo{border-color:var(--hx);box-shadow:0 0 0 3px var(--hx-soft)}
+.ord .h{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
+.ord .h b{font-size:16px}
+.ord ul{margin:0;padding:0;list-style:none;font-size:13px;display:grid;gap:3px}
+.ord ul small{color:var(--muted)}
+.ord .tt{display:flex;justify-content:space-between;font-weight:700;border-top:1px dashed var(--line);padding-top:8px}
+.ord .acts{display:flex;gap:6px;flex-wrap:wrap}
+
+.cat{margin-bottom:18px}
+.cat .ch{display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap}
+.cat .ch h3{margin:0;font-size:16px}
+.prods{display:grid;gap:8px}
+.pr{display:grid;grid-template-columns:52px 1fr auto auto;gap:12px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:8px 10px}
+.pr.off{opacity:.55}
+.pr .th{width:52px;height:52px;border-radius:10px;overflow:hidden;background:var(--hx-soft);color:var(--hx);display:grid;place-items:center}
+.pr .th img{width:100%;height:100%;object-fit:cover}
+.pr .th svg{width:30px;height:30px}
+.pr b{display:block}
+.pr small{color:var(--muted);font-size:12px}
+.sw{position:relative;width:40px;height:22px;flex:none}
+.sw input{opacity:0;position:absolute;inset:0;margin:0;cursor:pointer;z-index:1}
+.sw span{position:absolute;inset:0;border-radius:11px;background:var(--line);transition:.15s}
+.sw span::after{content:"";position:absolute;width:18px;height:18px;border-radius:50%;background:#fff;top:2px;left:2px;transition:.15s;box-shadow:0 1px 2px rgba(0,0,0,.2)}
+.sw input:checked+span{background:var(--ok)}
+.sw input:checked+span::after{left:20px}
+.imgpick{display:flex;gap:12px;align-items:center}
+.imgpick .pv{width:84px;height:84px;border-radius:12px;overflow:hidden;background:var(--hx-soft);color:var(--hx);display:grid;place-items:center;flex:none;border:1px solid var(--line)}
+.imgpick .pv img{width:100%;height:100%;object-fit:cover}
+.imgpick .pv svg{width:46px;height:46px}
+.days{display:flex;gap:6px;flex-wrap:wrap}
+.days label{display:flex;align-items:center;gap:4px;font-size:13px;border:1px solid var(--line);border-radius:8px;padding:5px 8px;color:var(--ink);font-weight:500}
+.slide{border:1px solid var(--line);border-radius:12px;padding:12px;display:grid;gap:10px;margin-top:10px}
+.hours{display:grid;grid-template-columns:110px 70px 1fr 1fr;gap:8px;align-items:center}
+.posts{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px}
+.pc{background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;text-align:left;padding:0}
+.pc .im{aspect-ratio:4/5;background:var(--hx-soft);color:var(--hx);display:grid;place-items:center}
+.pc .im img{width:100%;height:100%;object-fit:cover}
+.pc .im svg{width:40%;height:40%}
+.pc div.t{padding:8px 10px;font-size:12px;color:var(--muted)}
+.linkbox{display:flex;gap:8px;align-items:center;background:var(--soft);border-radius:10px;padding:8px 10px;font-size:13px;word-break:break-all}
+.help{font-size:12px;color:var(--muted);margin:4px 0 0}
+</style>
+</head>
+<body>
+<div id="acting" class="acting" hidden></div>
+<header class="top"><div class="in">
+  <a class="hx-logo" href="/painel" title="Huntix"><i><svg viewBox="0 0 24 24" fill="none" stroke-linecap="round"><g stroke="currentColor" stroke-width="2"><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3"/><circle cx="12" cy="12" r="6"/></g><circle cx="12" cy="12" r="2.6" stroke="#fff" stroke-width="1.8"/><circle cx="12" cy="12" r="1" fill="currentColor"/></svg></i></a>
+  <div class="store"><img id="sLogo" alt="" hidden><div style="min-width:0"><b id="sName">…</b><small id="sLink"></small></div></div>
+  <a class="btn sec sm" id="ver" target="_blank" rel="noopener">Ver cardápio ↗</a>
+  <button class="btn ghost sm" id="sair">Sair</button>
+</div>
+<nav class="tabs" id="tabs">
+  <button data-tab="pedidos" class="on">Pedidos<span class="dot" id="newDot" hidden>0</span></button>
+  <button data-tab="relatorios">Relatórios</button>
+  <button data-tab="cardapio">Cardápio</button>
+  <button data-tab="stories">Stories</button>
+  <button data-tab="feed">Feed</button>
+  <button data-tab="loja">Loja</button>
+  <button data-tab="pixel">Pixel Meta</button>
+  <button data-tab="conta">Conta</button>
+</nav></header>
+<main id="main"></main>
+<div id="modal" class="modal" hidden><div class="box" id="mbox"></div></div>
+<div class="toast" id="toast" hidden></div>
+
+<script src="/static/icons.js"></script>
+<script>
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const BRL=v=>(+v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+const DIAS=['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
+const ST={novo:['Novo','hx'],preparando:['Preparando','warn'],saiu:['Saiu p/ entrega','warn'],concluido:['Concluído','ok'],cancelado:['Cancelado','bad']};
+const NEXT={novo:'preparando',preparando:'saiu',saiu:'concluido'};
+function toast(t){ const el=$('#toast'); el.textContent=t; el.hidden=false; clearTimeout(toast.t); toast.t=setTimeout(()=>el.hidden=true,2600); }
+async function api(url,method='GET',body){ const r=await fetch(url,{method,headers:body?{'content-type':'application/json'}:{},body:body?JSON.stringify(body):undefined}); if(r.status===401){ location.replace('/login'); throw new Error('login'); } const j=r.headers.get('content-type')?.includes('json')?await r.json():{}; if(!r.ok) throw new Error(j.erro||'Erro ao salvar'); return j; }
+const today=()=>{ const d=new Date(); d.setMinutes(d.getMinutes()-d.getTimezoneOffset()); return d.toISOString().slice(0,10); };
+const addDays=(s,n)=>{ const d=new Date(s+'T12:00:00'); d.setDate(d.getDate()+n); return d.toISOString().slice(0,10); };
+const fmtH=x=>x==null?'':`${String(Math.floor(x)).padStart(2,'0')}:${String(Math.round(x%1*60)).padStart(2,'0')}`;
+const parseH=s=>{ const m=String(s).match(/^(\d{1,2}):(\d{2})$/); return m?+m[1]+(+m[2])/60:null; };
+const thumb=(img,icon)=>img?`<img src="${esc(img)}" alt="" loading="lazy">`:ico(icon||'bag');
+function modal(html){ $('#mbox').innerHTML=html; $('#modal').hidden=false; $('#mbox').querySelector('input,select,textarea')?.focus(); }
+function closeModal(){ $('#modal').hidden=true; }
+$('#modal').addEventListener('mousedown',e=>{ if(e.target.id==='modal') closeModal(); });
+document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&!$('#modal').hidden) closeModal(); });
+
+/* foto: reduz no navegador e envia */
+function pickImage(max=1080){ return new Promise(res=>{ const i=document.createElement('input'); i.type='file'; i.accept='image/*'; i.onchange=()=>{ const f=i.files[0]; if(!f) return res(null); const img=new Image(); img.onload=async()=>{ const k=Math.min(1,max/Math.max(img.width,img.height)), c=document.createElement('canvas'); c.width=Math.round(img.width*k); c.height=Math.round(img.height*k); c.getContext('2d').drawImage(img,0,0,c.width,c.height); URL.revokeObjectURL(img.src);
+  try{ const j=await api('/api/p/upload','POST',{data:c.toDataURL('image/jpeg',.85)}); res(j.url); }catch(e){ toast(e.message); res(null); } }; img.onerror=()=>{ toast('Não consegui abrir essa imagem'); res(null); }; img.src=URL.createObjectURL(f); }; i.click(); }); }
+function imgField(id,val,icon,label='Foto'){ return `<div class="f" style="display:grid;gap:5px;font-size:12px;font-weight:600;color:var(--muted)">${label}<div class="imgpick"><div class="pv" id="${id}-pv">${thumb(val,icon)}</div><div style="display:grid;gap:6px"><input type="hidden" id="${id}" value="${esc(val||'')}"><div style="display:flex;gap:6px;flex-wrap:wrap"><button type="button" class="btn sec sm" data-up="${id}">Enviar foto</button><button type="button" class="btn ghost sm" data-clr="${id}">Remover</button></div><span class="h" style="font-weight:400">Sem foto, aparece o ícone.</span></div></div></div>`; }
+document.addEventListener('click',async e=>{
+  const u=e.target.closest('[data-up]'); if(u){ const id=u.dataset.up; u.disabled=true; u.textContent='Enviando…'; const url=await pickImage(); u.disabled=false; u.textContent='Enviar foto'; if(url){ $('#'+id).value=url; $('#'+id+'-pv').innerHTML=thumb(url); } return; }
+  const c=e.target.closest('[data-clr]'); if(c){ const id=c.dataset.clr; $('#'+id).value=''; $('#'+id+'-pv').innerHTML=thumb('',$('#'+id+'-icon')?.value||'bag'); }
+});
+const iconSelect=(id,val)=>`<select id="${id}">${Object.keys(ICON_NAMES).map(k=>`<option value="${k}" ${k===val?'selected':''}>${ICON_NAMES[k]}</option>`).join('')}</select>`;
+
+/* ---------------- sessão ---------------- */
+let ME,LOJA,tab='pedidos';
+(async()=>{
+  try{ ME=await api('/api/me'); }catch{ return; }
+  if(!ME.tenant){ if(ME.role==='admin') location.replace('/admin'); else document.body.innerHTML='<p style="padding:40px">Login sem loja vinculada. Fale com a Hunte Marketing.</p>'; return; }
+  if(ME.role==='admin'){ $('#acting').hidden=false; $('#acting').innerHTML=`Você está no painel de <b>${esc(ME.tenant.name)}</b> como administrador · <a href="#" id="back">voltar ao admin</a>`; $('#back').onclick=async e=>{ e.preventDefault(); await api('/api/a/act','POST',{id:null}); location.href='/admin'; }; }
+  await loadLoja(); const h=location.hash.slice(1); show($(`[data-tab="${h}"]`)?h:'pedidos'); pollNew(); setInterval(pollNew,20000);
+})();
+async function loadLoja(){ LOJA=await api('/api/p/loja'); $('#sName').textContent=LOJA.name; const url=location.origin+'/'+LOJA.slug; $('#sLink').textContent=url.replace(/^https?:\/\//,'')+(LOJA.status==='pausado'?' · pausado':''); $('#ver').href='/'+LOJA.slug; const lg=$('#sLogo'); lg.hidden=!LOJA.settings.logo; lg.src=LOJA.settings.logo||''; document.title=LOJA.name+' · Huntix'; }
+$('#sair').onclick=async()=>{ await fetch('/api/logout',{method:'POST'}); location.replace('/login'); };
+$('#tabs').onclick=e=>{ const b=e.target.closest('[data-tab]'); if(b) show(b.dataset.tab); };
+function show(t){ tab=t; location.hash=t; $$('#tabs [data-tab]').forEach(b=>b.classList.toggle('on',b.dataset.tab===t)); $('#main').innerHTML='<p class="muted">Carregando…</p>'; ({pedidos,relatorios,cardapio,stories,feed,loja,pixel,conta})[t]().catch(e=>{ $('#main').innerHTML=`<p class="err">${esc(e.message)}</p>`; }); }
+let lastNew=null;
+async function pollNew(){ try{ const j=await api('/api/p/orders/novos'); $('#newDot').hidden=!j.n; $('#newDot').textContent=j.n; document.title=(j.n?`(${j.n}) `:'')+LOJA.name+' · Huntix';
+  if(lastNew!==null&&j.ultimo&&j.ultimo>lastNew){ toast('Pedido novo!'); beep(); if(tab==='pedidos') pedidos(); } lastNew=j.ultimo||0; }catch{} }
+function beep(){ try{ const a=new AudioContext(),o=a.createOscillator(),g=a.createGain(); o.connect(g); g.connect(a.destination); o.frequency.value=880; g.gain.value=.08; o.start(); o.stop(a.currentTime+.25); }catch{} }
+
+/* ---------------- pedidos ---------------- */
+let OF={de:today(),ate:today(),status:''};
+async function pedidos(){
+  const q=new URLSearchParams({de:OF.de,ate:OF.ate,...(OF.status?{status:OF.status}:{})}), list=await api('/api/p/orders?'+q);
+  const tot=list.filter(o=>o.status!=='cancelado').reduce((s,o)=>s+o.total,0);
+  $('#main').innerHTML=`<div class="bar"><h1>Pedidos</h1>
+    <input type="date" id="oDe" value="${OF.de}" style="width:auto"><span class="muted">até</span><input type="date" id="oAte" value="${OF.ate}" style="width:auto">
+    <a class="btn ghost sm" href="/api/p/orders.csv?de=${OF.de}&ate=${OF.ate}">Baixar vendas (CSV)</a></div>
+    <div class="bar"><div class="seg" id="oSt">${[['','Todos'],...Object.entries(ST).map(([k,v])=>[k,v[0]])].map(([k,n])=>`<button data-st="${k}" class="${OF.status===k?'on':''}">${n}</button>`).join('')}</div>
+    <span class="muted" style="margin-left:auto">${list.length} pedido(s) · <b class="num" style="color:var(--ink)">${BRL(tot)}</b></span></div>
+    ${list.length?`<div class="orders">${list.map(o=>{ const d=new Date(o.created_at), [n,c]=ST[o.status]; return `<div class="ord ${o.status==='novo'?'novo':''}">
+      <div class="h"><div><b>#${o.num} · ${esc(o.customer)}</b><div class="muted" style="font-size:12px">${d.toLocaleDateString('pt-BR')} ${d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})} · ${esc(o.payment)}</div></div><span class="badge ${c}">${n}</span></div>
+      <ul>${o.items.map(i=>`<li>${i.qty}× ${esc(i.nome)} <span class="num" style="float:right">${BRL(i.total)}</span>${i.opts.length?`<br><small>${esc(i.opts.join(' · '))}</small>`:''}</li>`).join('')}</ul>
+      <div style="font-size:13px">${esc(o.bairro)}${o.address?` · ${esc(o.address)}`:''}${o.notes?`<br><span class="muted">Obs.: ${esc(o.notes)}</span>`:''}</div>
+      <div class="tt"><span>Total${o.discount?` <small class="muted">(−${BRL(o.discount)} curtidas)</small>`:''}</span><span class="num">${BRL(o.total)}</span></div>
+      <div class="acts">${NEXT[o.status]?`<button class="btn sm" data-next="${o.id}" data-to="${NEXT[o.status]}">${ST[NEXT[o.status]][0]}</button>`:''}
+        <a class="btn sec sm" target="_blank" rel="noopener" href="https://wa.me/${o.phone.length<=11?'55':''}${o.phone}">WhatsApp</a>
+        ${!['cancelado','concluido'].includes(o.status)?`<button class="btn danger sm" data-next="${o.id}" data-to="cancelado">Cancelar</button>`:''}</div></div>`; }).join('')}</div>`
+    :`<div class="card muted">Nenhum pedido nesse período. Divulgue o link <b style="color:var(--ink)">${esc(location.origin+'/'+LOJA.slug)}</b> na bio do Instagram e no WhatsApp.</div>`}`;
+  $('#oDe').onchange=e=>{OF.de=e.target.value;pedidos()}; $('#oAte').onchange=e=>{OF.ate=e.target.value;pedidos()};
+  $('#oSt').onclick=e=>{ const b=e.target.closest('[data-st]'); if(b){OF.status=b.dataset.st;pedidos()} };
+  $$('[data-next]').forEach(b=>b.onclick=async()=>{ if(b.dataset.to==='cancelado'&&!confirm('Cancelar este pedido?')) return; await api('/api/p/orders/'+b.dataset.next,'PUT',{status:b.dataset.to}); pollNew(); pedidos(); });
+}
+
+/* ---------------- relatórios ---------------- */
+let RP='7';
+async function relatorios(){
+  const t=today(), ranges={hoje:[t,t],'7':[addDays(t,-6),t],'30':[addDays(t,-29),t],mes:[t.slice(0,8)+'01',t]};
+  const [de,ate]=RP==='custom'?[RF.de,RF.ate]:ranges[RP]; RF={de,ate};
+  const r=await api(`/api/p/report?de=${de}&ate=${ate}`), mx=Math.max(1,...r.dias.map(d=>d.total)), conv=r.visitas?(r.pedidos/r.visitas*100):0;
+  const hb=(rows,fmt)=>{ const m=Math.max(1,...rows.map(x=>x[1])); return rows.length?`<div class="hbar">${rows.map(([k,v])=>`<span>${esc(k)}</span><b class="num">${fmt(v)}</b><div class="t"><i style="width:${v/m*100}%"></i></div>`).join('')}</div>`:'<p class="muted">Sem dados ainda.</p>'; };
+  const fn=[['Visitas',r.visitas],['Adicionou à sacola',r.carrinhos],['Abriu a sacola',r.checkouts],['Pedidos',r.pedidos]], fm=Math.max(1,r.visitas);
+  $('#main').innerHTML=`<div class="bar"><h1>Relatórios</h1><div class="seg" id="rp">${[['hoje','Hoje'],['7','7 dias'],['30','30 dias'],['mes','Este mês'],['custom','Período']].map(([k,n])=>`<button data-rp="${k}" class="${RP===k?'on':''}">${n}</button>`).join('')}</div>
+    ${RP==='custom'?`<input type="date" id="rDe" value="${de}" style="width:auto"><input type="date" id="rAte" value="${ate}" style="width:auto">`:''}
+    <a class="btn ghost sm" href="/api/p/orders.csv?de=${de}&ate=${ate}">Baixar vendas (CSV)</a></div>
+  <div class="grid">
+    <div class="kpis"><div class="kpi"><small>Faturamento</small><b class="num">${BRL(r.total)}</b><span>${r.de.split('-').reverse().join('/')} a ${r.ate.split('-').reverse().join('/')}</span></div>
+      <div class="kpi"><small>Pedidos</small><b class="num">${r.pedidos}</b><span>sem os cancelados</span></div>
+      <div class="kpi"><small>Ticket médio</small><b class="num">${BRL(r.ticket)}</b></div>
+      <div class="kpi"><small>Visitas no cardápio</small><b class="num">${r.visitas}</b><span>conversão ${conv.toFixed(1).replace('.',',')}%</span></div>
+      <div class="kpi"><small>Abriram o direct</small><b class="num">${r.contatos}</b><span>conversas com o robô</span></div></div>
+    <div class="two"><div class="card"><h2>Vendas por dia</h2><div class="chart">${r.dias.map(d=>`<div class="c"><span class="tip">${d.d.split('-').reverse().slice(0,2).join('/')} · ${BRL(d.total)} · ${d.pedidos} ped.</span><i style="height:${d.total/mx*100}%"></i>${r.dias.length<=16?`<span>${d.d.slice(8)}/${d.d.slice(5,7)}</span>`:''}</div>`).join('')}</div></div>
+      <div class="card"><h2>Funil</h2><div class="funnel">${fn.map(([k,v])=>`<div><span>${k}</span><em><i style="width:${v/fm*100}%"></i></em><b class="num">${v}</b></div>`).join('')}</div><p class="help">Visitas e sacola são contadas pelo próprio cardápio, mesmo sem Pixel.</p></div></div>
+    <div class="two"><div class="card"><h2>Produtos que mais venderam</h2>${r.produtos.length?`<div class="tw"><table><tr><th>Produto</th><th>Qtd.</th><th>Total</th></tr>${r.produtos.map(p=>`<tr><td>${esc(p.nome)}</td><td class="num">${p.qtd}</td><td class="num">${BRL(p.total)}</td></tr>`).join('')}</table></div>`:'<p class="muted">Sem vendas no período.</p>'}</div>
+      <div class="card"><h2>Mais curtidos da semana</h2>${hb(r.curtidas.map(c=>[c.name,c.n]),v=>v)}<p class="help">O 1º lugar ganha ${LOJA.settings.curtidas.campeao}% de desconto na semana seguinte, sozinho.</p></div></div>
+    <div class="two"><div class="card"><h2>Pedidos por bairro</h2>${hb(r.bairros,v=>v)}</div><div class="card"><h2>Por forma de pagamento</h2>${hb(r.pagamentos,BRL)}</div></div>
+    <div class="card"><h2>Horário dos pedidos</h2><div class="chart" style="height:120px">${r.horas.map((v,h)=>`<div class="c"><span class="tip">${h}h · ${v} ped.</span><i style="height:${v/Math.max(1,...r.horas)*100}%"></i>${h%3===0?`<span>${h}h</span>`:''}</div>`).join('')}</div></div>
+  </div>`;
+  $('#rp').onclick=e=>{ const b=e.target.closest('[data-rp]'); if(b){RP=b.dataset.rp;relatorios()} };
+  $('#rDe')&&($('#rDe').onchange=e=>{RF.de=e.target.value;relatorios()}); $('#rAte')&&($('#rAte').onchange=e=>{RF.ate=e.target.value;relatorios()});
+}
+let RF={de:today(),ate:today()};
+
+/* ---------------- cardápio ---------------- */
+let CATS=[],PRODS=[],BRANDS=[];
+const optsToText=o=>(o||[]).map(g=>`${g.nome}: ${g.itens.map(([n,x])=>n+(+x?` +${String(x).replace('.',',')}`:'')).join(', ')}`).join('\n');
+const textToOpts=t=>t.split('\n').map(l=>l.trim()).filter(l=>l.includes(':')).map(l=>{ const [nome,...r]=l.split(':'); return {nome:nome.trim(),itens:r.join(':').split(',').map(s=>s.trim()).filter(Boolean).map(s=>{ const m=s.match(/^(.*?)\s*\+\s*(\d+(?:[.,]\d+)?)$/); return m?[m[1],+m[2].replace(',','.')]:[s,0]; })}; }).filter(g=>g.nome&&g.itens.length);
+async function cardapio(){
+  [CATS,PRODS,BRANDS]=await Promise.all([api('/api/p/categories'),api('/api/p/products'),api('/api/p/brands')]);
+  const bn=id=>BRANDS.find(b=>b.id===id)?.name, sem=PRODS.filter(p=>!CATS.find(c=>c.id===p.category_id));
+  const prow=p=>`<div class="pr ${p.active?'':'off'}"><div class="th">${thumb(p.img,p.icon)}</div><div style="min-width:0"><b>${esc(p.name)}</b><small>${BRL(p.price)}${p.promo_price!=null?` · promo ${BRL(p.promo_price)}${p.promo_days.length?' ('+p.promo_days.map(d=>DIAS[d].slice(0,3)).join(', ')+')':''}`:''}${p.bulk_qty?` · atacado ${p.bulk_qty}+ ${BRL(p.bulk_price)}`:''}${p.active?'':' · pausado'}</small></div>
+    <label class="sw" title="${p.active?'Pausar':'Ativar'}"><input type="checkbox" data-act="${p.id}" ${p.active?'checked':''} aria-label="Ativo"><span></span></label><button class="btn sec sm" data-ep="${p.id}">Editar</button></div>`;
+  $('#main').innerHTML=`<div class="bar"><h1>Cardápio</h1><button class="btn sec sm" id="nb">Lojas/marcas</button><button class="btn sec sm" id="nc">+ Categoria</button><button class="btn sm" id="np">+ Produto</button></div>
+    <p class="help" style="margin:-6px 0 14px">A chave verde mostra ou esconde o produto no cardápio na hora (ex.: acabou o estoque).</p>
+    ${CATS.map(c=>`<div class="cat"><div class="ch"><h3>${esc(c.name)}</h3>${bn(c.brand_id)?`<span class="badge">${esc(bn(c.brand_id))}</span>`:''}${c.active?'':'<span class="badge warn">oculta</span>'}<button class="btn ghost sm" data-ec="${c.id}">Editar</button><button class="btn ghost sm" data-npc="${c.id}">+ Produto aqui</button></div>
+      <div class="prods">${PRODS.filter(p=>p.category_id===c.id).map(prow).join('')||'<p class="muted">Nenhum produto.</p>'}</div></div>`).join('')}
+    ${sem.length?`<div class="cat"><div class="ch"><h3>Sem categoria</h3></div><div class="prods">${sem.map(prow).join('')}</div></div>`:''}
+    ${!CATS.length&&!PRODS.length?'<div class="card muted">Comece criando uma categoria (ex.: Lanches, Bebidas) e depois os produtos.</div>':''}`;
+  $('#np').onclick=()=>editProduct({});
+  $('#nc').onclick=()=>editCat({});
+  $('#nb').onclick=brandsModal;
+  $$('[data-ep]').forEach(b=>b.onclick=()=>editProduct(PRODS.find(p=>p.id===+b.dataset.ep)));
+  $$('[data-npc]').forEach(b=>b.onclick=()=>editProduct({category_id:+b.dataset.npc}));
+  $$('[data-ec]').forEach(b=>b.onclick=()=>editCat(CATS.find(c=>c.id===+b.dataset.ec)));
+  $$('[data-act]').forEach(i=>i.onchange=async()=>{ await api('/api/p/products/'+i.dataset.act,'PUT',{active:i.checked}); toast(i.checked?'Produto ativo':'Produto pausado'); cardapio(); });
+}
+function editCat(c){
+  modal(`<h2>${c.id?'Editar categoria':'Nova categoria'}</h2><div class="row">
+    <label class="f">Nome<input type="text" id="cn" value="${esc(c.name||'')}"></label>
+    <div class="row cols3"><label class="f">Ícone${iconSelect('ci',c.icon||'bag')}</label><label class="f">Ordem<input type="number" id="cs" value="${c.sort??CATS.length}"></label>
+    ${BRANDS.length?`<label class="f">Loja/marca<select id="cb"><option value="">—</option>${BRANDS.map(b=>`<option value="${b.id}" ${b.id===c.brand_id?'selected':''}>${esc(b.name)}</option>`).join('')}</select></label>`:''}</div>
+    <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="ca" ${c.active!==0?'checked':''}> Mostrar no cardápio</label></div><div class="err" id="me"></div>
+    <div class="foot">${c.id?'<button class="btn danger" id="del">Excluir</button>':''}<button class="btn sec" onclick="closeModal()">Cancelar</button><button class="btn" id="ok">Salvar</button></div>`);
+  $('#ok').onclick=async()=>{ const b={name:$('#cn').value.trim(),icon:$('#ci').value,sort:+$('#cs').value||0,active:$('#ca').checked,brand_id:$('#cb')?.value||''}; if(!b.name) return $('#me').textContent='Coloque o nome';
+    try{ await api('/api/p/categories'+(c.id?'/'+c.id:''),c.id?'PUT':'POST',b); closeModal(); cardapio(); }catch(e){ $('#me').textContent=e.message; } };
+  $('#del')&&($('#del').onclick=async()=>{ if(!confirm('Excluir a categoria? Os produtos dela ficam em "Sem categoria".')) return; await api('/api/p/categories/'+c.id,'DELETE'); closeModal(); cardapio(); });
+}
+function editProduct(p){
+  const days=p.promo_days||[];
+  modal(`<h2>${p.id?'Editar produto':'Novo produto'}</h2><div class="row">
+    <div class="row cols2"><label class="f">Nome<input type="text" id="pn" value="${esc(p.name||'')}"></label>
+      <label class="f">Categoria<select id="pc"><option value="">Sem categoria</option>${CATS.map(c=>`<option value="${c.id}" ${c.id===p.category_id?'selected':''}>${esc(c.name)}</option>`).join('')}</select></label></div>
+    <label class="f">Descrição<input type="text" id="pd" value="${esc(p.descr||'')}" maxlength="160"></label>
+    <div class="row cols3"><label class="f">Preço (R$)<input type="number" step="0.01" min="0" id="pp" value="${p.price??''}"></label><label class="f">Etiqueta<input type="text" id="pt" value="${esc(p.tag||'')}" placeholder="Ex.: Mais vendido"></label><label class="f">Ordem<input type="number" id="ps" value="${p.sort??PRODS.length}"></label></div>
+    <div class="row cols2">${imgField('pi',p.img,p.icon)}<label class="f">Ícone (quando não tem foto)${iconSelect('pi-icon',p.icon||'bag')}</label></div>
+    <div class="card" style="box-shadow:none;padding:12px"><b style="font-size:13px">Promoção do dia</b><div class="row cols2" style="margin-top:8px"><label class="f">Preço promocional<input type="number" step="0.01" min="0" id="ppp" value="${p.promo_price??''}" placeholder="vazio = sem promo"></label><label class="f">Chamada no story<input type="text" id="ppl" value="${esc(p.promo_label||'')}" placeholder="Ex.: Galão de 5 L"></label></div>
+      <div class="days" style="margin-top:8px">${DIAS.map((d,i)=>`<label><input type="checkbox" data-day="${i}" ${days.includes(i)?'checked':''}>${d.slice(0,3)}</label>`).join('')}</div><p class="help">Sem dia marcado, a promoção vale todos os dias.</p></div>
+    <div class="row cols2"><label class="f">Atacado: a partir de (qtd.)<input type="number" min="2" id="pbq" value="${p.bulk_qty??''}"></label><label class="f">Preço de atacado (cada)<input type="number" step="0.01" min="0" id="pbp" value="${p.bulk_price??''}"></label></div>
+    <label class="f">Opções (uma por linha)<textarea id="po" placeholder="Tamanho: P, M, G, GG&#10;Adicional: Bacon +4, Ovo +2">${esc(optsToText(p.options))}</textarea><span class="h">Formato: Nome: opção, opção +preço extra</span></label>
+    <label class="f">Palavras para o robô entender<input type="text" id="pk" value="${esc(p.keywords||'')}" placeholder="Ex.: xis, x-tudo, sanduíche"></label>
+    <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="pa" ${p.active!==0?'checked':''}> Mostrar no cardápio</label></div><div class="err" id="me"></div>
+    <div class="foot">${p.id?'<button class="btn danger" id="del">Excluir</button>':''}<button class="btn sec" onclick="closeModal()">Cancelar</button><button class="btn" id="ok">Salvar</button></div>`);
+  $('#pi-icon').onchange=()=>{ if(!$('#pi').value) $('#pi-pv').innerHTML=thumb('',$('#pi-icon').value); };
+  $('#ok').onclick=async()=>{ const num=id=>{ const v=$(id).value; return v===''?'':+v; };
+    const b={name:$('#pn').value.trim(),category_id:$('#pc').value,descr:$('#pd').value.trim(),price:+$('#pp').value||0,tag:$('#pt').value.trim(),sort:+$('#ps').value||0,img:$('#pi').value,icon:$('#pi-icon').value,
+      promo_price:num('#ppp'),promo_label:$('#ppl').value.trim(),promo_days:$$('[data-day]').filter(x=>x.checked).map(x=>+x.dataset.day),bulk_qty:num('#pbq'),bulk_price:num('#pbp'),options:textToOpts($('#po').value),keywords:$('#pk').value.trim(),active:$('#pa').checked};
+    if(!b.name) return $('#me').textContent='Coloque o nome'; if(!(b.price>0)) return $('#me').textContent='Coloque o preço';
+    if((b.bulk_qty==='')!==(b.bulk_price==='')) return $('#me').textContent='Para atacado, preencha quantidade e preço';
+    try{ await api('/api/p/products'+(p.id?'/'+p.id:''),p.id?'PUT':'POST',b); closeModal(); toast('Produto salvo'); cardapio(); }catch(e){ $('#me').textContent=e.message; } };
+  $('#del')&&($('#del').onclick=async()=>{ if(!confirm(`Excluir "${p.name}"? Para esconder por um tempo, use a chave de pausar.`)) return; await api('/api/p/products/'+p.id,'DELETE'); closeModal(); cardapio(); });
+}
+async function brandsModal(){
+  BRANDS=await api('/api/p/brands');
+  modal(`<h2>Lojas/marcas</h2><p class="muted" style="margin-top:-8px">Use quando o mesmo cliente tem mais de uma loja no mesmo cardápio (ex.: Potengi Rações + Selaria Don Diego). Com duas ou mais, o cardápio mostra o filtro por loja.</p>
+    <div id="bl">${BRANDS.map(b=>`<div class="slide" data-b="${b.id}"><div class="row cols2"><label class="f">Nome<input type="text" class="bn" value="${esc(b.name)}"></label><label class="f">Frase<input type="text" class="bs" value="${esc(b.sub||'')}"></label></div>${imgField('bl'+b.id,b.logo,'bag','Logo')}<div><button class="btn danger sm bd">Excluir</button></div></div>`).join('')||'<p class="muted">Nenhuma.</p>'}</div>
+    <div class="foot"><button class="btn sec" id="ba">+ Loja/marca</button><button class="btn sec" onclick="closeModal()">Fechar</button><button class="btn" id="ok">Salvar</button></div>`);
+  $('#ba').onclick=async()=>{ await api('/api/p/brands','POST',{name:'Nova loja',sort:BRANDS.length+1}); brandsModal(); };
+  $$('#bl .bd').forEach(b=>b.onclick=async()=>{ if(!confirm('Excluir esta loja/marca?')) return; await api('/api/p/brands/'+b.closest('[data-b]').dataset.b,'DELETE'); brandsModal(); });
+  $('#ok').onclick=async()=>{ for(const el of $$('#bl [data-b]')){ const id=el.dataset.b; await api('/api/p/brands/'+id,'PUT',{name:el.querySelector('.bn').value.trim()||'Loja',sub:el.querySelector('.bs').value.trim(),logo:$('#bl'+id).value}); } closeModal(); toast('Salvo'); cardapio(); };
+}
+
+/* ---------------- stories ---------------- */
+async function stories(){
+  const [list,prods]=await Promise.all([api('/api/p/stories'),api('/api/p/products')]); PRODS=prods;
+  const cov=s=>String(s.cover||'').startsWith('icon:')?ico(s.cover.slice(5)):s.cover?`<img src="${esc(s.cover)}" alt="">`:ico('heart');
+  $('#main').innerHTML=`<div class="bar"><h1>Stories</h1><button class="btn sm" id="ns">+ Destaque</button></div>
+    <p class="help" style="margin:-6px 0 14px">São as bolinhas no topo do cardápio. O destaque <b>Hoje</b> é criado sozinho com as promoções do dia.</p>
+    <div class="prods">${list.map(s=>`<div class="pr ${s.active?'':'off'}"><div class="th" style="border-radius:50%">${cov(s)}</div><div><b>${esc(s.name)}</b><small>${s.slides.length} tela(s)${s.active?'':' · oculto'}</small></div><span></span><button class="btn sec sm" data-es="${s.id}">Editar</button></div>`).join('')||'<div class="card muted">Nenhum destaque ainda.</div>'}</div>`;
+  $('#ns').onclick=()=>editStory({slides:[{t:'',p:''}]});
+  $$('[data-es]').forEach(b=>b.onclick=()=>editStory(list.find(s=>s.id===+b.dataset.es)));
+}
+function editStory(s){
+  let slides=JSON.parse(JSON.stringify(s.slides||[]));
+  const coverIcon=String(s.cover||'').startsWith('icon:')?s.cover.slice(5):'', coverImg=coverIcon?'':(s.cover||'');
+  const draw=()=>{ $('#sl').innerHTML=slides.map((x,i)=>`<div class="slide"><div style="display:flex;justify-content:space-between;align-items:center"><b>Tela ${i+1}</b><span><button class="btn ghost sm" data-mv="${i}" ${i?'':'disabled'}>↑</button> <button class="btn danger sm" data-rm="${i}">Remover</button></span></div>
+      <div class="row cols2">${imgField('si'+i,x.img,x.icon||'bag','Imagem de fundo')}<label class="f">Ícone (sem imagem)${iconSelect('si'+i+'-icon',x.icon||'bag')}</label></div>
+      <label class="f">Título<input type="text" data-k="t" data-i="${i}" value="${esc(x.t||'')}"></label><label class="f">Texto<textarea data-k="p" data-i="${i}" style="min-height:56px">${esc(x.p||'')}</textarea></label>
+      <label class="f">Produto com botão de compra<select data-k="prod" data-i="${i}"><option value="">Nenhum</option>${PRODS.map(p=>`<option value="${p.id}" ${p.id===+x.prod?'selected':''}>${esc(p.name)}</option>`).join('')}</select></label></div>`).join('');
+    $$('#sl [data-rm]').forEach(b=>b.onclick=()=>{ sync(); slides.splice(+b.dataset.rm,1); draw(); });
+    $$('#sl [data-mv]').forEach(b=>b.onclick=()=>{ sync(); const i=+b.dataset.mv; [slides[i-1],slides[i]]=[slides[i],slides[i-1]]; draw(); }); };
+  const sync=()=>{ slides.forEach((x,i)=>{ x.img=$('#si'+i).value; x.icon=$('#si'+i+'-icon').value; }); $$('#sl [data-k]').forEach(el=>{ const x=slides[+el.dataset.i]; x[el.dataset.k]=el.dataset.k==='prod'?(el.value?+el.value:null):el.value; }); };
+  modal(`<h2>${s.id?'Editar destaque':'Novo destaque'}</h2><div class="row"><div class="row cols2"><label class="f">Nome (aparece embaixo da bolinha)<input type="text" id="sn" value="${esc(s.name||'')}" maxlength="18"></label><label class="f">Ordem<input type="number" id="so" value="${s.sort??0}"></label></div>
+    <div class="row cols2">${imgField('sc',coverImg,coverIcon||'heart','Capa')}<label class="f">Ícone da capa (sem foto)${iconSelect('sc-icon',coverIcon||'heart')}</label></div>
+    <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="sa" ${s.active!==0?'checked':''}> Mostrar no cardápio</label></div>
+    <div id="sl"></div><div class="err" id="me"></div>
+    <div class="foot">${s.id?'<button class="btn danger" id="del">Excluir</button>':''}<button class="btn sec" id="add">+ Tela</button><button class="btn sec" onclick="closeModal()">Cancelar</button><button class="btn" id="ok">Salvar</button></div>`);
+  draw();
+  $('#add').onclick=()=>{ sync(); slides.push({t:'',p:''}); draw(); };
+  $('#ok').onclick=async()=>{ sync(); const b={name:$('#sn').value.trim(),sort:+$('#so').value||0,active:$('#sa').checked,cover:$('#sc').value||'icon:'+$('#sc-icon').value,slides:slides.map(x=>({...(x.img?{img:x.img}:{icon:x.icon}),t:x.t,p:x.p,...(x.prod?{prod:x.prod}:{})}))};
+    if(!b.name) return $('#me').textContent='Coloque o nome'; if(!b.slides.length) return $('#me').textContent='Adicione pelo menos uma tela';
+    try{ await api('/api/p/stories'+(s.id?'/'+s.id:''),s.id?'PUT':'POST',b); closeModal(); toast('Destaque salvo'); stories(); }catch(e){ $('#me').textContent=e.message; } };
+  $('#del')&&($('#del').onclick=async()=>{ if(!confirm('Excluir este destaque?')) return; await api('/api/p/stories/'+s.id,'DELETE'); closeModal(); stories(); });
+}
+
+/* ---------------- feed ---------------- */
+async function feed(){
+  const [list,prods]=await Promise.all([api('/api/p/posts'),api('/api/p/products')]); PRODS=prods;
+  const pi=id=>PRODS.find(p=>p.id===id);
+  $('#main').innerHTML=`<div class="bar"><h1>Feed</h1><button class="btn sm" id="np">+ Post</button></div>
+    <p class="help" style="margin:-6px 0 14px">Posts estilo Instagram na aba Feed do cardápio. Ligue um produto para aparecer o preço e o botão de sacola. Sem nenhum post, o feed mostra os produtos sozinho.</p>
+    <div class="posts">${list.map(x=>{ const p=pi(x.product_id); return `<button class="pc" data-ep="${x.id}" style="${x.active?'':'opacity:.5'}"><div class="im">${x.img?`<img src="${esc(x.img)}" alt="">`:p?thumb(p.img,p.icon):ico('bag')}</div><div class="t">${esc((x.caption||'').slice(0,70))}${p?`<br><b style="color:var(--ink)">${esc(p.name)}</b>`:''}</div></button>`; }).join('')||'<div class="card muted">Nenhum post ainda.</div>'}</div>`;
+  $('#np').onclick=()=>editPost({});
+  $$('[data-ep]').forEach(b=>b.onclick=()=>editPost(list.find(x=>x.id===+b.dataset.ep)));
+}
+function editPost(x){
+  modal(`<h2>${x.id?'Editar post':'Novo post'}</h2><div class="row">${imgField('xi',x.img,'bag','Foto do post')}
+    <label class="f">Produto<select id="xp"><option value="">Nenhum</option>${PRODS.map(p=>`<option value="${p.id}" ${p.id===x.product_id?'selected':''}>${esc(p.name)}</option>`).join('')}</select><span class="h">Sem foto, o post usa a foto (ou o ícone) do produto.</span></label>
+    <label class="f">Legenda<textarea id="xc">${esc(x.caption||'')}</textarea></label>
+    <label class="f">Texto grande sobre a foto (opcional)<input type="text" id="xo" value="${esc(x.overlay||'')}" maxlength="40"></label>
+    <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="xa" ${x.active!==0?'checked':''}> Mostrar no feed</label></div><div class="err" id="me"></div>
+    <div class="foot">${x.id?'<button class="btn danger" id="del">Excluir</button>':''}<button class="btn sec" onclick="closeModal()">Cancelar</button><button class="btn" id="ok">${x.id?'Salvar':'Publicar'}</button></div>`);
+  $('#ok').onclick=async()=>{ const b={img:$('#xi').value,product_id:$('#xp').value,caption:$('#xc').value.trim(),overlay:$('#xo').value.trim(),active:$('#xa').checked};
+    if(!b.img&&!b.product_id) return $('#me').textContent='Coloque uma foto ou escolha um produto';
+    try{ await api('/api/p/posts'+(x.id?'/'+x.id:''),x.id?'PUT':'POST',b); closeModal(); toast('Post salvo'); feed(); }catch(e){ $('#me').textContent=e.message; } };
+  $('#del')&&($('#del').onclick=async()=>{ if(!confirm('Excluir este post?')) return; await api('/api/p/posts/'+x.id,'DELETE'); closeModal(); feed(); });
+}
+
+/* ---------------- loja ---------------- */
+const FONTES=['Shrikhand','Archivo Black','Rye','Bebas Neue','Pacifico','Lobster','Playfair Display','Fredoka'];
+async function loja(){
+  await loadLoja(); const s=LOJA.settings, T=s.tema;
+  $('#main').innerHTML=`<div class="bar"><h1>Loja</h1><button class="btn" id="save">Salvar alterações</button></div><div class="grid">
+  <div class="card"><h2>Dados</h2><div class="row"><div class="row cols2"><label class="f">Nome da loja<input type="text" id="ln" value="${esc(LOJA.name)}"></label><label class="f">Frase embaixo do nome<input type="text" id="lsub" value="${esc(s.subtitulo)}" placeholder="Ex.: Água de coco · Natal/RN"></label></div>
+    <div class="row cols2"><label class="f">Cidade<input type="text" id="lci" value="${esc(s.cidade)}"></label><label class="f">Link do cardápio<div class="linkbox"><span id="lk">${esc(location.origin+'/'+LOJA.slug)}</span><button class="btn sec sm" id="cplk" type="button">Copiar</button></div><span class="h">Para trocar o endereço, fale com a Hunte Marketing.</span></label></div>
+    ${imgField('llogo',s.logo,'bag','Logo (aparece redonda)')}</div></div>
+  <div class="card"><h2>Visual</h2><div class="row cols3"><label class="f">Cor principal<input type="color" id="tc" value="${esc(T.cor)}" style="height:40px;padding:2px"></label><label class="f">Cor de destaque (preços)<input type="color" id="td" value="${esc(T.destaque)}" style="height:40px;padding:2px"></label><label class="f">Cor de acento<input type="color" id="ta" value="${esc(T.acento)}" style="height:40px;padding:2px"></label></div>
+    <label class="f" style="margin-top:12px">Fonte do nome e dos títulos<select id="tf">${FONTES.map(f=>`<option ${f===T.fonte?'selected':''}>${f}</option>`).join('')}</select></label></div>
+  <div class="card"><h2>Pedidos no WhatsApp</h2><div class="row"><div class="row cols2"><label class="f">WhatsApp que recebe os pedidos<input type="tel" id="lw" value="${esc(s.whatsapp)}" placeholder="5584999999999"><span class="h">Com 55 + DDD, só números.</span></label><label class="f">Horário do atendente humano<input type="text" id="lat" value="${esc(s.atendente)}" placeholder="Ex.: das 8h às 18h"></label></div>
+    <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="lew" ${s.enviarWhats?'checked':''}> Abrir o WhatsApp da loja com o pedido escrito quando o cliente finalizar</label>
+    <p class="help">O pedido sempre fica salvo aqui na aba Pedidos, com ou sem essa opção.</p></div></div>
+  <div class="card"><h2>Horário de funcionamento</h2><div class="row">${DIAS.map((d,i)=>{ const h=s.horario[i]; return `<div class="hours"><b style="font-size:13px">${d}</b><label style="display:flex;gap:6px;align-items:center;font-size:13px"><input type="checkbox" data-hd="${i}" ${h?'checked':''}>aberto</label><input type="time" data-ha="${i}" value="${fmtH(h?h[0]:8)}"><input type="time" data-hb="${i}" value="${fmtH(h?h[1]:18)}"></div>`; }).join('')}</div></div>
+  <div class="card"><h2>Entrega</h2><div class="row"><label class="f">Bairros e taxas (um por linha)<textarea id="lb" style="min-height:140px" placeholder="Centro; 6&#10;Nova Parnamirim; 10">${esc(s.bairros.map(([b,t])=>`${b}; ${String(t).replace('.',',')}`).join('\n'))}</textarea><span class="h">Formato: Bairro; taxa</span></label>
+    <div class="row cols2"><label class="f">Pedido mínimo para entrega (R$)<input type="number" step="0.01" min="0" id="lm" value="${s.minimo||''}"></label><label class="f">Formas de pagamento<input type="text" id="lpg" value="${esc(s.pagamentos.join(', '))}"><span class="h">Separadas por vírgula.</span></label></div>
+    <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="lr" ${s.retirada?'checked':''}> Permitir retirada na loja (sem taxa)</label></div></div>
+  <div class="card"><h2>Promoção do dia</h2><p class="help" style="margin-top:-6px">O tema aparece no story <b>Hoje</b>. Os preços de cada dia ficam no próprio produto (aba Cardápio).</p><div class="row cols2" style="margin-top:8px">${DIAS.map((d,i)=>`<label class="f">${d}<input type="text" data-pt="${i}" value="${esc(s.promoTemas[i]||'')}"></label>`).join('')}</div></div>
+  <div class="card"><h2>Curtidas</h2><div class="row cols3"><label class="f">Curtidas para ganhar desconto<input type="number" min="0" id="cm" value="${s.curtidas.meta}"><span class="h">0 desliga.</span></label><label class="f">Desconto por curtir (%)<input type="number" min="0" max="50" id="cd" value="${s.curtidas.desconto}"></label><label class="f">Desconto do campeão da semana (%)<input type="number" min="0" max="80" id="cc" value="${s.curtidas.campeao}"></label></div></div>
+  <div class="card"><h2>Robô do direct</h2><div class="row cols2"><label class="f">Nome do robô<input type="text" id="rn" value="${esc(s.robo.nome)}"></label><label style="display:flex;gap:8px;align-items:center;align-self:end;height:40px"><input type="checkbox" id="ra" ${s.robo.ativo?'checked':''}> Mostrar o direct com o robô</label></div></div>
+  </div>`;
+  $('#cplk').onclick=()=>navigator.clipboard.writeText($('#lk').textContent).then(()=>toast('Link copiado'));
+  $('#save').onclick=async()=>{
+    const horario={}; DIAS.forEach((_,i)=>{ const a=parseH($(`[data-ha="${i}"]`).value), b=parseH($(`[data-hb="${i}"]`).value); horario[i]=$(`[data-hd="${i}"]`).checked&&a!=null&&b!=null&&b>a?[a,b]:null; });
+    const bairros=$('#lb').value.split('\n').map(l=>l.split(';')).filter(x=>x[0]&&x[0].trim()).map(([b,t])=>[b.trim(),+(String(t||'0').replace(',','.').trim())||0]);
+    const settings={subtitulo:$('#lsub').value.trim(),cidade:$('#lci').value.trim(),logo:$('#llogo').value,tema:{cor:$('#tc').value,destaque:$('#td').value,acento:$('#ta').value,fonte:$('#tf').value},
+      whatsapp:$('#lw').value,atendente:$('#lat').value.trim(),enviarWhats:$('#lew').checked,horario,bairros,minimo:+$('#lm').value||0,retirada:$('#lr').checked,
+      pagamentos:$('#lpg').value.split(',').map(x=>x.trim()).filter(Boolean),promoTemas:DIAS.map((_,i)=>$(`[data-pt="${i}"]`).value.trim()),
+      curtidas:{meta:Math.max(0,+$('#cm').value|0),desconto:Math.max(0,+$('#cd').value||0),campeao:Math.max(0,+$('#cc').value||0)},robo:{nome:$('#rn').value.trim()||'Atendente',ativo:$('#ra').checked}};
+    if(settings.enviarWhats&&settings.whatsapp.replace(/\D/g,'').length<12) return toast('Coloque o WhatsApp com 55 + DDD');
+    if(!settings.pagamentos.length) return toast('Coloque pelo menos uma forma de pagamento');
+    try{ await api('/api/p/loja','PUT',{name:$('#ln').value.trim()||LOJA.name,settings}); toast('Loja salva'); loadLoja(); }catch(e){ toast(e.message); } };
+}
+
+/* ---------------- pixel ---------------- */
+async function pixel(){
+  await loadLoja(); const s=LOJA.settings; let capi=[]; try{ capi=(await api(`/api/p/report?de=${addDays(today(),-30)}&ate=${today()}`)).capi; }catch{}
+  $('#main').innerHTML=`<div class="bar"><h1>Pixel Meta</h1><button class="btn" id="save">Salvar</button></div><div class="grid">
+  <div class="card"><h2>Pixel</h2><div class="row"><label class="f">ID do Pixel (conjunto de dados)<input type="text" id="px" value="${esc(s.pixelId)}" inputmode="numeric" placeholder="Ex.: 123456789012345"><span class="h">No Gerenciador de Eventos da Meta, em Fontes de dados.</span></label>
+    <p class="help">Com o ID preenchido, o cardápio envia sozinho: <b>PageView</b>, <b>ViewContent</b> (abriu produto), <b>AddToCart</b>, <b>InitiateCheckout</b> (abriu a sacola), <b>Contact</b> (abriu o direct) e <b>Purchase</b> (pedido enviado, com valor).</p></div></div>
+  <div class="card"><h2>API de Conversões (recomendado)</h2><div class="row"><label class="f">Token de acesso<input type="password" id="ct" value="${esc(s.capiToken)}" autocomplete="off" placeholder="Gerado no Gerenciador de Eventos → Configurações"></label>
+    <label class="f">Código de teste (opcional)<input type="text" id="cte" value="${esc(s.capiTeste)}" placeholder="TEST12345"><span class="h">Use só enquanto testa em "Testar eventos"; depois apague.</span></label>
+    <p class="help">A compra também é enviada pelo servidor, com o mesmo ID do evento do Pixel. Assim a Meta não conta duas vezes e as vendas aparecem mesmo com bloqueador de anúncio.</p></div></div>
+  <div class="card"><h2>Últimos envios para a Meta</h2>${capi.length?`<div class="tw"><table><tr><th>Quando</th><th>Resultado</th></tr>${capi.map(c=>`<tr><td>${new Date(c.created_at).toLocaleString('pt-BR')}</td><td>${esc(c.info)}</td></tr>`).join('')}</table></div>`:'<p class="muted">Nenhum envio ainda. Aparece aqui depois do primeiro pedido com o token preenchido.</p>'}</div></div>`;
+  $('#save').onclick=async()=>{ try{ await api('/api/p/loja','PUT',{name:LOJA.name,settings:{pixelId:$('#px').value.trim(),capiToken:$('#ct').value.trim(),capiTeste:$('#cte').value.trim()}}); toast('Pixel salvo'); }catch(e){ toast(e.message); } };
+}
+
+/* ---------------- conta ---------------- */
+async function conta(){
+  $('#main').innerHTML=`<div class="bar"><h1>Conta</h1></div><div class="card" style="max-width:460px"><h2>Trocar senha</h2>
+    ${ME.role==='admin'?'<p class="muted">Você está como administrador. As senhas dos clientes ficam no painel admin.</p>':`<div class="row"><div class="muted">${esc(ME.email)}</div><label class="f">Senha atual<input type="password" id="a1" autocomplete="current-password"></label><label class="f">Nova senha (8+ caracteres)<input type="password" id="a2" autocomplete="new-password"></label><div class="err" id="me"></div><div><button class="btn" id="ok">Trocar senha</button></div></div>`}</div>`;
+  $('#ok')&&($('#ok').onclick=async()=>{ try{ await api('/api/p/senha','POST',{atual:$('#a1').value,nova:$('#a2').value}); toast('Senha trocada'); $('#a1').value=$('#a2').value=''; $('#me').textContent=''; }catch(e){ $('#me').textContent=e.message; } });
+}
+</script>
+</body>
+</html>

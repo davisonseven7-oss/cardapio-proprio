@@ -1,14 +1,16 @@
 {
-  "name": "cardapio-proprio",
+  "name": "huntix-cardapio",
   "private": true,
-  "description": "Cardápio digital próprio (site estático). No Railway, o start serve a pasta na porta que ele define.",
+  "description": "Huntix · plataforma de cardápios no padrão rede social (Hunte Marketing)",
+  "main": "server.js",
   "scripts": {
-    "start": "serve . --no-clipboard -l tcp://0.0.0.0:${PORT:-3000}"
+    "start": "node server.js",
+    "dev": "node --watch server.js"
   },
   "dependencies": {
-    "serve": "14.2.4"
+    "express": "4.21.2"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=22.13"
   }
 }
