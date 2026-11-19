@@ -208,6 +208,28 @@ main{margin-left:var(--side);max-width:calc(1180px + var(--side));padding:22px 2
 .ord .acts .btn.danger,#mbox .btn#dc{background:var(--card);border:1px solid #E5A3A8;color:var(--bad);padding:0 12px}
 .ord .acts .btn.danger:hover,#mbox .btn#dc:hover{background:#FFF1F1;border-color:var(--bad)}
 .ord .h .badge{margin-left:6px}
+/* balcão e mesas */
+.pdv{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(320px,1fr);gap:14px;align-items:start}
+@media (max-width:1000px){.pdv{grid-template-columns:1fr}}
+.pbar{display:flex;gap:8px;margin-bottom:10px}.pbar input{flex:1}.pbar select{width:auto}
+.pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;max-height:62vh;overflow:auto}
+.pitem{display:grid;gap:4px;text-align:left;border:1px solid var(--line);border-radius:6px;background:var(--card);padding:10px;min-height:72px;cursor:pointer}
+.pitem:hover{border-color:var(--ink)}
+.pitem b{font-size:13px;font-weight:600;line-height:1.3}.pitem span{font-size:13px;color:var(--muted)}
+.pitem.esg{opacity:.5;cursor:not-allowed}
+.pright{position:sticky;top:12px}
+.pl{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line);font-size:13px}
+.pl small{display:block;color:var(--muted);font-size:12px}
+.qtyb{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:6px}
+.qtyb button{border:0;background:none;width:28px;height:28px;font-size:16px;cursor:pointer}.qtyb b{min-width:22px;text-align:center}
+.ptot{display:grid;grid-template-columns:1fr auto;gap:4px;margin-top:12px;font-size:15px}.ptot b{font-size:18px}
+.btn.go{background:#1A7F37;border-color:#1A7F37;color:#fff}.btn.go:hover{background:#156B2E;border-color:#156B2E}
+.mesas{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.mesa{display:grid;gap:3px;text-align:left;border:1px solid var(--line);border-radius:8px;background:var(--card);padding:12px;min-height:96px;cursor:pointer}
+.mesa:hover{border-color:var(--ink)}
+.mesa b{font-size:15px}.mesa small{color:var(--muted);font-size:12px}.mesa span{font-weight:600}
+.mesa.oc{border-color:#E8A15F;background:#FFF8F1;box-shadow:inset 3px 0 0 var(--hx)}
+.mesa em{font-style:normal;font-size:12px;color:var(--warn);font-weight:500}
 </style>
 </head>
 <body>
@@ -225,10 +247,15 @@ main{margin-left:var(--side);max-width:calc(1180px + var(--side));padding:22px 2
     <button data-tab="clientes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c.6-3.4 3-5.4 6-5.4s5.4 2 6 5.4"/><path d="M16 4.5a3 3 0 0 1 0 6M18 14.6c1.7.6 2.8 2.4 3 5.4"/></svg><span>Clientes</span></button>
     <button data-tab="entregadores"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="17" r="2.6"/><circle cx="18" cy="17" r="2.6"/><path d="M8.6 17h6.8M14 7h3l2.4 7.4M11 7l3 7M7 11h5"/></svg><span>Entregadores</span></button>
     <button data-tab="relatorios"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V4M4 20h16"/><path d="M8 16v-4M12 16V8M16 16v-6"/></svg><span>Relatórios</span></button>
+    <div class="grp">Loja física</div>
+    <button data-tab="balcao"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="1.5"/><path d="M7 20h10M12 16v4M7 8h4M7 11h7"/></svg><span>Balcão</span></button>
+    <button data-tab="mesas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9h16M6 9v10M18 9v10M8 5h8"/></svg><span>Mesas</span></button>
+    <button data-tab="caixa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="7" width="18" height="12" rx="1.5"/><path d="M3 11h18M7 15h3M16 4H8"/></svg><span>Caixa</span></button>
     <div class="grp">Cardápio</div>
     <button data-tab="cardapio"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 3h11a3 3 0 0 1 3 3v15H8a3 3 0 0 1-3-3V3z"/><path d="M9 8h6M9 12h6M9 16h3"/></svg><span>Produtos</span></button>
     <button data-tab="stories"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5" stroke-dasharray="4 2.2"/><circle cx="12" cy="12" r="4.5"/></svg><span>Stories</span></button>
     <button data-tab="feed"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="3"/><circle cx="9.5" cy="9.5" r="1.8"/><path d="M20 15l-4.5-4.5L7 19"/></svg><span>Feed</span></button>
+    <button data-tab="estoque"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8l8-4 8 4v8l-8 4-8-4V8z"/><path d="M4 8l8 4 8-4M12 12v8"/></svg><span>Estoque</span></button>
     <div class="grp">Vendas</div>
     <button data-tab="marketing"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10v4h3l6 4V6L7 10H4z"/><path d="M17 9a4 4 0 0 1 0 6"/></svg><span>Cupons e fidelidade</span></button>
     <button data-tab="pixel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1" fill="currentColor"/></svg><span>Pixel Meta</span></button>
@@ -253,7 +280,7 @@ const DESK=window.huntixDesktop||null; /* presente quando o painel roda dentro d
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const BRL=v=>(+v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 const DIAS=['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
-const ST={pix:['Aguardando Pix','warn'],novo:['Novo','hx'],preparando:['Preparando','warn'],saiu:['Saiu p/ entrega','warn'],concluido:['Concluído','ok'],cancelado:['Cancelado','bad']};
+const ST={aberta:['Mesa aberta','warn'],pix:['Aguardando Pix','warn'],novo:['Novo','hx'],preparando:['Preparando','warn'],saiu:['Saiu p/ entrega','warn'],concluido:['Concluído','ok'],cancelado:['Cancelado','bad']};
 const NEXT={novo:'preparando',preparando:'saiu',saiu:'concluido'};
 function toast(t){ const el=$('#toast'); el.textContent=t; el.hidden=false; clearTimeout(toast.t); toast.t=setTimeout(()=>el.hidden=true,2600); }
 async function api(url,method='GET',body){ const r=await fetch(url,{method,headers:body?{'content-type':'application/json'}:{},body:body?JSON.stringify(body):undefined}); if(r.status===401){ location.replace('/login'); throw new Error('login'); } const j=r.headers.get('content-type')?.includes('json')?await r.json():{}; if(!r.ok) throw new Error(j.erro||'Erro ao salvar'); return j; }
@@ -291,7 +318,7 @@ if(!DESK&&!/Android|iPhone|iPad/i.test(navigator.userAgent)) $('#getApp').hidden
 $('#sair').onclick=async()=>{ await fetch('/api/logout',{method:'POST'}); location.replace('/login'); };
 $('#tabs').onclick=e=>{ const b=e.target.closest('[data-tab]'); if(b){ show(b.dataset.tab); document.body.classList.remove('menuOn'); } };
 $('#menuBtn').onclick=()=>document.body.classList.toggle('menuOn'); $('#sideBack').onclick=()=>document.body.classList.remove('menuOn');
-function show(t){ tab=t; location.hash=t; $$('#tabs [data-tab]').forEach(b=>b.classList.toggle('on',b.dataset.tab===t)); $('#main').innerHTML='<p class="muted">Carregando…</p>'; ({pedidos,clientes:clientesTab,entregadores,marketing,relatorios,cardapio,stories,feed,loja,pixel,conta})[t]().catch(e=>{ $('#main').innerHTML=`<p class="err">${esc(e.message)}</p>`; }); }
+function show(t){ tab=t; location.hash=t; $$('#tabs [data-tab]').forEach(b=>b.classList.toggle('on',b.dataset.tab===t)); $('#main').innerHTML='<p class="muted">Carregando…</p>'; ({pedidos,clientes:clientesTab,entregadores,marketing,balcao,mesas:mesasTab,caixa:caixaTab,estoque:estoqueTab,relatorios,cardapio,stories,feed,loja,pixel,conta})[t]().catch(e=>{ $('#main').innerHTML=`<p class="err">${esc(e.message)}</p>`; }); }
 let lastNew=null;
 async function pollNew(){ try{ const j=await api('/api/p/orders/novos'); $('#newDot').hidden=!j.n; $('#newDot').textContent=j.n; document.title=(j.n?`(${j.n}) `:'')+LOJA.name+' · Huntix';
   if(lastNew!==null&&j.ultimo&&j.ultimo>lastNew){ toast('Pedido novo!'); beep(); const prev=lastNew; if(DESK) DESK.notify('Pedido novo · '+LOJA.name, j.n>1?`${j.n} pedidos esperando`:'Toque para abrir o painel');
@@ -579,6 +606,209 @@ async function relatorios(){
   $('#rDe')&&($('#rDe').onchange=e=>{RF.de=e.target.value;relatorios()}); $('#rAte')&&($('#rAte').onchange=e=>{RF.ate=e.target.value;relatorios()});
 }
 let RF={de:today(),ate:today()};
+
+/* =====================================================================
+   FASE 3 · loja física: balcão (PDV), mesas, caixa e estoque
+   ===================================================================== */
+let MENU=null;
+async function loadMenu(){ const r=await fetch(`/api/m/${LOJA.slug}`); if(r.status===423) throw new Error('Cardápio pausado: ative a loja para vender'); MENU=await r.json(); return MENU; }
+const PAGS=['Dinheiro','Pix','Cartão de débito','Cartão de crédito'];
+const gOf=g=>({nome:g.nome,itens:g.itens||[],min:g.min??1,max:g.max??1,regra:g.regra||'soma'});
+const extraOf=(p,sel)=>(p.opts||[]).map(gOf).reduce((t,g,gi)=>{ const ex=(sel[gi]||[]).map(i=>+g.itens[i][1]||0); if(!ex.length) return t; return t+(g.regra==='maior'?Math.max(...ex):g.regra==='media'?ex.reduce((a,b)=>a+b,0)/ex.length:ex.reduce((a,b)=>a+b,0)); },0);
+const labelsOf=(p,sel)=>(p.opts||[]).map(gOf).map((g,gi)=>(sel[gi]||[]).length?`${g.nome}: ${sel[gi].map(i=>g.itens[i][0]).join(g.regra==='soma'?', ':' + ')}`:'').filter(Boolean);
+/* escolha de complementos (mesmas regras do cardápio) */
+function escolherOpcoes(p){ return new Promise(resolve=>{
+  const G=(p.opts||[]).map(gOf); let q=1;
+  modal(`<h2>${esc(p.name)}</h2><div class="muted" style="margin-top:-8px">${BRL(p.price)}</div>
+    ${G.map((g,gi)=>{ const radio=g.max===1&&g.min===1; return `<div style="margin-top:14px;font-weight:600">${esc(g.nome)} <span class="muted" style="font-weight:400;font-size:12px">${g.max===1?(g.min?'escolha 1':'opcional'):`${g.min?`de ${g.min} a ${g.max}`:`até ${g.max}`}`}</span></div>
+      ${g.itens.map(([n,x],oi)=>`<label class="tg" style="display:flex;padding:6px 0;border-bottom:1px solid var(--line)"><input type="${radio?'radio':'checkbox'}" name="og${gi}" value="${oi}" ${radio&&!oi?'checked':''}> <span style="flex:1">${esc(n)}</span><span class="muted">${+x?'+ '+BRL(+x):''}</span></label>`).join('')}`; }).join('')}
+    <label class="f" style="margin-top:12px">Observação<input type="text" id="oobs" placeholder="Ex.: sem cebola"></label>
+    <div class="err" id="oerr"></div>
+    <div class="foot"><div class="qtyb"><button type="button" id="oqm">−</button><b id="oqv">1</b><button type="button" id="oqp">+</button></div><button class="btn sec" id="ocan">Cancelar</button><button class="btn" id="ook">Adicionar <span id="oap"></span></button></div>`);
+  const sel=()=>G.map((g,gi)=>[...document.querySelectorAll(`[name=og${gi}]:checked`)].map(x=>+x.value));
+  const u=()=>{ const s=sel(); G.forEach((g,gi)=>{ if(g.max>1||g.min===0){ const all=[...document.querySelectorAll(`[name=og${gi}]`)]; all.forEach(x=>{ if(!x.checked) x.disabled=s[gi].length>=g.max; }); } }); $('#oqv').textContent=q; $('#oap').textContent=BRL((p.price+extraOf(p,s))*q); $('#oerr').textContent=''; };
+  $('#mbox').onchange=u; $('#oqm').onclick=()=>{ if(q>1){q--;u()} }; $('#oqp').onclick=()=>{ q++; u(); };
+  $('#ocan').onclick=()=>{ closeModal(); resolve(null); };
+  $('#ook').onclick=()=>{ const s=sel(), miss=G.findIndex((g,gi)=>s[gi].length<g.min); if(miss>=0) return $('#oerr').textContent=`Escolha ${G[miss].min>1?G[miss].min+' opções':'uma opção'} em "${G[miss].nome}"`; closeModal(); resolve({sel:s,qty:q,obs:$('#oobs').value.trim()}); };
+  u(); }); }
+/* grade de produtos usada no balcão e na comanda da mesa */
+function gradeProdutos(el,onPick){
+  let cat='', q='';
+  const draw=()=>{ const ps=MENU.prods.filter(p=>(!cat||String(p.cat)===cat)&&(!q||p.name.toLowerCase().includes(q)));
+    el.querySelector('.pgrid').innerHTML=ps.map(p=>`<button class="pitem ${p.esg?'esg':''}" data-pid="${p.id}" ${p.esg?'disabled':''}><b>${esc(p.name)}</b><span>${p.esg?'Esgotado':BRL(p.price)}</span></button>`).join('')||'<p class="muted">Nenhum produto.</p>'; };
+  el.innerHTML=`<div class="pbar"><input type="text" placeholder="Buscar produto (F2)" class="pbusca"><select class="pcat"><option value="">Todas as categorias</option>${MENU.cats.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('')}</select></div><div class="pgrid"></div>`;
+  el.querySelector('.pbusca').oninput=e=>{ q=e.target.value.toLowerCase().trim(); draw(); };
+  el.querySelector('.pbusca').onkeydown=e=>{ if(e.key==='Enter'){ const b=el.querySelector('.pitem:not(.esg)'); b&&b.click(); } };
+  el.querySelector('.pcat').onchange=e=>{ cat=e.target.value; draw(); };
+  el.querySelector('.pgrid').onclick=async e=>{ const b=e.target.closest('[data-pid]'); if(!b) return; const p=MENU.prods.find(x=>x.id===+b.dataset.pid);
+    if(p.opts&&p.opts.length){ const r=await escolherOpcoes(p); if(r) onPick(p,r.qty,r.sel,r.obs); } else onPick(p,1,[], ''); };
+  draw(); setTimeout(()=>el.querySelector('.pbusca').focus(),50);
+}
+/* comanda de cozinha (só itens, sem preço) */
+function cozinhaHtml(titulo,items,garcom){
+  const mm=prnGet('papel','80'), w=mm==='a4'?'190mm':(+mm-6)+'mm';
+  return `<!doctype html><meta charset="utf-8"><title>Cozinha</title><style>@page{size:${mm==='a4'?'A4':mm+'mm auto'};margin:2mm}body{font:14px/1.35 "Courier New",monospace;margin:0;width:${w};color:#000}hr{border:0;border-top:1px dashed #000;margin:6px 0}.c{text-align:center}.it{font-size:16px;font-weight:bold;margin:4px 0}.op{padding-left:14px;font-size:13px}</style>
+  <div class="c"><b style="font-size:18px">COZINHA</b></div><div class="c"><b style="font-size:20px">${esc(titulo)}</b></div><div class="c">${new Date().toLocaleString('pt-BR')}${garcom?' · '+esc(garcom):''}</div><hr>
+  ${items.map(i=>`<div class="it">${i.qty}x ${esc(i.nome)}</div>${(i.opts||[]).map(o=>`<div class="op">» ${esc(o)}</div>`).join('')}`).join('')}<hr>`;
+}
+function imprimirHtml(html){ if(DESK) return DESK.print(html).then(r=>{ if(!r.ok) toast('Impressora: '+r.erro); });
+  let fr=$('#prnFrame'); if(fr) fr.remove(); fr=document.createElement('iframe'); fr.id='prnFrame'; fr.style.cssText='position:fixed;width:0;height:0;border:0'; document.body.appendChild(fr);
+  const d=fr.contentWindow.document; d.open(); d.write(html); d.close(); setTimeout(()=>{ try{ fr.contentWindow.focus(); fr.contentWindow.print(); }catch{} },250); }
+
+/* ---------------- caixa ---------------- */
+async function caixaTab(){
+  const c=await api('/api/p/caixa'), hist=await api('/api/p/caixa/historico');
+  const histHtml=hist.length?`<div class="tw"><table><tr><th>Aberto</th><th>Fechado</th><th>Vendas</th><th>Total</th><th>Dinheiro esperado</th><th>Contado</th><th>Diferença</th></tr>${hist.map(h=>{ const r=h.resumo||{}, d=r.diferenca||0; return `<tr><td>${new Date(h.aberto_em).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}</td><td>${new Date(h.fechado_em).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}</td><td class="num">${r.vendas||0}</td><td class="num">${BRL(r.total)}</td><td class="num">${BRL(r.esperadoDinheiro)}</td><td class="num">${BRL(h.valor_contado)}</td><td class="num" style="color:${Math.abs(d)<0.01?'var(--ok)':'var(--bad)'}">${d>0?'+':''}${BRL(d)}</td></tr>`; }).join('')}</table></div>`:'<p class="muted">Nenhum caixa fechado ainda.</p>';
+  if(!c.aberto){
+    $('#main').innerHTML=`<div class="bar"><h1>Caixa</h1></div><div class="grid"><div class="card" style="max-width:420px"><h2>Caixa fechado</h2><p class="muted" style="margin-top:-6px">Abra o caixa para vender no balcão e receber as mesas. Os pedidos de delivery concluídos também entram no caixa aberto.</p>
+      <label class="f">Troco inicial (R$)<input type="number" min="0" step="0.01" id="cxi" placeholder="0,00"></label><div style="margin-top:12px"><button class="btn" id="cxa">Abrir caixa</button></div></div>
+      <div class="card"><h2>Caixas anteriores</h2>${histHtml}</div></div>`;
+    $('#cxa').onclick=async()=>{ try{ await api('/api/p/caixa/abrir','POST',{valor:+$('#cxi').value||0}); toast('Caixa aberto'); caixaTab(); }catch(e){ toast(e.message); } };
+    return;
+  }
+  const r=c.resumo;
+  $('#main').innerHTML=`<div class="bar"><h1>Caixa</h1><span class="muted">Aberto em ${new Date(c.caixa.aberto_em).toLocaleString('pt-BR')} por ${esc(c.caixa.aberto_por)}</span><span style="flex:1"></span><button class="btn sec sm" id="cxs">Sangria</button><button class="btn sec sm" id="cxr">Reforço</button><button class="btn sm" id="cxf">Fechar caixa</button></div>
+  <div class="grid"><div class="kpis"><div class="kpi"><small>Vendas</small><b class="num">${r.vendas}</b></div><div class="kpi"><small>Total vendido</small><b class="num">${BRL(r.total)}</b></div><div class="kpi"><small>Troco inicial</small><b class="num">${BRL(c.caixa.valor_inicial)}</b></div><div class="kpi"><small>Dinheiro esperado na gaveta</small><b class="num">${BRL(r.esperadoDinheiro)}</b><span>inicial + vendas em dinheiro + reforços − sangrias</span></div></div>
+    <div class="two"><div class="card"><h2>Por forma de pagamento</h2>${Object.keys(r.porPagamento).length?`<table>${Object.entries(r.porPagamento).map(([k,v])=>`<tr><td>${esc(k)}</td><td class="num" style="text-align:right">${BRL(v)}</td></tr>`).join('')}</table>`:'<p class="muted">Nenhuma venda ainda.</p>'}</div>
+      <div class="card"><h2>Por canal</h2>${Object.keys(r.porCanal).length?`<table>${Object.entries(r.porCanal).map(([k,v])=>`<tr><td>${{delivery:'Delivery',balcao:'Balcão',mesa:'Mesas'}[k]||k}</td><td class="num" style="text-align:right">${BRL(v)}</td></tr>`).join('')}</table>`:'<p class="muted">—</p>'}</div></div>
+    <div class="card"><h2>Movimentações</h2>${r.movs.length?`<table><tr><th>Hora</th><th>Tipo</th><th>Motivo</th><th style="text-align:right">Valor</th></tr>${r.movs.map(m=>`<tr><td>${new Date(m.created_at).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</td><td>${m.tipo==='sangria'?'Sangria':'Reforço'}</td><td>${esc(m.motivo||'—')}</td><td class="num" style="text-align:right;color:${m.tipo==='sangria'?'var(--bad)':'var(--ok)'}">${m.tipo==='sangria'?'−':'+'} ${BRL(m.valor)}</td></tr>`).join('')}</table>`:'<p class="muted">Nenhuma sangria ou reforço.</p>'}</div>
+    <div class="card"><h2>Caixas anteriores</h2>${histHtml}</div></div>`;
+  const mov=tipo=>{ modal(`<h2>${tipo==='sangria'?'Sangria (retirar dinheiro)':'Reforço (colocar dinheiro)'}</h2><div class="row"><label class="f">Valor (R$)<input type="number" min="0" step="0.01" id="mv"></label><label class="f">Motivo<input type="text" id="mm" placeholder="${tipo==='sangria'?'Ex.: depósito, pagamento de fornecedor':'Ex.: troco'}"></label></div><div class="err" id="me"></div><div class="foot"><button class="btn sec" onclick="closeModal()">Cancelar</button><button class="btn" id="ok">Confirmar</button></div>`);
+    $('#ok').onclick=async()=>{ try{ await api('/api/p/caixa/mov','POST',{tipo,valor:+$('#mv').value,motivo:$('#mm').value}); closeModal(); toast('Registrado'); caixaTab(); }catch(e){ $('#me').textContent=e.message; } }; };
+  $('#cxs').onclick=()=>mov('sangria'); $('#cxr').onclick=()=>mov('reforco');
+  $('#cxf').onclick=()=>{ modal(`<h2>Fechar caixa</h2><p class="muted" style="margin-top:-8px">Conte o dinheiro da gaveta. O sistema esperava <b>${BRL(r.esperadoDinheiro)}</b>.</p><div class="row"><label class="f">Dinheiro contado (R$)<input type="number" min="0" step="0.01" id="fc"></label><div id="fd" class="muted"></div><label class="f">Observação<input type="text" id="fo"></label></div><div class="foot"><button class="btn sec" onclick="closeModal()">Cancelar</button><button class="btn" id="ok">Fechar caixa</button></div>`);
+    $('#fc').oninput=()=>{ const d=(+$('#fc').value||0)-r.esperadoDinheiro; $('#fd').innerHTML=`Diferença: <b style="color:${Math.abs(d)<0.01?'var(--ok)':'var(--bad)'}">${d>0?'+':''}${BRL(d)}</b>${Math.abs(d)<0.01?' (conferido)':d<0?' (faltando)':' (sobrando)'}`; };
+    $('#ok').onclick=async()=>{ const j=await api('/api/p/caixa/fechar','POST',{contado:+$('#fc').value||0,obs:$('#fo').value}); closeModal();
+      imprimirHtml(`<!doctype html><meta charset="utf-8"><style>body{font:13px "Courier New",monospace;width:72mm;margin:0}hr{border:0;border-top:1px dashed #000}.r{display:flex;justify-content:space-between}</style><b>${esc(LOJA.name)}</b><br>FECHAMENTO DE CAIXA<br>${new Date().toLocaleString('pt-BR')}<hr>${Object.entries(j.resumo.porPagamento).map(([k,v])=>`<div class="r"><span>${esc(k)}</span><span>${BRL(v)}</span></div>`).join('')}<hr><div class="r"><span>Total</span><b>${BRL(j.resumo.total)}</b></div><div class="r"><span>Troco inicial</span><span>${BRL(c.caixa.valor_inicial)}</span></div><div class="r"><span>Sangrias</span><span>-${BRL(j.resumo.sangria)}</span></div><div class="r"><span>Reforços</span><span>${BRL(j.resumo.reforco)}</span></div><div class="r"><span>Esperado</span><span>${BRL(j.resumo.esperadoDinheiro)}</span></div><div class="r"><span>Contado</span><span>${BRL(+$('#fc')?.value||0)}</span></div><div class="r"><b>Diferença</b><b>${BRL(j.diferenca)}</b></div>`);
+      toast('Caixa fechado'); caixaTab(); }; };
+}
+
+/* ---------------- balcão (PDV) ---------------- */
+let PDV={itens:[],pag:'Dinheiro'};
+async function balcao(){
+  const [c]=await Promise.all([api('/api/p/caixa'),loadMenu()]);
+  if(!c.aberto){ $('#main').innerHTML=`<div class="bar"><h1>Balcão</h1></div><div class="card" style="max-width:420px"><h2>Caixa fechado</h2><p class="muted">Para vender no balcão, abra o caixa primeiro.</p><button class="btn" id="goCx">Ir para o caixa</button></div>`; $('#goCx').onclick=()=>show('caixa'); return; }
+  $('#main').innerHTML=`<div class="bar"><h1>Balcão</h1><span class="muted">Caixa aberto · ${c.resumo.vendas} venda(s) · ${BRL(c.resumo.total)}</span></div>
+  <div class="pdv"><div class="card pleft" id="pgrade"></div>
+    <div class="card pright"><h2>Venda</h2><div id="pcart"></div>
+      <div class="row" style="margin-top:10px"><div class="row cols2"><label class="f">Cliente (opcional)<input type="text" id="pnome" placeholder="Nome"></label><label class="f">WhatsApp (opcional)<input type="tel" id="pfone" placeholder="84999999999"></label></div>
+      <label class="f">Desconto (R$)<input type="number" min="0" step="0.01" id="pdesc" placeholder="0,00"></label>
+      <div><div style="font-size:13px;font-weight:500;margin-bottom:4px">Pagamento</div><div class="seg" id="ppag">${PAGS.map(x=>`<button data-p="${x}" class="${x===PDV.pag?'on':''}">${x}</button>`).join('')}</div></div>
+      <label class="f" id="precF">Valor recebido (R$)<input type="number" min="0" step="0.01" id="prec"></label></div>
+      <div class="ptot" id="ptot"></div><div class="err" id="perr"></div>
+      <div class="foot" style="margin-top:10px"><button class="btn sec" id="plimpa">Limpar</button><button class="btn go" id="pfin" style="flex:1">Finalizar venda</button></div></div></div>`;
+  gradeProdutos($('#pgrade'),(p,qty,sel,obs)=>{ const key=p.id+'|'+JSON.stringify(sel)+'|'+obs; const ex=PDV.itens.find(i=>i.key===key); if(ex) ex.qty+=qty; else PDV.itens.push({key,id:p.id,nome:p.name,price:p.price+extraOf(p,sel),qty,sel,obs,labels:labelsOf(p,sel)}); drawCart(); });
+  const total=()=>{ const s=PDV.itens.reduce((a,i)=>a+i.price*i.qty,0); return Math.max(0,s-(+$('#pdesc').value||0)); };
+  const drawCart=()=>{ $('#pcart').innerHTML=PDV.itens.length?PDV.itens.map((i,k)=>`<div class="pl"><div><b>${esc(i.nome)}</b>${i.labels.length||i.obs?`<small>${esc([...i.labels,i.obs&&'Obs.: '+i.obs].filter(Boolean).join(' · '))}</small>`:''}</div><div class="qtyb"><button data-m="${k}">−</button><b>${i.qty}</b><button data-p="${k}">+</button></div><span class="num">${BRL(i.price*i.qty)}</span></div>`).join(''):'<p class="muted">Clique nos produtos para adicionar.</p>';
+    const t=total(), rec=+$('#prec').value||0; $('#precF').hidden=PDV.pag!=='Dinheiro';
+    $('#ptot').innerHTML=`<span>Total</span><b class="num">${BRL(t)}</b>${PDV.pag==='Dinheiro'&&rec>=t&&t>0?`<span>Troco</span><b class="num" style="color:var(--ok)">${BRL(rec-t)}</b>`:''}`; };
+  $('#pcart').onclick=e=>{ const m=e.target.closest('[data-m]'), p=e.target.closest('[data-p]'); if(m){ const i=PDV.itens[+m.dataset.m]; i.qty--; if(i.qty<1) PDV.itens.splice(+m.dataset.m,1); } if(p) PDV.itens[+p.dataset.p].qty++; drawCart(); };
+  $('#ppag').onclick=e=>{ const b=e.target.closest('[data-p]'); if(!b) return; PDV.pag=b.dataset.p; $$('#ppag button').forEach(x=>x.classList.toggle('on',x===b)); drawCart(); };
+  $('#pdesc').oninput=drawCart; $('#prec').oninput=drawCart;
+  $('#plimpa').onclick=()=>{ PDV.itens=[]; drawCart(); };
+  $('#pfin').onclick=async()=>{ if(!PDV.itens.length) return $('#perr').textContent='Adicione pelo menos um produto';
+    const t=total(); if(PDV.pag==='Dinheiro'&&$('#prec').value&&+$('#prec').value<t) return $('#perr').textContent='Valor recebido menor que o total';
+    try{ const j=await api('/api/p/pdv/venda','POST',{itens:PDV.itens.map(i=>({id:i.id,qty:i.qty,opts:i.sel,obs:i.obs})),pagamento:PDV.pag,recebido:+$('#prec').value||0,desconto:+$('#pdesc').value||0,nome:$('#pnome').value,telefone:$('#pfone').value});
+      toast(`Venda #${j.num} · ${BRL(j.total)}${j.troco?` · troco ${BRL(j.troco)}`:''}`);
+      if(pref('imprimirBalcao',true)){ const o=(await api('/api/p/orders?de='+today()+'&ate='+today())).find(x=>x.id===j.id); if(o) printOrder(o); }
+      PDV.itens=[]; balcao(); }catch(e){ $('#perr').textContent=e.message; } };
+  drawCart();
+}
+
+/* ---------------- mesas ---------------- */
+async function mesasTab(){
+  const ms=await api('/api/p/mesas'), gs=await api('/api/p/garcons');
+  const tempo=iso=>{ const m=Math.floor((Date.now()-new Date(iso))/6e4); return m<60?`${m} min`:`${Math.floor(m/60)}h${String(m%60).padStart(2,'0')}`; };
+  $('#main').innerHTML=`<div class="bar"><h1>Mesas</h1><label class="tg"><input type="checkbox" id="autoCoz" ${pref('imprimirCozinha',false)?'checked':''}> Imprimir pedido da cozinha sozinho</label><span style="flex:1"></span><button class="btn sec sm" id="gars">Garçons</button><button class="btn sm" id="addMesa">+ Mesas</button></div>
+  ${ms.length?`<div class="mesas">${ms.filter(m=>m.ativo).map(m=>`<button class="mesa ${m.comanda?'oc':''}" data-mesa="${m.id}"><b>${esc(m.nome)}</b>${m.comanda?`<span class="num">${BRL(m.comanda.total)}</span><small>${m.comanda.itens} item(ns) · ${tempo(m.comanda.aberta_em)}${m.comanda.garcom?' · '+esc(m.comanda.garcom):''}</small>${m.comanda.pendentes?`<em>${m.comanda.pendentes} p/ cozinha</em>`:''}`:'<small>Livre</small>'}</button>`).join('')}</div>`
+    :'<div class="card muted">Cadastre as mesas do salão no botão "+ Mesas".</div>'}`;
+  $('#autoCoz').onchange=e=>setPref('imprimirCozinha',e.target.checked);
+  $('#addMesa').onclick=()=>{ modal(`<h2>Adicionar mesas</h2><div class="row cols2"><label class="f">Quantidade<input type="number" min="1" max="100" id="mq" value="10"></label><label class="f">Ou uma com nome<input type="text" id="mn" placeholder="Ex.: Varanda 1"></label></div><div class="foot"><button class="btn sec" onclick="closeModal()">Cancelar</button><button class="btn" id="ok">Adicionar</button></div>`);
+    $('#ok').onclick=async()=>{ await api('/api/p/mesas','POST',$('#mn').value.trim()?{nome:$('#mn').value.trim()}:{quantidade:+$('#mq').value||1}); closeModal(); mesasTab(); }; };
+  $('#gars').onclick=()=>garconsModal(gs);
+  $$('[data-mesa]').forEach(b=>b.onclick=()=>abrirMesa(ms.find(m=>m.id===+b.dataset.mesa)));
+}
+function garconsModal(gs){
+  modal(`<h2>Garçons</h2><p class="muted" style="margin-top:-8px">Cada garçom recebe um link para lançar pedidos pelo celular, sem precisar de senha.</p>
+    ${gs.length?`<table>${gs.map(g=>`<tr><td><b>${esc(g.name)}</b>${g.ativo?'':' <span class="badge">desativado</span>'}</td><td style="text-align:right;white-space:nowrap"><button class="btn sec sm" data-gl="${esc(g.token)}">Copiar link</button> <button class="btn ghost sm" data-gt="${g.id}" data-at="${g.ativo?0:1}">${g.ativo?'Desativar':'Ativar'}</button> <button class="btn danger sm" data-gd="${g.id}">Excluir</button></td></tr>`).join('')}</table>`:'<p class="muted">Nenhum garçom cadastrado.</p>'}
+    <div class="row cols2" style="margin-top:12px"><input type="text" id="gn" placeholder="Nome do garçom"><button class="btn" id="ga">Adicionar</button></div>
+    <div class="foot"><button class="btn sec" onclick="closeModal()">Fechar</button></div>`);
+  $('#ga').onclick=async()=>{ if(!$('#gn').value.trim()) return; await api('/api/p/garcons','POST',{name:$('#gn').value}); garconsModal(await api('/api/p/garcons')); };
+  $$('[data-gl]').forEach(b=>b.onclick=()=>navigator.clipboard.writeText(`${location.origin}/g/${b.dataset.gl}`).then(()=>toast('Link copiado')));
+  $$('[data-gt]').forEach(b=>b.onclick=async()=>{ await api('/api/p/garcons/'+b.dataset.gt,'PUT',{ativo:b.dataset.at==='1'}); garconsModal(await api('/api/p/garcons')); });
+  $$('[data-gd]').forEach(b=>b.onclick=async()=>{ if(!confirm('Excluir este garçom?')) return; await api('/api/p/garcons/'+b.dataset.gd,'DELETE'); garconsModal(await api('/api/p/garcons')); });
+}
+async function abrirMesa(m){
+  await loadMenu();
+  const c=m.comanda?await api('/api/p/comandas/'+m.comanda.id):null, items=c?c.items:[];
+  const pend=items.filter(i=>!i.cozinha);
+  $('#main').innerHTML=`<div class="bar"><button class="btn ghost sm" id="voltar">← Mesas</button><h1>${esc(m.nome)}</h1>${c?`<span class="muted">Comanda #${c.num} · aberta ${new Date(c.created_at).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</span>`:'<span class="muted">Livre</span>'}</div>
+  <div class="pdv"><div class="card pleft" id="mgrade"></div>
+    <div class="card pright"><h2>Comanda</h2>
+      ${items.length?items.map((i,k)=>`<div class="pl"><div><b>${i.qty}× ${esc(i.nome)}</b>${i.opts.length?`<small>${esc(i.opts.join(' · '))}</small>`:''}<small>${i.por?esc(i.por)+' · ':''}${i.hora?new Date(i.hora).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}):''}${i.cozinha?'':' · <span style="color:var(--warn)">não enviado à cozinha</span>'}</small></div><button class="btn danger sm" data-rm="${k}">Remover</button><span class="num">${BRL(i.total)}</span></div>`).join(''):'<p class="muted">Clique nos produtos para lançar na mesa.</p>'}
+      <div class="ptot"><span>Subtotal</span><b class="num">${BRL(c?c.subtotal:0)}</b></div>
+      ${c?`<div class="row" style="margin-top:12px">
+        <button class="btn sec" id="mcoz" ${pend.length?'':'disabled'}>Enviar para a cozinha${pend.length?` (${pend.length})`:''}</button>
+        <div class="row cols2"><button class="btn sec" id="mconta">Imprimir conta</button><button class="btn sec" id="mtrans">Transferir mesa</button></div>
+        <button class="btn go" id="mfechar">Fechar conta</button>
+        <button class="btn danger sm" id="mcanc" style="justify-self:start">Cancelar comanda</button></div>`:''}</div></div>`;
+  $('#voltar').onclick=()=>mesasTab();
+  gradeProdutos($('#mgrade'),async(p,qty,sel,obs)=>{ try{ await api(`/api/p/mesas/${m.id}/itens`,'POST',{itens:[{id:p.id,qty,opts:sel,obs}],garcom:'Caixa'}); const ms=await api('/api/p/mesas'); abrirMesa(ms.find(x=>x.id===m.id)); toast(`${p.name} lançado`); }catch(e){ toast(e.message); } });
+  if(!c) return;
+  $$('[data-rm]').forEach(b=>b.onclick=async()=>{ if(!confirm('Remover este item da comanda?')) return; await api(`/api/p/comandas/${c.id}/itens/${b.dataset.rm}`,'DELETE'); const ms=await api('/api/p/mesas'); abrirMesa(ms.find(x=>x.id===m.id)); });
+  $('#mcoz').onclick=async()=>{ imprimirHtml(cozinhaHtml(m.nome,pend,'')); await api(`/api/p/comandas/${c.id}/cozinha`,'POST',{}); toast('Enviado para a cozinha'); const ms=await api('/api/p/mesas'); abrirMesa(ms.find(x=>x.id===m.id)); };
+  const conta=(serv)=>{ const sv=serv?Math.round(c.subtotal*(LOJA.settings.servicoPct||10))/100:0; return `<!doctype html><meta charset="utf-8"><style>body{font:13px "Courier New",monospace;width:72mm;margin:0}hr{border:0;border-top:1px dashed #000}.r{display:flex;justify-content:space-between;gap:6px}</style><div style="text-align:center"><b>${esc(LOJA.name)}</b><br>CONTA · ${esc(m.nome)}<br>${new Date().toLocaleString('pt-BR')}</div><hr>${items.map(i=>`<div class="r"><span>${i.qty}x ${esc(i.nome)}</span><span>${BRL(i.total)}</span></div>`).join('')}<hr><div class="r"><span>Subtotal</span><span>${BRL(c.subtotal)}</span></div>${serv?`<div class="r"><span>Serviço (${LOJA.settings.servicoPct||10}%)</span><span>${BRL(sv)}</span></div>`:''}<div class="r"><b>TOTAL</b><b>${BRL(c.subtotal+sv)}</b></div><hr><div style="text-align:center">Não é documento fiscal</div>`; };
+  $('#mconta').onclick=()=>imprimirHtml(conta(true));
+  $('#mtrans').onclick=async()=>{ const ms=(await api('/api/p/mesas')).filter(x=>!x.comanda&&x.ativo); if(!ms.length) return toast('Nenhuma mesa livre');
+    modal(`<h2>Transferir ${esc(m.nome)}</h2><label class="f">Para<select id="tm">${ms.map(x=>`<option value="${x.id}">${esc(x.nome)}</option>`).join('')}</select></label><div class="foot"><button class="btn sec" onclick="closeModal()">Cancelar</button><button class="btn" id="ok">Transferir</button></div>`);
+    $('#ok').onclick=async()=>{ try{ await api(`/api/p/comandas/${c.id}/transferir`,'POST',{mesa:+$('#tm').value}); closeModal(); toast('Mesa transferida'); mesasTab(); }catch(e){ toast(e.message); } }; };
+  $('#mcanc').onclick=async()=>{ if(!confirm('Cancelar a comanda inteira? Os itens voltam para o estoque.')) return; await api(`/api/p/comandas/${c.id}/cancelar`,'POST',{}); toast('Comanda cancelada'); mesasTab(); };
+  $('#mfechar').onclick=()=>{ let pag='Dinheiro'; const pct=LOJA.settings.servicoPct||10;
+    modal(`<h2>Fechar conta · ${esc(m.nome)}</h2><div class="row"><div class="ptot" style="margin:0"><span>Subtotal</span><b class="num">${BRL(c.subtotal)}</b></div>
+      <label class="tg"><input type="checkbox" id="fsv" checked> Cobrar ${pct}% de serviço</label>
+      <label class="f">Desconto (R$)<input type="number" min="0" step="0.01" id="fdc"></label>
+      <div><div style="font-size:13px;font-weight:500;margin-bottom:4px">Pagamento</div><div class="seg" id="fpg">${PAGS.map(x=>`<button data-p="${x}" class="${x===pag?'on':''}">${x}</button>`).join('')}</div></div>
+      <label class="f" id="frcF">Valor recebido (R$)<input type="number" min="0" step="0.01" id="frc"></label>
+      <div class="ptot" id="ftt" style="margin:0"></div><div class="err" id="me"></div></div>
+      <div class="foot"><button class="btn sec" onclick="closeModal()">Voltar</button><button class="btn go" id="ok">Receber e fechar</button></div>`);
+    const tot=()=>{ const d=+$('#fdc').value||0, base=Math.max(0,c.subtotal-d), sv=$('#fsv').checked?Math.round(base*pct)/100:0; return base+sv; };
+    const u=()=>{ const t=tot(), r=+$('#frc').value||0; $('#frcF').hidden=pag!=='Dinheiro'; $('#ftt').innerHTML=`<span>Total</span><b class="num">${BRL(t)}</b>${pag==='Dinheiro'&&r>=t?`<span>Troco</span><b class="num" style="color:var(--ok)">${BRL(r-t)}</b>`:''}`; };
+    $('#mbox').oninput=u; $('#fsv').onchange=u; $('#fpg').onclick=e=>{ const b=e.target.closest('[data-p]'); if(!b) return; pag=b.dataset.p; $$('#fpg button').forEach(x=>x.classList.toggle('on',x===b)); u(); };
+    $('#ok').onclick=async()=>{ try{ const j=await api(`/api/p/comandas/${c.id}/fechar`,'POST',{pagamento:pag,desconto:+$('#fdc').value||0,servico:$('#fsv').checked,recebido:+$('#frc').value||0}); closeModal(); toast(`${m.nome} fechada · ${BRL(j.total)}${j.troco?` · troco ${BRL(j.troco)}`:''}`); mesasTab(); }catch(e){ $('#me').textContent=e.message; } };
+    u(); };
+}
+/* impressão automática dos pedidos de cozinha (garçom lançou pelo celular) */
+async function cozinhaAuto(){ if(!pref('imprimirCozinha',false)) return; try{ const ps=await api('/api/p/cozinha/pendentes'); for(const o of ps){ imprimirHtml(cozinhaHtml(o.mesa,o.items,o.items[0]&&o.items[0].por)); await api(`/api/p/comandas/${o.id}/cozinha`,'POST',{}); await new Promise(r=>setTimeout(r,1500)); } if(ps.length&&tab==='mesas') mesasTab(); }catch{} }
+setInterval(cozinhaAuto,15000);
+
+/* ---------------- estoque ---------------- */
+let EF='';
+async function estoqueTab(){
+  const ps=await api('/api/p/estoque');
+  const st=p=>!p.estoque_controle?['Sem controle','']:p.estoque<=0?['Esgotado','bad']:p.estoque<=p.estoque_min?['Baixo','warn']:['OK','ok'];
+  const baixos=ps.filter(p=>p.estoque_controle&&p.estoque<=p.estoque_min).length;
+  $('#main').innerHTML=`<div class="bar"><h1>Estoque</h1>${baixos?`<span class="badge warn">${baixos} produto(s) com estoque baixo ou esgotado</span>`:''}<span style="flex:1"></span><div class="seg" id="ef">${[['','Todos'],['c','Com controle'],['b','Baixos']].map(([k,n])=>`<button data-ef="${k}" class="${EF===k?'on':''}">${n}</button>`).join('')}</div></div>
+  <p class="help" style="margin:-6px 0 12px">Com o controle ligado, cada venda (delivery, balcão ou mesa) baixa o estoque e o produto aparece como "Esgotado" no cardápio quando zera. Cancelamentos devolvem.</p>
+  <div class="card tw" style="padding:0"><table><tr><th>Produto</th><th>Controle</th><th style="text-align:right">Estoque</th><th style="text-align:right">Mínimo</th><th style="text-align:right">Vendidos (30 dias)</th><th>Situação</th><th></th></tr>
+  ${ps.filter(p=>!EF||(EF==='c'&&p.estoque_controle)||(EF==='b'&&p.estoque_controle&&p.estoque<=p.estoque_min)).map(p=>{ const [n,c]=st(p); return `<tr><td><b>${esc(p.name)}</b><br><small class="muted">${esc(p.categoria||'')}</small></td>
+    <td><label class="sw"><input type="checkbox" data-ctl="${p.id}" ${p.estoque_controle?'checked':''} aria-label="Controlar estoque"><span></span></label></td>
+    <td class="num" style="text-align:right"><b>${p.estoque_controle?+(+p.estoque).toFixed(3):'—'}</b></td><td class="num" style="text-align:right">${p.estoque_controle?+(+p.estoque_min).toFixed(3):'—'}</td><td class="num" style="text-align:right">${+(+p.vendidos30).toFixed(3)}</td>
+    <td><span class="badge ${c}">${n}</span></td>
+    <td style="white-space:nowrap;text-align:right"><button class="btn sec sm" data-mov="${p.id}">Movimentar</button> <button class="btn ghost sm" data-his="${p.id}">Histórico</button></td></tr>`; }).join('')}</table></div>`;
+  $('#ef').onclick=e=>{ const b=e.target.closest('[data-ef]'); if(b){ EF=b.dataset.ef; estoqueTab(); } };
+  $$('[data-ctl]').forEach(i=>i.onchange=async()=>{ const p=ps.find(x=>x.id===+i.dataset.ctl); await api('/api/p/estoque/'+p.id,'POST',{controle:i.checked,minimo:p.estoque_min}); toast(i.checked?'Controle de estoque ligado':'Controle desligado'); estoqueTab(); });
+  $$('[data-mov]').forEach(b=>b.onclick=()=>{ const p=ps.find(x=>x.id===+b.dataset.mov); let tipo='entrada';
+    modal(`<h2>${esc(p.name)}</h2><p class="muted" style="margin-top:-8px">Estoque atual: <b>${p.estoque_controle?+(+p.estoque).toFixed(3):'sem controle'}</b></p>
+      <div class="seg" id="mt">${[['entrada','Entrada (compra)'],['perda','Perda / quebra'],['ajuste','Ajustar contagem']].map(([k,n])=>`<button data-t="${k}" class="${k===tipo?'on':''}">${n}</button>`).join('')}</div>
+      <div class="row" style="margin-top:12px"><label class="f" id="mql">Quantidade<input type="number" step="0.001" id="mq"></label><label class="f">Estoque mínimo (alerta)<input type="number" min="0" step="0.001" id="mmn" value="${p.estoque_min||''}"></label><label class="f">Observação<input type="text" id="mo" placeholder="Ex.: nota 1234, fornecedor X"></label></div>
+      <div class="err" id="me"></div><div class="foot"><button class="btn sec" onclick="closeModal()">Cancelar</button><button class="btn" id="ok">Salvar</button></div>`);
+    $('#mt').onclick=e=>{ const x=e.target.closest('[data-t]'); if(!x) return; tipo=x.dataset.t; $$('#mt button').forEach(y=>y.classList.toggle('on',y===x)); $('#mql').firstChild.textContent=tipo==='ajuste'?'Quantidade contada (novo estoque)':'Quantidade'; };
+    $('#ok').onclick=async()=>{ const q=$('#mq').value; if(q===''&&tipo!=='ajuste') return $('#me').textContent='Coloque a quantidade';
+      try{ await api('/api/p/estoque/'+p.id,'POST',{controle:true,minimo:+$('#mmn').value||0,tipo:q===''?null:tipo,qtd:+q,obs:$('#mo').value}); closeModal(); toast('Estoque atualizado'); estoqueTab(); }catch(e){ $('#me').textContent=e.message; } }; });
+  $$('[data-his]').forEach(b=>b.onclick=async()=>{ const p=ps.find(x=>x.id===+b.dataset.his), h=await api(`/api/p/estoque/${p.id}/historico`);
+    const M={venda:'Venda',cancelamento:'Devolução (cancelado)',entrada:'Entrada',perda:'Perda',ajuste:'Ajuste'};
+    modal(`<h2>Histórico · ${esc(p.name)}</h2>${h.length?`<div class="tw"><table><tr><th>Data</th><th>Movimento</th><th style="text-align:right">Qtd.</th><th>Obs.</th></tr>${h.map(m=>`<tr><td>${new Date(m.created_at).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}</td><td>${M[m.motivo]||m.motivo}${m.num?` · pedido #${m.num}`:''}</td><td class="num" style="text-align:right;color:${m.qtd<0?'var(--bad)':'var(--ok)'}">${m.qtd>0?'+':''}${+(+m.qtd).toFixed(3)}</td><td>${esc(m.obs||'')}</td></tr>`).join('')}</table></div>`:'<p class="muted">Sem movimentações.</p>'}<div class="foot"><button class="btn sec" onclick="closeModal()">Fechar</button></div>`); });
+}
 
 /* ---------------- entregadores ---------------- */
 let ENT=[];

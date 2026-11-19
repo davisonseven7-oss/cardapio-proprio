@@ -17,7 +17,7 @@ const { seed } = require('./seed');
 const PORT = +process.env.PORT || 3000;
 const PROD = process.env.NODE_ENV === 'production' || !!process.env.RAILWAY_ENVIRONMENT;
 const TZ = -3; // horário de Brasília/Nordeste (sem horário de verão)
-const RESERVED = new Set(['e', 'download', 'login', 'logout', 'admin', 'painel', 'api', 'static', 'img', 'u', 'favicon.ico', 'robots.txt', 'prototipos', 'pausados']);
+const RESERVED = new Set(['e', 'g', 'download', 'login', 'logout', 'admin', 'painel', 'api', 'static', 'img', 'u', 'favicon.ico', 'robots.txt', 'prototipos', 'pausados']);
 
 /* ---------------- utilidades ---------------- */
 const nowLocal = () => new Date(Date.now() + TZ * 36e5);              // "relógio" local em campos UTC
@@ -36,7 +36,7 @@ const DEFAULTS = {
   whatsapp: '', enviarWhats: false, atendente: '',
   tema: { cor: '#17603A', destaque: '#FFC53D', acento: '#C9F25C', fonte: 'Shrikhand' },
   horario: { 0: [7, 19], 1: [7, 19], 2: [7, 19], 3: [7, 19], 4: [7, 19], 5: [7, 19], 6: [7, 19] },
-  bairros: [], retirada: true, minimo: 0, pagamentos: ['Pix na entrega', 'Cartão (maquininha)', 'Dinheiro'], pixChave: '', pixNome: '', pixAntecipado: false, lojaLat: null, lojaLng: null,
+  bairros: [], retirada: true, minimo: 0, pagamentos: ['Pix na entrega', 'Cartão (maquininha)', 'Dinheiro'], pixChave: '', pixNome: '', pixAntecipado: false, servicoPct: 10, lojaLat: null, lojaLng: null,
   entrega: { modo: 'bairro', faixas: [[2, 5], [4, 7], [6, 9], [8, 12]], raioMax: 10, fator: 1.3 },
   fidelidade: { tipo: 'off', cashbackPct: 5, cashbackDias: 60, usoMax: 50, selosMeta: 10, selosPremio: 20 },
   promoTemas: ['', '', '', '', '', '', ''],
@@ -149,7 +149,7 @@ function menuPayload(t, visitor) {
   const cats = db.prepare('SELECT id,brand_id,name,icon FROM categories WHERE tenant_id=? AND active=1 ORDER BY sort,id').all(t.id);
   const prods = db.prepare('SELECT * FROM products WHERE tenant_id=? AND active=1 ORDER BY sort,id').all(t.id).map(p => {
     const i = priceInfo(p, dow, champ, s);
-    return { id: p.id, cat: p.category_id, name: p.name, desc: p.descr, price: i.price, old: i.old, why: i.why, base: p.price, bulk: p.bulk_qty ? [p.bulk_qty, p.bulk_price] : null, img: p.img, icon: p.icon, tag: p.tag, opts: J(p.options, []), kw: p.keywords, promoLabel: p.promo_label };
+    return { esg: !!(p.estoque_controle && p.estoque <= 0), id: p.id, cat: p.category_id, name: p.name, desc: p.descr, price: i.price, old: i.old, why: i.why, base: p.price, bulk: p.bulk_qty ? [p.bulk_qty, p.bulk_price] : null, img: p.img, icon: p.icon, tag: p.tag, opts: J(p.options, []), kw: p.keywords, promoLabel: p.promo_label };
   });
   const counts = Object.fromEntries(db.prepare('SELECT product_id id, COUNT(*) n FROM likes WHERE tenant_id=? AND week=? GROUP BY product_id').all(t.id, wk).map(r => [r.id, r.n]));
   const mine = visitor ? db.prepare('SELECT product_id FROM likes WHERE tenant_id=? AND week=? AND visitor=?').all(t.id, wk, visitor).map(r => r.product_id) : [];
@@ -289,6 +289,7 @@ async function quote(t, b) {
   }
   const items = lines.map(({ p, qty, extra, labels }) => { const info = priceInfo(p, dow, champ, s), unit = round2(unitFor(p, info, prodQty[p.id]) + extra); return { id: p.id, nome: p.name, desc: p.descr || '', qty, unit, opts: labels, total: round2(unit * qty) }; });
   const subtotal = round2(items.reduce((a, i) => a + i.total, 0));
+  { const semEst = checaEstoque(t.id, items); if (semEst) return { erro: semEst }; }
   const descontos = [], avisos = [];
   /* curtidas */
   if (visitorOk(b.visitor) && s.curtidas.meta > 0) { const n = db.prepare('SELECT COUNT(*) n FROM likes WHERE tenant_id=? AND visitor=? AND week=?').get(t.id, b.visitor, weekKey()).n; if (n >= s.curtidas.meta) descontos.push({ tipo: 'curtidas', label: `Curtiu e ganhou (${s.curtidas.desconto}%)`, valor: round2(subtotal * s.curtidas.desconto / 100) }); }
@@ -388,6 +389,7 @@ app.post('/api/m/:slug/order', async (req, res) => {
     r = db.prepare('INSERT INTO orders(tenant_id,num,customer,phone,address,bairro,payment,notes,items,subtotal,discount,fee,total,visitor,source,track,log,status,coupon,descontos,cashback_usado,km,cep) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)')
       .run(t.id, num, nome, fone, endereco, bairro, pay, String(b.obs || '').slice(0, 300), JSON.stringify(items), subtotal, discount, fee, total, visitorOk(b.visitor) ? b.visitor : null, String(b.origem || '').slice(0, 120), track, JSON.stringify([{ s: status0, t: nowIso() }]), status0, q.coupon, JSON.stringify(descontos), q.fidelidade.cashbackUsado, q.km, q.cep);
     const oid = r.lastInsertRowid;
+    baixaEstoque(t.id, items, oid);
     if (q.fidelidade.cashbackUsado > 0) db.prepare(`INSERT INTO cashback(tenant_id,phone,valor,tipo,order_id) VALUES(?,?,?,'uso',?)`).run(t.id, fone, -q.fidelidade.cashbackUsado, oid);
     if (descontos.some(d => d.tipo === 'selo')) db.prepare(`INSERT INTO cashback(tenant_id,phone,valor,tipo,order_id) VALUES(?,?,0,'selo',?)`).run(t.id, fone, oid);
     db.exec('COMMIT');
@@ -461,7 +463,7 @@ const P = auth('painel');
 app.get('/api/p/loja', P, (req, res) => { const t = req.tenant; res.json({ id: t.id, slug: t.slug, name: t.name, status: t.status, settings: settingsOf(t) }); });
 app.put('/api/p/loja', P, (req, res) => {
   const b = req.body || {}, cur = settingsOf(req.tenant), n = b.settings || {};
-  const keep = ['subtitulo', 'cidade', 'logo', 'endereco', 'telefone', 'tempoPreparo', 'tempoEntrega', 'whatsapp', 'enviarWhats', 'atendente', 'tema', 'horario', 'bairros', 'retirada', 'minimo', 'pagamentos', 'promoTemas', 'curtidas', 'robo', 'pixelId', 'capiToken', 'capiTeste', 'mensagens', 'pixChave', 'pixNome', 'pixAntecipado', 'entrega', 'fidelidade', 'lojaLat', 'lojaLng'];
+  const keep = ['subtitulo', 'cidade', 'logo', 'endereco', 'telefone', 'tempoPreparo', 'tempoEntrega', 'whatsapp', 'enviarWhats', 'atendente', 'tema', 'horario', 'bairros', 'retirada', 'minimo', 'pagamentos', 'promoTemas', 'curtidas', 'robo', 'pixelId', 'capiToken', 'capiTeste', 'mensagens', 'pixChave', 'pixNome', 'pixAntecipado', 'entrega', 'fidelidade', 'lojaLat', 'lojaLng', 'servicoPct'];
   const out = { ...cur }; keep.forEach(k => { if (k in n) out[k] = n[k]; });
   out.minimo = +out.minimo || 0; out.bairros = (out.bairros || []).filter(x => x && x[0]).map(([a, v]) => [String(a).slice(0, 60), +v || 0]);
   out.pixelId = String(out.pixelId || '').replace(/\D/g, ''); out.whatsapp = String(out.whatsapp || '').replace(/\D/g, '');
@@ -480,7 +482,7 @@ app.post('/api/p/senha', P, (req, res) => {
 const TABLES = {
   brands: { cols: ['name', 'sub', 'logo', 'sort'], order: 'sort,id' },
   categories: { cols: ['brand_id', 'name', 'icon', 'sort', 'active'], order: 'sort,id' },
-  products: { cols: ['category_id', 'name', 'descr', 'price', 'promo_price', 'promo_days', 'promo_label', 'bulk_qty', 'bulk_price', 'img', 'icon', 'tag', 'options', 'keywords', 'active', 'sort'], order: 'sort,id', json: ['promo_days', 'options'] },
+  products: { cols: ['estoque_controle', 'estoque_min', 'category_id', 'name', 'descr', 'price', 'promo_price', 'promo_days', 'promo_label', 'bulk_qty', 'bulk_price', 'img', 'icon', 'tag', 'options', 'keywords', 'active', 'sort'], order: 'sort,id', json: ['promo_days', 'options'] },
   stories: { cols: ['name', 'cover', 'slides', 'sort', 'active'], order: 'sort,id', json: ['slides'] },
   posts: { cols: ['img', 'product_id', 'caption', 'overlay', 'active', 'created_at'], order: 'created_at DESC' },
 };
@@ -510,6 +512,7 @@ const ST = ['pix', 'novo', 'preparando', 'saiu', 'concluido', 'cancelado'];
 app.get('/api/p/orders', P, (req, res) => {
   const r = rangeOf(req.query), st = ST.includes(req.query.status) ? req.query.status : null;
   /* ativos=1: todos os pedidos em andamento (de qualquer dia) + os do período */
+  const soDelivery = req.query.ativos ? "AND COALESCE(o.canal,'delivery')='delivery'" : '';
   const when = req.query.ativos ? `(status IN ('pix','novo','preparando','saiu') OR created_at BETWEEN ? AND ?)` : 'created_at BETWEEN ? AND ?';
   /* ordem = qual pedido do cliente é este (1 = cliente novo); cli_* = histórico do cliente pelo telefone */
   const rows = db.prepare(`SELECT o.*,
@@ -518,7 +521,7 @@ app.get('/api/p/orders', P, (req, res) => {
       (SELECT COALESCE(SUM(total),0) FROM orders x WHERE x.tenant_id=o.tenant_id AND x.phone=o.phone AND x.status!='cancelado') cli_total,
       (SELECT MIN(created_at) FROM orders x WHERE x.tenant_id=o.tenant_id AND x.phone=o.phone) cli_desde,
       (SELECT name FROM couriers c WHERE c.id=o.courier_id) courier_nome
-    FROM orders o WHERE o.tenant_id=? AND ${when.replace(/status|created_at/g, m => 'o.' + m)} ${st ? 'AND o.status=?' : ''} ORDER BY o.created_at DESC LIMIT 500`).all(req.tid, r.a, r.b, ...(st ? [st] : []));
+    FROM orders o WHERE o.tenant_id=? AND ${when.replace(/status|created_at/g, m => 'o.' + m)} ${st ? 'AND o.status=?' : ''} ${soDelivery} ORDER BY o.created_at DESC LIMIT 500`).all(req.tid, r.a, r.b, ...(st ? [st] : []));
   res.json(rows.map(o => ({ ...o, items: J(o.items, []), log: J(o.log, []), descontos: J(o.descontos, []) })));
 });
 app.get('/api/p/orders/novos', P, (req, res) => res.json(db.prepare(`SELECT COUNT(*) n, MAX(id) ultimo FROM orders WHERE tenant_id=? AND status IN ('novo','pix')`).get(req.tid)));
@@ -527,7 +530,9 @@ app.put('/api/p/orders/:id', P, (req, res) => {
   const o = db.prepare('SELECT * FROM orders WHERE id=? AND tenant_id=?').get(+req.params.id, req.tid); if (!o) return res.status(404).end();
   const log = J(o.log, []); if (o.status !== st) log.push({ s: st, t: new Date().toISOString() });
   db.prepare('UPDATE orders SET status=?, log=? WHERE id=?').run(st, JSON.stringify(log), o.id);
-  let ganhou = 0; if (o.status !== st) { try { ganhou = loyaltyOnStatus(req.tenant, o, st); } catch (e) { console.error('fidelidade', e.message); } }
+  let ganhou = 0; if (o.status !== st) { try { ganhou = loyaltyOnStatus(req.tenant, o, st); } catch (e) { console.error('fidelidade', e.message); }
+    if (st === 'cancelado') devolveEstoque(req.tid, o.id);
+    if (st === 'concluido' && !o.caixa_id) { const cx = caixaAberto(req.tid); if (cx) db.prepare('UPDATE orders SET caixa_id=? WHERE id=?').run(cx.id, o.id); } }
   let msg = statusMessage(req.tenant, settingsOf(req.tenant), { ...o, status: st, prev: o.status }, req);
   if (msg && ganhou > 0) msg += `
 🎁 Você ganhou ${brlS(ganhou)} de cashback para o próximo pedido!`;
@@ -548,6 +553,207 @@ app.get('/api/p/orders.csv', P, (req, res) => {
     ...rows.map(o => { const d = new Date(new Date(o.created_at).getTime() + TZ * 36e5).toISOString(); return [o.num, d.slice(0, 10), d.slice(11, 16), o.status, q(o.customer), o.phone, q(o.bairro), q(o.address), o.payment, q(J(o.items, []).map(i => `${i.qty}x ${i.nome}${i.opts.length ? ' (' + i.opts.join(', ') + ')' : ''}`).join(' | ')), n(o.subtotal), n(o.discount), n(o.fee), n(o.total)].join(';'); })].join('\r\n');
   res.setHeader('Content-Type', 'text/csv; charset=utf-8'); res.setHeader('Content-Disposition', `attachment; filename="vendas-${req.tenant.slug}-${r.de}-a-${r.ate}.csv"`); res.send('﻿' + csv);
 });
+
+/* =====================================================================
+   FASE 3 · LOJA FÍSICA: estoque, caixa, balcão (PDV), mesas e garçons
+   ===================================================================== */
+/* ---------- estoque ---------- */
+function stockMove(tid, pid, qtd, motivo, orderId, obs, por) {
+  const p = db.prepare('SELECT id, estoque_controle FROM products WHERE id=? AND tenant_id=?').get(pid, tid); if (!p || !p.estoque_controle || !qtd) return;
+  db.prepare('UPDATE products SET estoque=ROUND(estoque+?,3) WHERE id=?').run(qtd, pid);
+  db.prepare('INSERT INTO stock_moves(tenant_id,product_id,qtd,motivo,order_id,obs,por) VALUES(?,?,?,?,?,?,?)').run(tid, pid, qtd, motivo, orderId || null, String(obs || '').slice(0, 120), String(por || '').slice(0, 60));
+}
+const baixaEstoque = (tid, items, orderId, motivo = 'venda') => items.forEach(i => stockMove(tid, i.id, -i.qty, motivo, orderId));
+/* devolve ao estoque o que um pedido baixou (cancelamento ou item removido) */
+function devolveEstoque(tid, orderId) {
+  const rows = db.prepare(`SELECT product_id, SUM(qtd) q FROM stock_moves WHERE tenant_id=? AND order_id=? GROUP BY product_id`).all(tid, orderId);
+  rows.forEach(r => { if (r.q < 0) stockMove(tid, r.product_id, -r.q, 'cancelamento', orderId); });
+}
+/* confere se tem estoque para a lista de itens (soma os iguais) */
+function checaEstoque(tid, items) {
+  const tot = {}; items.forEach(i => tot[i.id] = (tot[i.id] || 0) + i.qty);
+  for (const [id, q] of Object.entries(tot)) {
+    const p = db.prepare('SELECT name, estoque_controle, estoque FROM products WHERE id=? AND tenant_id=?').get(+id, tid);
+    if (p && p.estoque_controle && p.estoque < q) return p.estoque <= 0 ? `${p.name} esgotou` : `Só temos ${+p.estoque.toFixed(3)} de ${p.name}`;
+  }
+  return null;
+}
+app.get('/api/p/estoque', P, (req, res) => {
+  const ps = db.prepare(`SELECT p.id, p.name, p.estoque_controle, p.estoque, p.estoque_min, p.active, c.name categoria,
+      (SELECT MAX(0,COALESCE(-SUM(qtd),0)) FROM stock_moves m WHERE m.product_id=p.id AND m.motivo IN ('venda','cancelamento') AND m.order_id IS NOT NULL AND m.created_at>?) vendidos30
+    FROM products p LEFT JOIN categories c ON c.id=p.category_id WHERE p.tenant_id=? ORDER BY c.sort, p.sort, p.id`).all(new Date(Date.now() - 30 * 864e5).toISOString(), req.tid);
+  res.json(ps);
+});
+app.get('/api/p/estoque/:pid/historico', P, (req, res) => res.json(db.prepare(`SELECT m.*, o.num FROM stock_moves m LEFT JOIN orders o ON o.id=m.order_id WHERE m.tenant_id=? AND m.product_id=? ORDER BY m.id DESC LIMIT 100`).all(req.tid, +req.params.pid)));
+app.post('/api/p/estoque/:pid', P, (req, res) => {
+  const p = db.prepare('SELECT * FROM products WHERE id=? AND tenant_id=?').get(+req.params.pid, req.tid); if (!p) return res.status(404).end();
+  const b = req.body || {};
+  if ('controle' in b || 'minimo' in b) db.prepare('UPDATE products SET estoque_controle=?, estoque_min=? WHERE id=?').run(b.controle ? 1 : 0, Math.max(0, +b.minimo || 0), p.id);
+  const qtd = +b.qtd || 0, tipo = ['entrada', 'perda', 'ajuste'].includes(b.tipo) ? b.tipo : null;
+  if (tipo && (qtd || tipo === 'ajuste')) {
+    if (!db.prepare('SELECT estoque_controle FROM products WHERE id=?').get(p.id).estoque_controle) db.prepare('UPDATE products SET estoque_controle=1 WHERE id=?').run(p.id);
+    const atual = db.prepare('SELECT estoque FROM products WHERE id=?').get(p.id).estoque;
+    const delta = tipo === 'entrada' ? Math.abs(qtd) : tipo === 'perda' ? -Math.abs(qtd) : qtd - atual;
+    stockMove(req.tid, p.id, round2(delta), tipo, null, b.obs, req.s.email);
+  }
+  res.json(db.prepare('SELECT id, estoque_controle, estoque, estoque_min FROM products WHERE id=?').get(p.id));
+});
+
+/* ---------- itens com preço (balcão e mesa usam as mesmas regras do cardápio) ---------- */
+function montaItens(t, raw) {
+  const s = settingsOf(t), dow = nowLocal().getUTCDay(), champ = champion(t.id), prodQty = {}, lines = [];
+  for (const it of (Array.isArray(raw) ? raw.slice(0, 100) : [])) {
+    const p = db.prepare('SELECT * FROM products WHERE id=? AND tenant_id=?').get(+it.id, t.id); if (!p) return { erro: 'Produto não encontrado' };
+    const qty = Math.max(1, Math.min(999, +it.qty | 0)), o = pickOptions(p, it.opts); if (o.erro) return { erro: o.erro };
+    prodQty[p.id] = (prodQty[p.id] || 0) + qty; lines.push({ p, qty, ...o, obs: String(it.obs || '').slice(0, 80) });
+  }
+  if (!lines.length) return { erro: 'Nenhum item' };
+  const items = lines.map(({ p, qty, extra, labels, obs }) => { const info = priceInfo(p, dow, champ, s), unit = round2(unitFor(p, info, prodQty[p.id]) + extra); return { id: p.id, nome: p.name, desc: p.descr || '', qty, unit, opts: obs ? [...labels, 'Obs.: ' + obs] : labels, total: round2(unit * qty) }; });
+  return { items, subtotal: round2(items.reduce((a, i) => a + i.total, 0)) };
+}
+const caixaAberto = tid => db.prepare('SELECT * FROM caixas WHERE tenant_id=? AND fechado_em IS NULL ORDER BY id DESC LIMIT 1').get(tid);
+const nextNum = tid => (db.prepare('SELECT MAX(num) m FROM orders WHERE tenant_id=?').get(tid).m || 0) + 1;
+function payLabel(s, pag, troco) { let p = String(pag || '').slice(0, 40) || 'Dinheiro'; const tr = +troco || 0; if (/dinheiro/i.test(p) && tr > 0) p += ` (troco p/ R$ ${tr.toFixed(2).replace('.', ',')})`; return p; }
+
+/* ---------- caixa ---------- */
+function resumoCaixa(c) {
+  const vendas = db.prepare(`SELECT canal, payment, total FROM orders WHERE caixa_id=? AND status='concluido'`).all(c.id);
+  const porPag = {}, porCanal = {}; let total = 0, dinheiro = 0;
+  for (const v of vendas) { const k = String(v.payment).replace(/\s*\(troco.*$/, ''); porPag[k] = round2((porPag[k] || 0) + v.total); porCanal[v.canal || 'delivery'] = round2((porCanal[v.canal || 'delivery'] || 0) + v.total); total += v.total; if (/dinheiro/i.test(v.payment)) dinheiro += v.total; }
+  const movs = db.prepare('SELECT * FROM caixa_movs WHERE caixa_id=? ORDER BY id').all(c.id);
+  const sangria = movs.filter(m => m.tipo === 'sangria').reduce((a, m) => a + m.valor, 0), reforco = movs.filter(m => m.tipo === 'reforco').reduce((a, m) => a + m.valor, 0);
+  const esperado = round2(c.valor_inicial + dinheiro + reforco - sangria);
+  return { vendas: vendas.length, total: round2(total), porPagamento: porPag, porCanal, dinheiro: round2(dinheiro), sangria: round2(sangria), reforco: round2(reforco), esperadoDinheiro: esperado, movs };
+}
+app.get('/api/p/caixa', P, (req, res) => { const c = caixaAberto(req.tid); res.json(c ? { aberto: true, caixa: c, resumo: resumoCaixa(c) } : { aberto: false }); });
+app.post('/api/p/caixa/abrir', P, (req, res) => {
+  if (caixaAberto(req.tid)) return res.status(400).json({ erro: 'Já existe um caixa aberto' });
+  const r = db.prepare('INSERT INTO caixas(tenant_id,aberto_por,valor_inicial) VALUES(?,?,?)').run(req.tid, req.s.email, Math.max(0, +(req.body || {}).valor || 0)); res.json({ id: r.lastInsertRowid });
+});
+app.post('/api/p/caixa/mov', P, (req, res) => {
+  const c = caixaAberto(req.tid); if (!c) return res.status(400).json({ erro: 'Abra o caixa primeiro' });
+  const b = req.body || {}, v = round2(+b.valor || 0); if (!(v > 0)) return res.status(400).json({ erro: 'Coloque o valor' });
+  db.prepare('INSERT INTO caixa_movs(caixa_id,tipo,valor,motivo,por) VALUES(?,?,?,?,?)').run(c.id, b.tipo === 'reforco' ? 'reforco' : 'sangria', v, String(b.motivo || '').slice(0, 120), req.s.email); res.json({ ok: true });
+});
+app.post('/api/p/caixa/fechar', P, (req, res) => {
+  const c = caixaAberto(req.tid); if (!c) return res.status(400).json({ erro: 'Nenhum caixa aberto' });
+  const b = req.body || {}, r = resumoCaixa(c), contado = round2(+b.contado || 0);
+  db.prepare(`UPDATE caixas SET fechado_em=?, fechado_por=?, valor_contado=?, resumo=?, obs=? WHERE id=?`).run(nowIso(), req.s.email, contado, JSON.stringify({ ...r, diferenca: round2(contado - r.esperadoDinheiro) }), String(b.obs || '').slice(0, 300), c.id);
+  res.json({ ok: true, resumo: r, diferenca: round2(contado - r.esperadoDinheiro) });
+});
+app.get('/api/p/caixa/historico', P, (req, res) => res.json(db.prepare('SELECT id, aberto_em, aberto_por, valor_inicial, fechado_em, fechado_por, valor_contado, resumo, obs FROM caixas WHERE tenant_id=? AND fechado_em IS NOT NULL ORDER BY id DESC LIMIT 60').all(req.tid).map(c => ({ ...c, resumo: J(c.resumo, {}) }))));
+
+/* ---------- balcão (PDV) ---------- */
+app.post('/api/p/pdv/venda', P, (req, res) => {
+  const t = req.tenant, s = settingsOf(t), b = req.body || {}, c = caixaAberto(t.id);
+  if (!c) return res.status(400).json({ erro: 'Abra o caixa antes de vender no balcão' });
+  const m = montaItens(t, b.itens); if (m.erro) return res.status(400).json({ erro: m.erro });
+  const semEst = checaEstoque(t.id, m.items); if (semEst) return res.status(400).json({ erro: semEst });
+  const desconto = round2(Math.min(m.subtotal, Math.max(0, +b.desconto || 0))), total = round2(m.subtotal - desconto);
+  const fone = phoneNorm(b.telefone), nome = String(b.nome || '').trim().slice(0, 80) || 'Balcão';
+  const num = nextNum(t.id), track = crypto.randomBytes(8).toString('base64url'), agora = nowIso();
+  const r = db.prepare(`INSERT INTO orders(tenant_id,num,customer,phone,address,bairro,payment,notes,items,subtotal,discount,fee,total,track,log,status,canal,caixa_id,descontos) VALUES(?,?,?,?,'','Balcão',?,?,?,?,?,0,?,?,?,'concluido','balcao',?,?)`)
+    .run(t.id, num, nome, fone, payLabel(s, b.pagamento, b.recebido), String(b.obs || '').slice(0, 200), JSON.stringify(m.items), m.subtotal, desconto, total, track, JSON.stringify([{ s: 'concluido', t: agora }]), c.id, JSON.stringify(desconto ? [{ tipo: 'manual', label: 'Desconto', valor: desconto }] : []));
+  baixaEstoque(t.id, m.items, r.lastInsertRowid);
+  if (fone.length >= 10) { try { upsertCustomer(t.id, { phone: fone, name: nome, address: '', bairro: '' }); } catch {} }
+  const recebido = +b.recebido || 0;
+  res.json({ ok: true, id: r.lastInsertRowid, num, total, troco: /dinheiro/i.test(b.pagamento || '') && recebido > total ? round2(recebido - total) : 0 });
+});
+
+/* ---------- mesas e comandas ---------- */
+const comandaDe = (tid, mesaId) => db.prepare(`SELECT * FROM orders WHERE tenant_id=? AND mesa_id=? AND canal='mesa' AND status='aberta' ORDER BY id DESC LIMIT 1`).get(tid, mesaId);
+function recalcComanda(o) { const items = J(o.items, []); const sub = round2(items.reduce((a, i) => a + i.total, 0)); db.prepare('UPDATE orders SET items=?, subtotal=?, total=? WHERE id=?').run(JSON.stringify(items), sub, round2(sub - (o.discount || 0) + (o.servico || 0)), o.id); }
+app.get('/api/p/mesas', P, (req, res) => {
+  const ms = db.prepare('SELECT * FROM mesas WHERE tenant_id=? ORDER BY sort, id').all(req.tid);
+  res.json(ms.map(m => { const o = comandaDe(req.tid, m.id); return { ...m, comanda: o ? { id: o.id, num: o.num, total: o.subtotal, aberta_em: o.created_at, itens: J(o.items, []).reduce((a, i) => a + i.qty, 0), garcom: o.garcom, pendentes: J(o.items, []).filter(i => !i.cozinha).length } : null }; }));
+});
+app.post('/api/p/mesas', P, (req, res) => {
+  const b = req.body || {}, n = Math.min(100, Math.max(1, +b.quantidade | 0 || 1)), base = db.prepare('SELECT COUNT(*) n FROM mesas WHERE tenant_id=?').get(req.tid).n;
+  if (b.nome) { db.prepare('INSERT INTO mesas(tenant_id,nome,sort) VALUES(?,?,?)').run(req.tid, String(b.nome).slice(0, 30), base + 1); return res.json({ ok: true }); }
+  for (let i = 1; i <= n; i++) db.prepare('INSERT INTO mesas(tenant_id,nome,sort) VALUES(?,?,?)').run(req.tid, `Mesa ${base + i}`, base + i);
+  res.json({ ok: true });
+});
+app.put('/api/p/mesas/:id', P, (req, res) => { const b = req.body || {}; db.prepare('UPDATE mesas SET nome=COALESCE(?,nome), ativo=COALESCE(?,ativo) WHERE id=? AND tenant_id=?').run(b.nome != null ? String(b.nome).slice(0, 30) : null, 'ativo' in b ? (b.ativo ? 1 : 0) : null, +req.params.id, req.tid); res.json({ ok: true }); });
+app.delete('/api/p/mesas/:id', P, (req, res) => { if (comandaDe(req.tid, +req.params.id)) return res.status(400).json({ erro: 'Feche a comanda dessa mesa antes' }); db.prepare('DELETE FROM mesas WHERE id=? AND tenant_id=?').run(+req.params.id, req.tid); res.json({ ok: true }); });
+function abrirComanda(t, mesa, garcom, pessoas) {
+  const ex = comandaDe(t.id, mesa.id); if (ex) return ex;
+  const num = nextNum(t.id), r = db.prepare(`INSERT INTO orders(tenant_id,num,customer,phone,address,bairro,payment,items,subtotal,discount,fee,total,track,log,status,canal,mesa_id,garcom) VALUES(?,?,?,'','',?,'',?,0,0,0,0,?,?,'aberta','mesa',?,?)`)
+    .run(t.id, num, `${mesa.nome}${pessoas ? ` · ${pessoas} pessoa(s)` : ''}`, mesa.nome, '[]', crypto.randomBytes(8).toString('base64url'), JSON.stringify([{ s: 'aberta', t: nowIso() }]), mesa.id, String(garcom || '').slice(0, 40));
+  return db.prepare('SELECT * FROM orders WHERE id=?').get(r.lastInsertRowid);
+}
+function lancaItens(t, mesa, raw, quem) {
+  const m = montaItens(t, raw); if (m.erro) return m;
+  const semEst = checaEstoque(t.id, m.items); if (semEst) return { erro: semEst };
+  const o = abrirComanda(t, mesa, quem), items = J(o.items, []), rodada = Math.max(0, ...items.map(i => i.rodada || 0)) + 1, hora = nowIso();
+  m.items.forEach(i => items.push({ ...i, rodada, hora, por: String(quem || '').slice(0, 40), cozinha: false }));
+  db.prepare('UPDATE orders SET items=? WHERE id=?').run(JSON.stringify(items), o.id); recalcComanda(db.prepare('SELECT * FROM orders WHERE id=?').get(o.id));
+  baixaEstoque(t.id, m.items, o.id);
+  return { ok: true, comanda: o.id, rodada };
+}
+app.get('/api/p/comandas/:oid', P, (req, res) => { const o = db.prepare(`SELECT * FROM orders WHERE id=? AND tenant_id=? AND canal='mesa'`).get(+req.params.oid, req.tid); if (!o) return res.status(404).end(); res.json({ ...o, items: J(o.items, []), log: J(o.log, []) }); });
+app.post('/api/p/mesas/:id/itens', P, (req, res) => {
+  const mesa = db.prepare('SELECT * FROM mesas WHERE id=? AND tenant_id=?').get(+req.params.id, req.tid); if (!mesa) return res.status(404).end();
+  const r = lancaItens(req.tenant, mesa, (req.body || {}).itens, (req.body || {}).garcom || 'Caixa'); if (r.erro) return res.status(400).json({ erro: r.erro }); res.json(r);
+});
+app.delete('/api/p/comandas/:oid/itens/:idx', P, (req, res) => {
+  const o = db.prepare(`SELECT * FROM orders WHERE id=? AND tenant_id=? AND status='aberta'`).get(+req.params.oid, req.tid); if (!o) return res.status(404).end();
+  const items = J(o.items, []), i = +req.params.idx, it = items[i]; if (!it) return res.status(404).end();
+  items.splice(i, 1); db.prepare('UPDATE orders SET items=? WHERE id=?').run(JSON.stringify(items), o.id); recalcComanda(db.prepare('SELECT * FROM orders WHERE id=?').get(o.id));
+  stockMove(req.tid, it.id, it.qty, 'cancelamento', o.id, 'item removido da comanda', req.s.email);
+  res.json({ ok: true });
+});
+/* itens já impressos na cozinha */
+app.post('/api/p/comandas/:oid/cozinha', P, (req, res) => {
+  const o = db.prepare(`SELECT * FROM orders WHERE id=? AND tenant_id=?`).get(+req.params.oid, req.tid); if (!o) return res.status(404).end();
+  const items = J(o.items, []); items.forEach(i => i.cozinha = true); db.prepare('UPDATE orders SET items=? WHERE id=?').run(JSON.stringify(items), o.id); res.json({ ok: true });
+});
+app.get('/api/p/cozinha/pendentes', P, (req, res) => {
+  const os = db.prepare(`SELECT o.id, o.num, o.garcom, m.nome mesa, o.items FROM orders o JOIN mesas m ON m.id=o.mesa_id WHERE o.tenant_id=? AND o.canal='mesa' AND o.status='aberta'`).all(req.tid)
+    .map(o => ({ ...o, items: J(o.items, []).filter(i => !i.cozinha) })).filter(o => o.items.length);
+  res.json(os);
+});
+app.post('/api/p/comandas/:oid/fechar', P, (req, res) => {
+  const o = db.prepare(`SELECT * FROM orders WHERE id=? AND tenant_id=? AND status='aberta'`).get(+req.params.oid, req.tid); if (!o) return res.status(404).json({ erro: 'Comanda não encontrada' });
+  const c = caixaAberto(req.tid); if (!c) return res.status(400).json({ erro: 'Abra o caixa para receber a conta' });
+  const b = req.body || {}, s = settingsOf(req.tenant), desconto = round2(Math.min(o.subtotal, Math.max(0, +b.desconto || 0)));
+  const servico = b.servico ? round2((o.subtotal - desconto) * (+s.servicoPct || 10) / 100) : 0, total = round2(o.subtotal - desconto + servico);
+  const log = J(o.log, []); log.push({ s: 'concluido', t: nowIso() });
+  db.prepare(`UPDATE orders SET status='concluido', payment=?, discount=?, servico=?, total=?, caixa_id=?, log=?, descontos=? WHERE id=?`)
+    .run(payLabel(s, b.pagamento, b.recebido), desconto, servico, total, c.id, JSON.stringify(log), JSON.stringify(desconto ? [{ tipo: 'manual', label: 'Desconto', valor: desconto }] : []), o.id);
+  const recebido = +b.recebido || 0;
+  res.json({ ok: true, total, servico, troco: /dinheiro/i.test(b.pagamento || '') && recebido > total ? round2(recebido - total) : 0 });
+});
+app.post('/api/p/comandas/:oid/cancelar', P, (req, res) => {
+  const o = db.prepare(`SELECT * FROM orders WHERE id=? AND tenant_id=? AND status='aberta'`).get(+req.params.oid, req.tid); if (!o) return res.status(404).end();
+  const log = J(o.log, []); log.push({ s: 'cancelado', t: nowIso() });
+  db.prepare(`UPDATE orders SET status='cancelado', log=? WHERE id=?`).run(JSON.stringify(log), o.id); devolveEstoque(req.tid, o.id); res.json({ ok: true });
+});
+app.post('/api/p/comandas/:oid/transferir', P, (req, res) => {
+  const o = db.prepare(`SELECT * FROM orders WHERE id=? AND tenant_id=? AND status='aberta'`).get(+req.params.oid, req.tid); if (!o) return res.status(404).end();
+  const m = db.prepare('SELECT * FROM mesas WHERE id=? AND tenant_id=?').get(+(req.body || {}).mesa, req.tid); if (!m) return res.status(400).json({ erro: 'Mesa não encontrada' });
+  if (comandaDe(req.tid, m.id)) return res.status(400).json({ erro: `${m.nome} já está ocupada` });
+  db.prepare('UPDATE orders SET mesa_id=?, bairro=?, customer=? WHERE id=?').run(m.id, m.nome, m.nome, o.id); res.json({ ok: true });
+});
+
+/* ---------- garçons (link no celular, sem login) ---------- */
+app.get('/api/p/garcons', P, (req, res) => res.json(db.prepare('SELECT * FROM garcons WHERE tenant_id=? ORDER BY ativo DESC, name').all(req.tid)));
+app.post('/api/p/garcons', P, (req, res) => { const n = String((req.body || {}).name || '').trim().slice(0, 40); if (!n) return res.status(400).json({ erro: 'Coloque o nome' }); db.prepare('INSERT INTO garcons(tenant_id,name,token) VALUES(?,?,?)').run(req.tid, n, crypto.randomBytes(9).toString('base64url')); res.json({ ok: true }); });
+app.put('/api/p/garcons/:id', P, (req, res) => { const b = req.body || {}; if (b.novoLink) db.prepare('UPDATE garcons SET token=? WHERE id=? AND tenant_id=?').run(crypto.randomBytes(9).toString('base64url'), +req.params.id, req.tid); if ('ativo' in b) db.prepare('UPDATE garcons SET ativo=? WHERE id=? AND tenant_id=?').run(b.ativo ? 1 : 0, +req.params.id, req.tid); res.json({ ok: true }); });
+app.delete('/api/p/garcons/:id', P, (req, res) => { db.prepare('DELETE FROM garcons WHERE id=? AND tenant_id=?').run(+req.params.id, req.tid); res.json({ ok: true }); });
+const garcomBy = tok => db.prepare('SELECT g.*, t.slug, t.name tname FROM garcons g JOIN tenants t ON t.id=g.tenant_id WHERE g.token=? AND g.ativo=1').get(String(tok || ''));
+app.get('/api/g/:token', (req, res) => {
+  const g = garcomBy(req.params.token); if (!g) return res.status(404).json({ erro: 'Link inválido ou desativado' });
+  const t = tenantById(g.tenant_id), m = menuPayload(t, null);
+  const mesas = db.prepare('SELECT * FROM mesas WHERE tenant_id=? AND ativo=1 ORDER BY sort, id').all(t.id).map(x => { const o = comandaDe(t.id, x.id); return { id: x.id, nome: x.nome, comanda: o ? { id: o.id, total: o.subtotal, itens: J(o.items, []) } : null }; });
+  const est = Object.fromEntries(db.prepare('SELECT id, estoque_controle, estoque FROM products WHERE tenant_id=?').all(t.id).map(p => [p.id, p.estoque_controle ? p.estoque : null]));
+  res.json({ garcom: g.name, loja: t.name, mesas, cats: m.cats, prods: m.prods.map(p => ({ id: p.id, cat: p.cat, name: p.name, price: p.price, opts: p.opts, estoque: est[p.id] })) });
+});
+app.post('/api/g/:token/mesas/:id/itens', (req, res) => {
+  const g = garcomBy(req.params.token); if (!g) return res.status(404).end();
+  const mesa = db.prepare('SELECT * FROM mesas WHERE id=? AND tenant_id=? AND ativo=1').get(+req.params.id, g.tenant_id); if (!mesa) return res.status(404).json({ erro: 'Mesa não encontrada' });
+  const r = lancaItens(tenantById(g.tenant_id), mesa, (req.body || {}).itens, g.name); if (r.erro) return res.status(400).json({ erro: r.erro }); res.json(r);
+});
+app.get('/g/:token', (req, res) => res.sendFile(path.join(pub, 'garcom.html')));
 
 /* ---------------- entregadores ---------------- */
 const courierPay = (c, o) => !c ? 0 : c.pagamento === 'fixo' ? round2(+c.valor || 0) : round2(+o.fee || 0);

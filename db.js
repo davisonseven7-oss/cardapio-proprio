@@ -159,6 +159,44 @@ addCol('orders', 'courier_id', 'INTEGER');
 addCol('orders', 'courier_valor', 'REAL DEFAULT 0');
 addCol('orders', 'courier_pago', 'TEXT');         // data do acerto
 
+/* ---- Fase 3: estoque, caixa, balcão, mesas e garçons ---- */
+addCol('products', 'estoque_controle', 'INTEGER DEFAULT 0');
+addCol('products', 'estoque', 'REAL DEFAULT 0');
+addCol('products', 'estoque_min', 'REAL DEFAULT 0');
+addCol('orders', 'canal', "TEXT DEFAULT 'delivery'");   // delivery | balcao | mesa
+addCol('orders', 'mesa_id', 'INTEGER');
+addCol('orders', 'garcom', "TEXT DEFAULT ''");
+addCol('orders', 'caixa_id', 'INTEGER');
+addCol('orders', 'servico', 'REAL DEFAULT 0');           // taxa de serviço (mesa)
+db.exec(`
+CREATE TABLE IF NOT EXISTS stock_moves(
+  id INTEGER PRIMARY KEY, tenant_id INTEGER NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  product_id INTEGER NOT NULL, qtd REAL NOT NULL, motivo TEXT NOT NULL,  -- venda | cancelamento | entrada | ajuste | perda
+  order_id INTEGER, obs TEXT DEFAULT '', por TEXT DEFAULT '',
+  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
+CREATE INDEX IF NOT EXISTS stock_moves_p ON stock_moves(tenant_id, product_id);
+CREATE TABLE IF NOT EXISTS caixas(
+  id INTEGER PRIMARY KEY, tenant_id INTEGER NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  aberto_em TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')), aberto_por TEXT DEFAULT '', valor_inicial REAL DEFAULT 0,
+  fechado_em TEXT, fechado_por TEXT DEFAULT '', valor_contado REAL, resumo TEXT DEFAULT '{}', obs TEXT DEFAULT ''
+);
+CREATE TABLE IF NOT EXISTS caixa_movs(
+  id INTEGER PRIMARY KEY, caixa_id INTEGER NOT NULL REFERENCES caixas(id) ON DELETE CASCADE,
+  tipo TEXT NOT NULL, valor REAL NOT NULL, motivo TEXT DEFAULT '', por TEXT DEFAULT '',   -- sangria | reforco
+  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
+CREATE TABLE IF NOT EXISTS mesas(
+  id INTEGER PRIMARY KEY, tenant_id INTEGER NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  nome TEXT NOT NULL, sort INTEGER DEFAULT 0, ativo INTEGER DEFAULT 1
+);
+CREATE TABLE IF NOT EXISTS garcons(
+  id INTEGER PRIMARY KEY, tenant_id INTEGER NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  name TEXT NOT NULL, token TEXT UNIQUE NOT NULL, ativo INTEGER DEFAULT 1,
+  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
+`);
+
 /* ---- backup: uma cópia por dia (guarda 14) ---- */
 const BK = path.join(DATA_DIR, 'backups'); fs.mkdirSync(BK, { recursive: true });
 function backupNow(file) { const f = file || path.join(BK, `cardapio-${new Date().toISOString().slice(0, 10)}.db`); try { fs.unlinkSync(f); } catch {} db.exec(`VACUUM INTO '${f.replace(/'/g, "''")}'`); return f; }
