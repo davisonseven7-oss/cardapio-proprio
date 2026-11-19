@@ -1,7 +1,7 @@
 {
   "name": "huntix-cardapio",
   "private": true,
-  "description": "Huntix · plataforma de cardápios no padrão rede social (Hunte Marketing)",
+  "description": "Huntix · plataforma de cardápios no padrão rede social (Hunter Marketing)",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

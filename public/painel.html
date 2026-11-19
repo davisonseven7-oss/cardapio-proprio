@@ -9,19 +9,38 @@
 <link rel="stylesheet" href="/static/huntix.css">
 <link rel="icon" href="/static/huntix-mark.svg" type="image/svg+xml">
 <style>
-.top{position:sticky;top:0;z-index:20;background:var(--card);border-bottom:1px solid var(--line)}
-.top .in{max-width:1180px;margin:0 auto;display:flex;align-items:center;gap:12px;padding:10px 16px;flex-wrap:wrap}
-.store{display:flex;align-items:center;gap:10px;margin-right:auto;min-width:0}
-.store img{width:34px;height:34px;border-radius:50%;object-fit:cover;background:#fff;border:1px solid var(--line)}
-.store b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.store small{color:var(--muted)}
-.acting{background:var(--hx);color:#fff;font-weight:600;font-size:13px;text-align:center;padding:7px 12px}
+/* menu lateral */
+:root{--side:248px}
+.side{position:fixed;inset:0 auto 0 0;width:var(--side);background:var(--card);border-right:1px solid var(--line);display:flex;flex-direction:column;z-index:30}
+.sideTop{padding:16px 16px 10px;border-bottom:1px solid var(--line);display:grid;gap:12px}
+.store{display:flex;align-items:center;gap:10px;min-width:0;background:var(--soft);border-radius:12px;padding:8px 10px}
+.store img{width:34px;height:34px;border-radius:50%;object-fit:cover;background:#fff;border:1px solid var(--line);flex:none}
+.store b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:14px}
+.store small{color:var(--muted);font-size:11px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tabs{flex:1;overflow-y:auto;padding:8px 10px;display:flex;flex-direction:column;gap:2px;scrollbar-width:thin}
+.tabs .grp{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);padding:12px 10px 4px}
+.tabs button,.sl{display:flex;align-items:center;gap:11px;width:100%;border:0;background:none;padding:9px 10px;border-radius:10px;font-weight:600;color:var(--muted);text-align:left;text-decoration:none;font-size:14px;cursor:pointer}
+.tabs button svg,.sl svg{width:20px;height:20px;flex:none}
+.tabs button:hover,.sl:hover{background:var(--soft);color:var(--ink)}
+.tabs button.on{background:var(--hx-soft);color:var(--hx)}
+.tabs button span:not(.dot){flex:1}
+.tabs .dot{display:inline-grid;place-items:center;min-width:20px;height:20px;border-radius:10px;background:var(--hx);color:#fff;font-size:11px;font-weight:800;padding:0 6px}
+.sideFoot{border-top:1px solid var(--line);padding:8px 10px 12px;display:grid;gap:2px}
+.sl.app{color:var(--hx)}
+.acting{background:var(--hx);color:#fff;font-weight:600;font-size:13px;text-align:center;padding:7px 12px;margin-left:var(--side)}
 .acting a{color:#fff;font-weight:800}
-.tabs{max-width:1180px;margin:0 auto;display:flex;gap:4px;padding:0 12px;overflow-x:auto;scrollbar-width:none}
-.tabs button{border:0;background:none;padding:10px 12px;font-weight:600;color:var(--muted);border-bottom:2px solid transparent;white-space:nowrap}
-.tabs button.on{color:var(--ink);border-color:var(--hx)}
-.tabs .dot{display:inline-grid;place-items:center;min-width:18px;height:18px;border-radius:9px;background:var(--hx);color:#fff;font-size:11px;font-weight:800;padding:0 5px;margin-left:5px}
-main{max-width:1180px;margin:0 auto;padding:18px 16px 60px}
+main{margin-left:var(--side);max-width:calc(1180px + var(--side));padding:22px 28px 60px}
+.menuBtn{display:none}
+.sideBack{display:none}
+@media (max-width:900px){
+  .side{transform:translateX(-102%);transition:transform .2s;box-shadow:0 0 40px rgba(0,0,0,.25)}
+  body.menuOn .side{transform:none}
+  body.menuOn .sideBack{display:block;position:fixed;inset:0;background:rgba(10,10,14,.45);z-index:25}
+  .menuBtn{display:grid;place-items:center;position:fixed;top:10px;left:10px;z-index:20;width:42px;height:42px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--ink);box-shadow:var(--shadow)}
+  .menuBtn svg{width:22px;height:22px}
+  .acting{margin-left:0;padding-left:60px}
+  main{margin-left:0;padding:62px 14px 60px}
+}
 .bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
 .bar h1{font-size:20px;margin:0 auto 0 0}
 .seg{display:inline-flex;background:var(--soft);border-radius:10px;padding:3px;gap:2px;flex-wrap:wrap}
@@ -127,30 +146,102 @@ main{max-width:1180px;margin:0 auto;padding:18px 16px 60px}
 .ent:has(input:checked){border-color:var(--hx);background:var(--hx-soft)}
 .ent b{display:block}.ent small{color:var(--muted);font-size:12px}
 .ent-tag{font-size:12px;font-weight:700;margin-top:3px}
+.appbanner{display:flex;align-items:center;gap:14px;background:#111;color:#fff;border-radius:14px;padding:14px 16px;margin-bottom:14px;position:relative;flex-wrap:wrap}
+.appbanner .ic{width:42px;height:42px;border-radius:10px;background:var(--hx);display:grid;place-items:center;font-size:22px;flex:none}
+.appbanner b{display:block}.appbanner span{font-size:13px;color:#B7B9C4}
+.appbanner>div:nth-child(2){flex:1;min-width:220px}
+.appbtns{display:flex;gap:8px;flex-wrap:wrap}
+.appbanner .x{position:absolute;top:6px;right:8px;background:none;border:0;color:#9A9DAA;font-size:20px;cursor:pointer}
 .fidp{margin-top:10px;background:var(--hx-soft);border-radius:10px;padding:8px 12px;font-size:13px}
+
+/* ===== visual sóbrio (sobrepõe o anterior) ===== */
+.store{background:none;border-radius:0;padding:0}
+.store img{width:32px;height:32px;border-radius:4px}
+.sideTop{padding:14px 14px 12px;gap:14px}
+.tabs{padding:6px 8px}
+.tabs .grp{font-size:12px;font-weight:600;text-transform:none;letter-spacing:0;padding:14px 10px 4px}
+.tabs button,.sl{padding:7px 10px;border-radius:6px;font-weight:500;color:var(--ink);gap:10px}
+.tabs button svg,.sl svg{width:18px;height:18px;color:var(--muted)}
+.tabs button.on{background:var(--soft);color:var(--ink);font-weight:600;box-shadow:inset 3px 0 0 var(--hx)}
+.tabs button.on svg{color:var(--ink)}
+.tabs .dot{min-width:18px;height:18px;border-radius:9px;font-size:11px;font-weight:600}
+.sl.app{color:var(--ink)}
+.acting{background:#FFF8C5;color:#3D3A00;font-weight:500;border-bottom:1px solid #E7DC88}
+.acting a{color:#3D3A00;font-weight:600}
+.menuBtn{border-radius:6px!important;box-shadow:none!important}
+.bar h1{font-size:18px;font-weight:600}
+.seg{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:2px}
+.seg button{border-radius:4px;font-weight:500;color:var(--muted)}
+.seg button.on{background:var(--soft);color:var(--ink);box-shadow:none}
+.kpi{border-radius:8px}
+.kpi small{font-weight:500}
+.kpi b{font-family:var(--f);font-size:22px;font-weight:600;letter-spacing:0}
+.chart .c i{border-radius:2px 2px 0 0}
+.hbar .t,.hbar .t i{border-radius:2px}
+.funnel em{background:var(--soft);border-radius:3px}.funnel em i{border-radius:3px}
+.col{background:var(--soft);border:1px solid var(--line);border-radius:8px}
+.col.over{border:1px dashed var(--hx)}
+.col header .cnt{border:1px solid var(--line);font-weight:600}
+.ord{border-radius:6px;padding:11px}
+.ord.novo{border-color:var(--line);box-shadow:inset 3px 0 0 var(--hx);animation:none}
+.ord .h b{font-size:15px}
+.ord .tm{font-weight:500}
+.ord .obs,.obs{background:var(--soft);border-left:2px solid var(--warn);border-radius:0 4px 4px 0}
+.ord .tt{font-weight:600;border-top-style:solid}
+.ord .mini button,.ord .mini a{font-weight:500}
+.ord .mini button:hover,.ord .mini a:hover{color:var(--ink);text-decoration:underline}
+.pr{border-radius:6px}
+.pr .th,.imgpick .pv,.pc .im{background:var(--soft);color:var(--muted)}
+.pr .th{border-radius:4px}.imgpick .pv{border-radius:6px}
+.pc,.slide,.linkbox,.ent,.days label{border-radius:6px}
+.ent:has(input:checked){border-color:var(--hx);background:var(--card);box-shadow:0 0 0 1px var(--hx)}
+.ent-tag{font-weight:500;color:var(--muted)}
+.fidp{background:var(--soft);border-radius:6px}
+.appbanner{background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:12px 14px;gap:12px}
+.appbanner span{color:var(--muted)}
+.appbanner .x{color:var(--muted)}
+.stp.done i,.stp.done::before{background:var(--ink)}
+.ord .acts{justify-content:space-between;align-items:center}
+/* ações do pedido: avançar em verde, recusar/cancelar em vermelho */
+.ord .acts .btn:not(.danger),#mbox .btn#dn,#mbox .btn#ok.go{flex:0 0 auto!important;min-width:110px;background:#1A7F37;border-color:#1A7F37;color:#fff}
+.ord .acts .btn:not(.danger):hover,#mbox .btn#dn:hover{background:#156B2E;border-color:#156B2E}
+.ord .acts .btn.danger,#mbox .btn#dc{background:var(--card);border:1px solid #E5A3A8;color:var(--bad);padding:0 12px}
+.ord .acts .btn.danger:hover,#mbox .btn#dc:hover{background:#FFF1F1;border-color:var(--bad)}
+.ord .h .badge{margin-left:6px}
 </style>
 </head>
 <body>
 <div id="acting" class="acting" hidden></div>
-<header class="top"><div class="in">
-  <a class="hx-logo" href="/painel" title="Huntix"><i><svg viewBox="0 0 24 24" fill="none" stroke-linecap="round"><g stroke="currentColor" stroke-width="2"><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3"/><circle cx="12" cy="12" r="6"/></g><circle cx="12" cy="12" r="2.6" stroke="#fff" stroke-width="1.8"/><circle cx="12" cy="12" r="1" fill="currentColor"/></svg></i></a>
-  <div class="store"><img id="sLogo" alt="" hidden><div style="min-width:0"><b id="sName">…</b><small id="sLink"></small></div></div>
-  <a class="btn sec sm" id="ver" target="_blank" rel="noopener">Ver cardápio ↗</a>
-  <button class="btn ghost sm" id="sair">Sair</button>
-</div>
-<nav class="tabs" id="tabs">
-  <button data-tab="pedidos" class="on">Pedidos<span class="dot" id="newDot" hidden>0</span></button>
-  <button data-tab="clientes">Clientes</button>
-  <button data-tab="relatorios">Relatórios</button>
-  <button data-tab="cardapio">Cardápio</button>
-  <button data-tab="stories">Stories</button>
-  <button data-tab="feed">Feed</button>
-  <button data-tab="loja">Loja</button>
-  <button data-tab="entregadores">Entregadores</button>
-  <button data-tab="marketing">Marketing</button>
-  <button data-tab="pixel">Pixel Meta</button>
-  <button data-tab="conta">Conta</button>
-</nav></header>
+<button class="menuBtn" id="menuBtn" aria-label="Abrir menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+<div class="sideBack" id="sideBack"></div>
+<aside class="side" id="side">
+  <div class="sideTop">
+    <a class="hx-logo" href="/painel" title="Huntix"><i><svg viewBox="0 0 24 24" fill="none" stroke-linecap="round"><g stroke="currentColor" stroke-width="2"><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3"/><circle cx="12" cy="12" r="6"/></g><circle cx="12" cy="12" r="2.6" stroke="#fff" stroke-width="1.8"/><circle cx="12" cy="12" r="1" fill="currentColor"/></svg></i><span>HUNT<em>IX</em></span></a>
+    <div class="store"><img id="sLogo" alt="" hidden><div style="min-width:0"><b id="sName">…</b><small id="sLink"></small></div></div>
+  </div>
+  <nav class="tabs" id="tabs">
+    <div class="grp">Operação</div>
+    <button data-tab="pedidos" class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h12l1 18H5L6 3z"/><path d="M9 7h6M9 11h6M9 15h4"/></svg><span>Pedidos</span><span class="dot" id="newDot" hidden>0</span></button>
+    <button data-tab="clientes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c.6-3.4 3-5.4 6-5.4s5.4 2 6 5.4"/><path d="M16 4.5a3 3 0 0 1 0 6M18 14.6c1.7.6 2.8 2.4 3 5.4"/></svg><span>Clientes</span></button>
+    <button data-tab="entregadores"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="17" r="2.6"/><circle cx="18" cy="17" r="2.6"/><path d="M8.6 17h6.8M14 7h3l2.4 7.4M11 7l3 7M7 11h5"/></svg><span>Entregadores</span></button>
+    <button data-tab="relatorios"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V4M4 20h16"/><path d="M8 16v-4M12 16V8M16 16v-6"/></svg><span>Relatórios</span></button>
+    <div class="grp">Cardápio</div>
+    <button data-tab="cardapio"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 3h11a3 3 0 0 1 3 3v15H8a3 3 0 0 1-3-3V3z"/><path d="M9 8h6M9 12h6M9 16h3"/></svg><span>Produtos</span></button>
+    <button data-tab="stories"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5" stroke-dasharray="4 2.2"/><circle cx="12" cy="12" r="4.5"/></svg><span>Stories</span></button>
+    <button data-tab="feed"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="3"/><circle cx="9.5" cy="9.5" r="1.8"/><path d="M20 15l-4.5-4.5L7 19"/></svg><span>Feed</span></button>
+    <div class="grp">Vendas</div>
+    <button data-tab="marketing"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10v4h3l6 4V6L7 10H4z"/><path d="M17 9a4 4 0 0 1 0 6"/></svg><span>Cupons e fidelidade</span></button>
+    <button data-tab="pixel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1" fill="currentColor"/></svg><span>Pixel Meta</span></button>
+    <div class="grp">Configurações</div>
+    <button data-tab="loja"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9l1.5-5h13L20 9"/><path d="M4 9h16v2a3 3 0 0 1-5.3 1.9A3 3 0 0 1 12 14a3 3 0 0 1-2.7-1.1A3 3 0 0 1 4 11V9z"/><path d="M5 13.5V20h14v-6.5"/></svg><span>Loja</span></button>
+    <button data-tab="conta"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="3.6"/><path d="M5 20c.8-3.6 3.5-5.6 7-5.6s6.2 2 7 5.6"/></svg><span>Conta</span></button>
+  </nav>
+  <div class="sideFoot">
+    <a class="sl" id="ver" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg><span>Ver cardápio</span></a>
+    <a class="sl app" id="getApp" href="/download" hidden title="Instale no computador da loja: imprime direto na térmica e avisa pedido novo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg><span>Baixar app</span></a>
+    <button class="sl" id="sair"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 4h4v16h-4M10 8l-4 4 4 4M6 12h10"/></svg><span>Sair</span></button>
+  </div>
+</aside>
 <main id="main"></main>
 <div id="modal" class="modal" hidden><div class="box" id="mbox"></div></div>
 <div class="toast" id="toast" hidden></div>
@@ -190,13 +281,16 @@ const iconSelect=(id,val)=>`<select id="${id}">${Object.keys(ICON_NAMES).map(k=>
 let ME,LOJA,tab='pedidos';
 (async()=>{
   try{ ME=await api('/api/me'); }catch{ return; }
-  if(!ME.tenant){ if(ME.role==='admin') location.replace('/admin'); else document.body.innerHTML='<p style="padding:40px">Login sem loja vinculada. Fale com a Hunte Marketing.</p>'; return; }
+  if(!ME.tenant){ if(ME.role==='admin') location.replace('/admin'); else document.body.innerHTML='<p style="padding:40px">Login sem loja vinculada. Fale com a Hunter Marketing.</p>'; return; }
   if(ME.role==='admin'){ $('#acting').hidden=false; $('#acting').innerHTML=`Você está no painel de <b>${esc(ME.tenant.name)}</b> como administrador · <a href="#" id="back">voltar ao admin</a>`; $('#back').onclick=async e=>{ e.preventDefault(); await api('/api/a/act','POST',{id:null}); location.href='/admin'; }; }
   await loadLoja(); const h=location.hash.slice(1); show($(`[data-tab="${h}"]`)?h:'pedidos'); pollNew(); setInterval(pollNew,20000);
 })();
 async function loadLoja(){ LOJA=await api('/api/p/loja'); $('#sName').textContent=LOJA.name; const url=location.origin+'/'+LOJA.slug; $('#sLink').textContent=url.replace(/^https?:\/\//,'')+(LOJA.status==='pausado'?' · pausado':''); $('#ver').href='/'+LOJA.slug; const lg=$('#sLogo'); lg.hidden=!LOJA.settings.logo; lg.src=LOJA.settings.logo||''; document.title=LOJA.name+' · Huntix'; }
+/* fora do app: mostra o botão de baixar (só faz sentido em computador) */
+if(!DESK&&!/Android|iPhone|iPad/i.test(navigator.userAgent)) $('#getApp').hidden=false;
 $('#sair').onclick=async()=>{ await fetch('/api/logout',{method:'POST'}); location.replace('/login'); };
-$('#tabs').onclick=e=>{ const b=e.target.closest('[data-tab]'); if(b) show(b.dataset.tab); };
+$('#tabs').onclick=e=>{ const b=e.target.closest('[data-tab]'); if(b){ show(b.dataset.tab); document.body.classList.remove('menuOn'); } };
+$('#menuBtn').onclick=()=>document.body.classList.toggle('menuOn'); $('#sideBack').onclick=()=>document.body.classList.remove('menuOn');
 function show(t){ tab=t; location.hash=t; $$('#tabs [data-tab]').forEach(b=>b.classList.toggle('on',b.dataset.tab===t)); $('#main').innerHTML='<p class="muted">Carregando…</p>'; ({pedidos,clientes:clientesTab,entregadores,marketing,relatorios,cardapio,stories,feed,loja,pixel,conta})[t]().catch(e=>{ $('#main').innerHTML=`<p class="err">${esc(e.message)}</p>`; }); }
 let lastNew=null;
 async function pollNew(){ try{ const j=await api('/api/p/orders/novos'); $('#newDot').hidden=!j.n; $('#newDot').textContent=j.n; document.title=(j.n?`(${j.n}) `:'')+LOJA.name+' · Huntix';
@@ -216,7 +310,7 @@ const stLabel=o=>o.status==='saiu'?(isRet(o)?'Pronto p/ retirada':'Saiu p/ entre
 const mins=o=>Math.floor((Date.now()-new Date(o.created_at))/6e4);
 const elapsed=o=>{ const m=mins(o); return m<60?`${m} min`:`${Math.floor(m/60)}h${String(m%60).padStart(2,'0')}`; };
 const hhmm=iso=>new Date(iso).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
-const nextOf=o=>({pix:['preparando','Confirmar Pix ✓'],novo:['preparando','Aceitar'],preparando:['saiu',isRet(o)?'Pronto p/ retirada':'Saiu p/ entrega'],saiu:['concluido',isRet(o)?'Retirado':'Entregue']})[o.status];
+const nextOf=o=>({pix:['preparando','Confirmar Pix'],novo:['preparando','Aceitar'],preparando:['saiu',isRet(o)?'Pronto p/ retirada':'Saiu p/ entrega'],saiu:['concluido',isRet(o)?'Retirado':'Entregue']})[o.status];
 
 async function pedidos(){
   const q=OV.view==='kanban'?new URLSearchParams({de:today(),ate:today(),ativos:1}):new URLSearchParams({de:OV.de,ate:OV.ate,...(OV.status?{status:OV.status}:{})});
@@ -229,9 +323,12 @@ async function pedidos(){
   <div class="bar ptools">
     <label class="tg"><input type="checkbox" id="pAv" ${avisar?'checked':''}> Avisar o cliente no WhatsApp ao mudar o status</label>
     <label class="tg"><input type="checkbox" id="pSom" ${som?'checked':''}> Alarme de pedido novo</label>
-    <button class="btn ghost sm" id="pPrn">🖨 Impressora${pref('imprimirNovo',false)||pref('imprimir',false)?' · automática':''}${DESK?' · app':''}</button>
+    <button class="btn ghost sm" id="pPrn">Impressora${pref('imprimirNovo',false)||pref('imprimir',false)?' · automática':''}${DESK?' · app':''}</button>
     <span class="muted" style="margin-left:auto;font-size:12px">Tempo estimado: preparo ${s.tempoPreparo||30} min · entrega ${s.tempoEntrega||40} min <a href="#loja" data-goloja>alterar</a></span></div>
+  ${!DESK&&!pref('appAviso0',false)&&!/Android|iPhone|iPad/i.test(navigator.userAgent)?`<div class="appbanner" id="appBan"><div><b>App Huntix Pedidos para Windows (opcional)</b><span style="display:block;font-size:13px">O painel funciona normalmente no navegador. O app imprime direto na impressora térmica e avisa pedidos com a janela minimizada.</span></div><div class="appbtns"><a class="btn sec" href="/download">Baixar app</a><button class="btn ghost" id="appBanNav">Agora não</button></div><button class="x" id="appBanX" aria-label="Fechar aviso">×</button></div>`:''}
   <div id="obody"></div>`;
+  const fechaBan=()=>{ setPref('appAviso0',true); $('#appBan').remove(); toast('Você pode baixar depois pelo menu lateral.'); };
+  $('#appBanX')&&($('#appBanX').onclick=fechaBan); $('#appBanNav')&&($('#appBanNav').onclick=fechaBan);
   $('#ovw').onclick=e=>{ const b=e.target.closest('[data-v]'); if(b){ OV.view=b.dataset.v; pedidos(); } };
   $('#oq').oninput=e=>{ OV.q=e.target.value; drawOrders(); };
   $('#otp').onchange=e=>{ OV.tipo=e.target.value; drawOrders(); };
@@ -246,12 +343,12 @@ function filtered(){ const q=OV.q.trim().toLowerCase(), qd=q.replace(/\D/g,'');
 function cardHtml(o){
   const nx=nextOf(o), late=['novo','preparando','saiu'].includes(o.status)&&mins(o)>=((LOJA.settings.tempoPreparo||30)+(isRet(o)?0:(LOJA.settings.tempoEntrega||40)));
   return `<div class="ord ${o.status}" draggable="${['concluido','cancelado'].includes(o.status)?'false':'true'}" data-id="${o.id}">
-    <div class="h"><div><b>#${o.num}</b> <span class="badge ${isRet(o)?'':'hx'}">${isRet(o)?'Retirada':'Entrega'}</span></div><span class="tm ${late?'late':''}" title="Pedido às ${hhmm(o.created_at)}">⏱ ${elapsed(o)}</span></div>
-    <div><b style="font-size:14px">${esc(o.customer)}</b> ${cliBadge(o)}<div class="muted" style="font-size:12px">${hhmm(o.created_at)} · ${esc(o.payment)}${isRet(o)?'':' · '+esc(o.bairro)}</div>${o.courier_nome?`<div class="ent-tag">🛵 ${esc(o.courier_nome)}</div>`:''}</div>
+    <div class="h"><div><b>#${o.num}</b> <span class="badge">${isRet(o)?'Retirada':'Entrega'}</span></div><span class="tm ${late?'late':''}" title="Pedido às ${hhmm(o.created_at)}">${elapsed(o)}</span></div>
+    <div><b style="font-size:14px">${esc(o.customer)}</b> ${cliBadge(o)}<div class="muted" style="font-size:12px">${hhmm(o.created_at)} · ${esc(o.payment)}${isRet(o)?'':' · '+esc(o.bairro)}</div>${o.courier_nome?`<div class="ent-tag">Entregador: ${esc(o.courier_nome)}</div>`:''}</div>
     <ul>${o.items.slice(0,4).map(i=>`<li>${i.qty}× ${esc(i.nome)}${i.opts.length?` <small>(${esc(i.opts.map(x=>x.split(': ')[1]||x).join(', '))})</small>`:''}</li>`).join('')}${o.items.length>4?`<li class="muted">+ ${o.items.length-4} item(ns)</li>`:''}</ul>
     ${o.notes?`<div class="obs">Obs.: ${esc(o.notes)}</div>`:''}
     <div class="tt"><span>Total</span><span class="num">${BRL(o.total)}</span></div>
-    <div class="acts">${o.status==='novo'?`<button class="btn danger sm" data-cancel="${o.id}">Recusar</button>`:o.status==='pix'?`<button class="btn danger sm" data-cancel="${o.id}" title="Cliente não pagou">Cancelar</button>`:''}${nx?`<button class="btn sm" data-mv="${o.id}" data-to="${nx[0]}" style="flex:1">${nx[1]} →</button>`:`<span class="badge ${ST[o.status][1]}">${stLabel(o)}</span>`}</div>
+    <div class="acts">${o.status==='novo'?`<button class="btn danger sm" data-cancel="${o.id}">Recusar</button>`:o.status==='pix'?`<button class="btn danger sm" data-cancel="${o.id}" title="Cliente não pagou">Cancelar</button>`:''}${nx?`<button class="btn sm" data-mv="${o.id}" data-to="${nx[0]}" style="flex:1">${nx[1]}</button>`:`<span class="badge ${ST[o.status][1]}">${stLabel(o)}</span>`}</div>
     <div class="mini"><button data-det="${o.id}">Detalhes</button><button data-print="${o.id}">Imprimir</button><a href="${waUrl(o.phone,'')}" target="_blank" rel="noopener">WhatsApp</a>${['preparando','saiu'].includes(o.status)?`<button data-cancel="${o.id}">Cancelar</button>`:''}</div></div>`;
 }
 function drawOrders(){
@@ -262,7 +359,7 @@ function drawOrders(){
     box.innerHTML=`<div class="kanban" style="grid-template-columns:repeat(${cols.length},minmax(250px,1fr))">${cols.map(([st,nm,sub])=>{ const its=list.filter(o=>st==='concluido'?(['concluido','cancelado'].includes(o.status)&&o.created_at&&new Date(o.created_at).toLocaleDateString('sv')===t0):o.status===st);
       return `<section class="col" data-col="${st}"><header><b>${nm}</b><span class="cnt">${its.length}</span><small>${sub}</small></header><div class="cards">${its.map(cardHtml).join('')||'<p class="empty">Nenhum pedido</p>'}</div>
       ${st==='concluido'&&its.length?`<footer class="muted">${BRL(its.filter(o=>o.status==='concluido').reduce((a,o)=>a+o.total,0))} concluídos hoje</footer>`:''}</section>`; }).join('')}</div>
-      <p class="help">Arraste o pedido para a próxima coluna ou use o botão laranja. Com o aviso ligado, o WhatsApp abre com a mensagem pronta para o cliente: é só tocar em enviar.</p>`;
+      <p class="help">Arraste o pedido para a próxima coluna ou use o botão principal. Com o aviso ligado, o WhatsApp abre com a mensagem pronta para o cliente: é só tocar em enviar.</p>`;
     dnd();
   } else {
     const tot=list.filter(o=>o.status!=='cancelado').reduce((a,o)=>a+o.total,0);
@@ -314,13 +411,13 @@ function orderDetail(id){
   modal(`<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px"><div><h2 style="margin:0">Pedido #${o.num}</h2><div class="muted">${new Date(o.created_at).toLocaleString('pt-BR')} · há ${elapsed(o)}</div></div><span class="badge ${ST[o.status][1]}">${stLabel(o)}</span></div>
     <div class="steps">${o.status==='cancelado'?`<div class="stp bad"><i></i><span>Cancelado ${when('cancelado')}</span></div>`:steps.map(([st,n])=>`<div class="stp ${when(st)?'done':''}"><i></i><span>${n}<small>${when(st)}</small></span></div>`).join('')}</div>
     <div class="row cols2" style="margin-top:14px"><div><div class="muted" style="font-size:12px;font-weight:600">CLIENTE</div><b>${esc(o.customer)}</b> ${cliBadge(o)}<br><a href="${waUrl(o.phone,'')}" target="_blank" rel="noopener">${esc(o.phone)}</a><div class="muted" style="font-size:12px;margin-top:4px">${o.cli_pedidos} pedido(s) · ${BRL(o.cli_total)} no total · desde ${fmtD(o.cli_desde)}</div></div>
-      <div><div class="muted" style="font-size:12px;font-weight:600">${isRet(o)?'RETIRADA':'ENTREGA'}</div>${isRet(o)?'Retirar na loja':`${esc(o.address)}<br>${esc(o.bairro)}`}${!isRet(o)?`<div style="margin-top:6px;font-size:13px">🛵 ${o.courier_nome?`<b>${esc(o.courier_nome)}</b>`:'<span class="muted">sem entregador</span>'}${['preparando','saiu'].includes(o.status)?` · <a href="#" id="dent" onclick="return false">${o.courier_nome?'trocar':'escolher'}</a>`:''}</div>`:''}</div></div>
+      <div><div class="muted" style="font-size:12px;font-weight:600">${isRet(o)?'RETIRADA':'ENTREGA'}</div>${isRet(o)?'Retirar na loja':`${esc(o.address)}<br>${esc(o.bairro)}`}${!isRet(o)?`<div style="margin-top:6px;font-size:13px">Entregador: ${o.courier_nome?`<b>${esc(o.courier_nome)}</b>`:'<span class="muted">sem entregador</span>'}${['preparando','saiu'].includes(o.status)?` · <a href="#" id="dent" onclick="return false">${o.courier_nome?'trocar':'escolher'}</a>`:''}</div>`:''}</div></div>
     <table style="margin-top:12px">${o.items.map(i=>`<tr><td>${i.qty}×</td><td>${esc(i.nome)}${i.opts.length?`<br><small class="muted">${esc(i.opts.join(' · '))}</small>`:''}</td><td class="num" style="text-align:right">${BRL(i.total)}</td></tr>`).join('')}
       <tr><td></td><td class="muted">Subtotal</td><td class="num" style="text-align:right">${BRL(o.subtotal)}</td></tr>${(o.descontos&&o.descontos.length?o.descontos:o.discount?[{label:'Desconto',valor:o.discount}]:[]).map(d=>`<tr><td></td><td class="muted">${esc(d.label)}</td><td class="num" style="text-align:right">− ${BRL(d.valor)}</td></tr>`).join('')}
       <tr><td></td><td class="muted">Entrega${o.km!=null?` (${String(o.km).replace('.',',')} km)`:''}</td><td class="num" style="text-align:right">${o.fee?BRL(o.fee):'grátis'}</td></tr><tr><td></td><td><b>Total · ${esc(o.payment)}</b></td><td class="num" style="text-align:right"><b>${BRL(o.total)}</b></td></tr></table>
     ${o.notes?`<div class="obs" style="margin-top:10px">Obs.: ${esc(o.notes)}</div>`:''}
     <label class="f" style="margin-top:12px">Link de acompanhamento do cliente<div class="linkbox"><span style="flex:1">${esc(link)}</span><button class="btn sec sm" id="cpl" type="button">Copiar</button></div></label>
-    <div class="foot">${!['concluido','cancelado'].includes(o.status)?`<button class="btn danger" id="dc">Cancelar</button>`:''}<button class="btn sec" id="dp">Imprimir</button><button class="btn sec" onclick="closeModal()">Fechar</button>${nx?`<button class="btn" id="dn">${nx[1]} →</button>`:''}</div>`);
+    <div class="foot">${!['concluido','cancelado'].includes(o.status)?`<button class="btn danger" id="dc">Cancelar</button>`:''}<button class="btn sec" id="dp">Imprimir</button><button class="btn sec" onclick="closeModal()">Fechar</button>${nx?`<button class="btn" id="dn">${nx[1]}</button>`:''}</div>`);
   $('#cpl').onclick=()=>navigator.clipboard.writeText(link).then(()=>toast('Link copiado'));
   $('#dp').onclick=()=>printOrder(o);
   $('#dc')&&($('#dc').onclick=()=>{ closeModal(); cancelOrder(id); });
@@ -374,9 +471,9 @@ function printerSetup(){
     <li>Para imprimir <b>sem a janela de confirmação</b>: crie um atalho do Chrome na área de trabalho, clique com o botão direito → Propriedades, e no fim de <b>Destino</b> acrescente <code>--kiosk-printing</code>. Feche todos os Chrome e abra o painel por esse atalho.</li>
     <li>Clique em <b>Imprimir teste</b> abaixo.</li></ol></div></div>
   <div class="foot"><button class="btn sec" id="pt">Imprimir teste</button><button class="btn sec" onclick="closeModal()">Fechar</button><button class="btn" id="ok">Salvar</button></div>`);
-  if(DESK){ const box=document.querySelector('#mbox .card'); if(box) box.innerHTML='<b>✓ App Huntix Pedidos conectado</b><p class="help" style="margin:6px 0 0">A comanda vai direto para a impressora escolhida, sem janela de confirmação. Mesmo minimizado, o app avisa e imprime.</p><label class="f" style="margin-top:10px">Impressora<select id="pdev"><option value="">Padrão do Windows</option></select></label>';
+  if(DESK){ const box=document.querySelector('#mbox .card'); if(box) box.innerHTML='<b>App Huntix Pedidos conectado</b><p class="help" style="margin:6px 0 0">A comanda vai direto para a impressora escolhida, sem janela de confirmação. Mesmo minimizado, o app avisa e imprime.</p><label class="f" style="margin-top:10px">Impressora<select id="pdev"><option value="">Padrão do Windows</option></select></label>';
     DESK.printers().then(p=>{ const s=$('#pdev'); if(!s) return; p.lista.forEach(x=>{ const o=document.createElement('option'); o.value=x.nome; o.textContent=x.nome+(x.padrao?' (padrão)':''); s.appendChild(o); }); s.value=p.atual; s.onchange=()=>DESK.setPrinter(s.value).then(()=>toast('Impressora escolhida')); }); }
-  else { const box=document.querySelector('#mbox .card'); if(box) box.insertAdjacentHTML('afterbegin','<div style="background:var(--hx-soft);border-radius:10px;padding:10px 12px;margin-bottom:10px"><b>Recomendado: app Huntix Pedidos para Windows</b><br>Imprime direto na térmica, avisa pedido novo e abre junto com o computador. <a class="btn sm" href="/download" style="margin-top:8px">⬇ Baixar o app</a></div><b style="font-size:12px;color:var(--muted)">OU PELO CHROME:</b>'); }
+  else { const box=document.querySelector('#mbox .card'); if(box) box.insertAdjacentHTML('afterbegin','<div style="background:var(--hx-soft);border-radius:10px;padding:10px 12px;margin-bottom:10px"><b>Recomendado: app Huntix Pedidos para Windows</b><br>Imprime direto na térmica, avisa pedido novo e abre junto com o computador. <a class="btn sm" href="/download" style="margin-top:8px">Baixar o app</a></div><b style="font-size:12px;color:var(--muted)">OU PELO CHROME:</b>'); }
   $('#pp').value=prnGet('papel','80'); $('#pv').value=prnGet('vias','1');
   const save=()=>{ prnSet('papel',$('#pp').value); prnSet('vias',$('#pv').value); setPref('imprimirNovo',$('#pn').checked); setPref('imprimir',$('#pa').checked); };
   $('#pt').onclick=()=>{ save(); printOrder({num:0,created_at:new Date().toISOString(),customer:'Teste de impressão',phone:'84 99999-0000',bairro:'Centro',address:'Rua Exemplo, 123',payment:'Pix',notes:'Sem cebola',items:[{qty:2,nome:'Produto de exemplo',opts:['Tamanho: G'],total:39.8},{qty:1,nome:'Outro produto',opts:[],total:12}],subtotal:51.8,discount:0,fee:6,total:57.8}); };
@@ -393,7 +490,7 @@ setInterval(()=>{ if(tab==='pedidos'&&OV.view==='kanban'&&$('#modal').hidden) dr
 /* ---------------- clientes (cadastro) ---------------- */
 const SEG={cadastrado:['Sem pedido',''],novo:['Novo','hx'],recorrente:['Recorrente','warn'],fiel:['Fiel','ok'],sumido:['Sumido','bad']};
 let CF={q:'',seg:''}, CLI=[];
-const cliBadge=o=>o.ordem===1?'<span class="badge hx">⭐ Cliente novo</span>':o.cli_pedidos>=5?`<span class="badge ok">Fiel · ${o.ordem}º pedido</span>`:`<span class="badge warn">${o.ordem}º pedido</span>`;
+const cliBadge=o=>o.ordem===1?'<span class="badge hx">Cliente novo</span>':o.cli_pedidos>=5?`<span class="badge ok">Fiel · ${o.ordem}º pedido</span>`:`<span class="badge warn">${o.ordem}º pedido</span>`;
 const fmtD=iso=>iso?new Date(iso).toLocaleDateString('pt-BR'):'—';
 const bday=b=>b?b.split('-').reverse().slice(0,2).join('/'):'';
 async function clientesTab(){
@@ -419,7 +516,7 @@ function drawCli(){
   const q=CF.q.trim().toLowerCase(), qd=q.replace(/\D/g,''), mes=new Date().toISOString().slice(5,7);
   const list=CLI.filter(c=>(!CF.seg||(CF.seg==='aniv'?(c.birthday&&c.birthday.slice(5,7)===mes):c.seg===CF.seg))&&(!q||[c.name,c.bairro,c.tags,c.email].join(' ').toLowerCase().includes(q)||(qd.length>=4&&c.phone.includes(qd))));
   $('#clist').innerHTML=list.length?`<table><tr><th>Cliente</th><th>Grupo</th><th>Pedidos</th><th>Total gasto</th><th>Último pedido</th><th>Bairro</th><th></th></tr>${list.map(c=>`<tr>
-    <td><b>${esc(c.name||'Sem nome')}</b><br><small class="muted">${esc(c.phone)}${c.birthday?` · 🎂 ${bday(c.birthday)}`:''}</small>${c.tags?`<br>${c.tags.split(',').map(t=>t.trim()).filter(Boolean).map(t=>`<span class="badge" style="margin:2px 2px 0 0">${esc(t)}</span>`).join('')}`:''}</td>
+    <td><b>${esc(c.name||'Sem nome')}</b><br><small class="muted">${esc(c.phone)}${c.birthday?` · aniv. ${bday(c.birthday)}`:''}</small>${c.tags?`<br>${c.tags.split(',').map(t=>t.trim()).filter(Boolean).map(t=>`<span class="badge" style="margin:2px 2px 0 0">${esc(t)}</span>`).join('')}`:''}</td>
     <td><span class="badge ${SEG[c.seg][1]}">${SEG[c.seg][0]}</span></td><td class="num">${c.pedidos}</td><td class="num">${BRL(c.total)}<br><small class="muted">ticket ${BRL(c.ticket)}</small></td>
     <td>${fmtD(c.ultimo)}${c.dias!=null?`<br><small class="muted">há ${c.dias} dia(s)</small>`:''}</td><td>${esc(c.bairro||'—')}</td>
     <td style="white-space:nowrap"><a class="btn ghost sm" target="_blank" rel="noopener" href="${waUrl(c.phone,'')}">WhatsApp</a> <button class="btn sec sm" data-cli="${c.id}">Ficha</button></td></tr>`).join('')}</table>`
@@ -429,11 +526,11 @@ function drawCli(){
 async function fichaCliente(id){
   const c=await api('/api/p/clientes/'+id);
   modal(`<div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start"><div><h2 style="margin:0">${esc(c.name||'Sem nome')}</h2><div class="muted">${esc(c.phone)} · cliente desde ${fmtD(c.primeiro||c.created_at)}</div></div><span class="badge ${SEG[c.seg][1]}">${SEG[c.seg][0]}</span></div>
-    ${c.cashback!=null?`<div class="fidp">🎁 Saldo de cashback: <b>${BRL(c.cashback)}</b></div>`:""}${c.selos?`<div class="fidp">🏷 Cartão fidelidade: <b>${c.selos.premio?"prêmio liberado no próximo pedido":`${c.selos.feitos} de ${c.selos.meta} pedidos`}</b></div>`:""}
+    ${c.cashback!=null?`<div class="fidp">Saldo de cashback: <b>${BRL(c.cashback)}</b></div>`:""}${c.selos?`<div class="fidp">Cartão fidelidade: <b>${c.selos.premio?"prêmio liberado no próximo pedido":`${c.selos.feitos} de ${c.selos.meta} pedidos`}</b></div>`:""}
     <div class="kpis" style="margin:14px 0"><div class="kpi"><small>Pedidos</small><b class="num">${c.pedidos}</b></div><div class="kpi"><small>Total gasto</small><b class="num">${BRL(c.total)}</b></div><div class="kpi"><small>Ticket médio</small><b class="num">${BRL(c.ticket)}</b></div></div>
     <div class="row cols2"><div><div class="muted" style="font-size:12px;font-weight:600">ENDEREÇO</div>${esc(c.address||'—')}${c.bairro?`<br>${esc(c.bairro)}`:''}</div>
       <div><div class="muted" style="font-size:12px;font-weight:600">MAIS PEDE</div>${c.favoritos.length?c.favoritos.map(([n,q])=>`${q}× ${esc(n)}`).join('<br>'):'—'}</div></div>
-    ${c.email||c.birthday?`<div style="margin-top:10px">${c.email?`✉ ${esc(c.email)}  `:''}${c.birthday?`🎂 ${bday(c.birthday)}`:''}</div>`:''}
+    ${c.email||c.birthday?`<div style="margin-top:10px">${c.email?`${esc(c.email)} · `:''}${c.birthday?`Aniversário: ${bday(c.birthday)}`:''}</div>`:''}
     ${c.notes?`<div class="obs" style="margin-top:10px">${esc(c.notes)}</div>`:''}
     <h3 style="font-size:14px;margin:16px 0 6px">Histórico de pedidos</h3>
     ${c.historico.length?`<div class="tw"><table><tr><th>Nº</th><th>Data</th><th>Itens</th><th>Status</th><th style="text-align:right">Total</th></tr>${c.historico.map(o=>`<tr><td>#${o.num}</td><td>${new Date(o.created_at).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'})}</td><td style="font-size:12px">${esc(o.items.map(i=>i.qty+'× '+i.nome).join(', '))}</td><td><span class="badge ${ST[o.status][1]}">${ST[o.status][0]}</span></td><td class="num" style="text-align:right">${BRL(o.total)}</td></tr>`).join('')}</table></div>`:'<p class="muted">Ainda não fez pedido.</p>'}
@@ -493,14 +590,14 @@ async function saidaEntrega(id){
   modal(`<h2>Saiu para entrega · #${o.num}</h2><p class="muted" style="margin-top:-8px">${esc(o.customer)} · ${esc(o.bairro)}${o.km!=null?` · ${String(o.km).replace('.',',')} km`:''} · taxa ${BRL(o.fee)}</p>
     <div class="row" id="elist">${at.map(c=>`<label class="ent"><input type="radio" name="ent" value="${c.id}" ${c.id===o.courier_id?'checked':''}><span><b>${esc(c.name)}</b><small>${esc(c.veiculo||'')} · recebe ${c.pagamento==='fixo'?BRL(c.valor)+' por entrega':'a taxa ('+BRL(o.fee)+')'}</small></span></label>`).join('')}
       <label class="ent"><input type="radio" name="ent" value="" ${o.courier_id?'':'checked'}><span><b>Sem entregador</b><small>a própria loja leva</small></span></label></div>
-    <div class="foot"><button class="btn sec" onclick="closeModal()">Cancelar</button><button class="btn" id="ok">Confirmar saída →</button></div>`);
+    <div class="foot"><button class="btn sec" onclick="closeModal()">Cancelar</button><button class="btn" id="ok">Confirmar saída</button></div>`);
   $('#ok').onclick=async()=>{ const cid=(document.querySelector('[name=ent]:checked')||{}).value||null;
     const avisar=pref('avisar',true)&&o.phone, win=avisar?window.open('about:blank','_blank'):null;
     try{ const a=await api(`/api/p/orders/${id}/entregador`,'PUT',{courier_id:cid}); const j=await api('/api/p/orders/'+id,'PUT',{status:'saiu'});
       if(win){ if(j.aviso) win.location.href=waUrl(o.phone,j.aviso); else win.close(); }
       const c=ENT.find(x=>String(x.id)===String(cid));
       if(a.whats&&c){ modal(`<h2>Mandar a rota para ${esc(c.name)}?</h2><p class="muted" style="margin-top:-8px">Abre o WhatsApp dele com endereço, mapa, telefone do cliente, valor a cobrar e o link das entregas.</p>
-          <div class="foot"><button class="btn sec" onclick="closeModal()">Agora não</button><a class="btn" id="rota" href="${esc(a.whats)}" target="_blank" rel="noopener">📲 Mandar rota no WhatsApp</a></div>`);
+          <div class="foot"><button class="btn sec" onclick="closeModal()">Agora não</button><a class="btn" id="rota" href="${esc(a.whats)}" target="_blank" rel="noopener">Mandar rota no WhatsApp</a></div>`);
         $('#rota').onclick=()=>setTimeout(closeModal,300); }
       else closeModal();
       toast(`#${o.num}: saiu para entrega${c?' com '+c.name:''}`);
@@ -723,7 +820,7 @@ async function loja(){
   await loadLoja(); const s=LOJA.settings, T=s.tema;
   $('#main').innerHTML=`<div class="bar"><h1>Loja</h1><button class="btn" id="save">Salvar alterações</button></div><div class="grid">
   <div class="card"><h2>Dados</h2><div class="row"><div class="row cols2"><label class="f">Nome da loja<input type="text" id="ln" value="${esc(LOJA.name)}"></label><label class="f">Frase embaixo do nome<input type="text" id="lsub" value="${esc(s.subtitulo)}" placeholder="Ex.: Água de coco · Natal/RN"></label></div>
-    <div class="row cols2"><label class="f">Cidade<input type="text" id="lci" value="${esc(s.cidade)}"></label><label class="f">Link do cardápio<div class="linkbox"><span id="lk">${esc(location.origin+'/'+LOJA.slug)}</span><button class="btn sec sm" id="cplk" type="button">Copiar</button></div><span class="h">Para trocar o endereço, fale com a Hunte Marketing.</span></label></div>
+    <div class="row cols2"><label class="f">Cidade<input type="text" id="lci" value="${esc(s.cidade)}"></label><label class="f">Link do cardápio<div class="linkbox"><span id="lk">${esc(location.origin+'/'+LOJA.slug)}</span><button class="btn sec sm" id="cplk" type="button">Copiar</button></div><span class="h">Para trocar o endereço, fale com a Hunter Marketing.</span></label></div>
     <div class="row cols2"><label class="f">Endereço da loja (sai na comanda)<input type="text" id="lend" value="${esc(s.endereco||'')}" placeholder="Rua, número, bairro"></label><label class="f">Telefone da loja<input type="text" id="ltel" value="${esc(s.telefone||'')}"></label></div>
     ${imgField('llogo',s.logo,'bag','Logo (aparece redonda)')}</div></div>
   <div class="card"><h2>Visual</h2><div class="row cols3"><label class="f">Cor principal<input type="color" id="tc" value="${esc(T.cor)}" style="height:40px;padding:2px"></label><label class="f">Cor de destaque (preços)<input type="color" id="td" value="${esc(T.destaque)}" style="height:40px;padding:2px"></label><label class="f">Cor de acento<input type="color" id="ta" value="${esc(T.acento)}" style="height:40px;padding:2px"></label></div>
@@ -738,9 +835,9 @@ async function loja(){
   <div class="card"><h2>Entrega</h2><div class="row">
     <div class="seg" id="emodo">${[['bairro','Taxa por bairro'],['distancia','Taxa por distância (CEP)']].map(([k,n])=>`<button type="button" data-em="${k}" class="${(s.entrega.modo||'bairro')===k?'on':''}">${n}</button>`).join('')}</div>
     <div id="edist" ${s.entrega.modo==='distancia'?'':'hidden'} class="row">
-      <div class="row cols3"><label class="f">CEP da loja<input type="text" id="lcep" placeholder="00000-000" inputmode="numeric"></label><label class="f">Número<input type="text" id="lnum" placeholder="123"></label><label class="f" style="align-self:end"><button type="button" class="btn sec" id="lloc">📍 Localizar a loja no mapa</button></label></div>
+      <div class="row cols3"><label class="f">CEP da loja<input type="text" id="lcep" placeholder="00000-000" inputmode="numeric"></label><label class="f">Número<input type="text" id="lnum" placeholder="123"></label><label class="f" style="align-self:end"><button type="button" class="btn sec" id="lloc">Localizar no mapa</button></label></div>
       <div class="row cols2"><label class="f">Latitude<input type="text" id="llat" value="${s.lojaLat??''}"></label><label class="f">Longitude<input type="text" id="llng" value="${s.lojaLng??''}"></label></div>
-      <div id="lmap" class="help">${s.lojaLat?`Localização salva · <a target="_blank" rel="noopener" href="https://www.openstreetmap.org/?mlat=${s.lojaLat}&mlon=${s.lojaLng}#map=17/${s.lojaLat}/${s.lojaLng}">conferir no mapa ↗</a>`:'A loja ainda não foi localizada.'}</div>
+      <div id="lmap" class="help">${s.lojaLat?`Localização salva · <a target="_blank" rel="noopener" href="https://www.openstreetmap.org/?mlat=${s.lojaLat}&mlon=${s.lojaLng}#map=17/${s.lojaLat}/${s.lojaLng}">conferir no mapa</a>`:'A loja ainda não foi localizada.'}</div>
       <label class="f">Faixas de distância (uma por linha)<textarea id="lfx" style="min-height:110px" placeholder="3; 5&#10;6; 8&#10;10; 12">${esc((s.entrega.faixas||[]).map(([k,t])=>`${String(k).replace('.',',')}; ${String(t).replace('.',',')}`).join('\n'))}</textarea><span class="h">Formato: <b>até km; taxa</b>. Ex.: "3; 5" = até 3 km, R$ 5.</span></label>
       <div class="row cols2"><label class="f">Distância máxima (km)<input type="number" min="0" step="0.5" id="lrm" value="${s.entrega.raioMax||''}"></label><label class="f">Ajuste de rota (×)<input type="number" min="1" max="2" step="0.05" id="lft" value="${s.entrega.fator||1.3}"><span class="h">A distância é em linha reta; 1,3 aproxima o caminho pelas ruas.</span></label></div>
       <p class="help">O cliente digita o CEP, o endereço é preenchido sozinho e a taxa é calculada pela distância até a loja. Se o endereço não for achado no mapa, vale a taxa do bairro (lista abaixo).</p>
@@ -760,8 +857,8 @@ async function loja(){
   $('#emodo').onclick=e=>{ const b=e.target.closest('[data-em]'); if(!b) return; EMODO=b.dataset.em; $$('#emodo button').forEach(x=>x.classList.toggle('on',x===b)); $('#edist').hidden=EMODO!=='distancia'; };
   $('#lloc').onclick=async()=>{ const bt=$('#lloc'); bt.disabled=true; bt.textContent='Procurando…';
     try{ const j=await api('/api/p/localizar','POST',{cep:$('#lcep').value,numero:$('#lnum').value}); $('#llat').value=j.lat.toFixed(6); $('#llng').value=j.lng.toFixed(6);
-      $('#lmap').innerHTML=`Achei: ${esc(j.endereco||'')} · <a target="_blank" rel="noopener" href="https://www.openstreetmap.org/?mlat=${j.lat}&mlon=${j.lng}#map=17/${j.lat}/${j.lng}">conferir no mapa ↗</a> · depois clique em Salvar`; }
-    catch(e){ toast(e.message); } bt.disabled=false; bt.textContent='📍 Localizar a loja no mapa'; };
+      $('#lmap').innerHTML=`Achei: ${esc(j.endereco||'')} · <a target="_blank" rel="noopener" href="https://www.openstreetmap.org/?mlat=${j.lat}&mlon=${j.lng}#map=17/${j.lat}/${j.lng}">conferir no mapa</a> · depois clique em Salvar`; }
+    catch(e){ toast(e.message); } bt.disabled=false; bt.textContent='Localizar no mapa'; };
   $('#save').onclick=async()=>{
     const horario={}; DIAS.forEach((_,i)=>{ const a=parseH($(`[data-ha="${i}"]`).value), b=parseH($(`[data-hb="${i}"]`).value); horario[i]=$(`[data-hd="${i}"]`).checked&&a!=null&&b!=null&&b>a?[a,b]:null; });
     const fx=$('#lfx').value.split('\n').map(l=>l.split(';')).filter(x=>x[0]&&x[0].trim()).map(([k,t])=>[+(k.replace(',','.').trim())||0,+(String(t||'0').replace(',','.').trim())||0]).filter(x=>x[0]>0);

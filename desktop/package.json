@@ -1,9 +1,9 @@
 {
   "name": "huntix-pedidos",
   "productName": "Huntix Pedidos",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Huntix Pedidos: painel da loja com impressão direta na impressora térmica",
-  "author": "Hunte Marketing",
+  "author": "Hunter Marketing",
   "main": "main.js",
   "private": true,
   "scripts": {
@@ -16,7 +16,7 @@
     "electron-builder": "25.1.8"
   },
   "build": {
-    "appId": "br.com.huntemarketing.huntix",
+    "appId": "br.com.huntermarketing.huntix",
     "productName": "Huntix Pedidos",
     "artifactName": "Huntix-Pedidos-Setup.${ext}",
     "directories": {

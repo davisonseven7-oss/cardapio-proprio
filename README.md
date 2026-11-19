@@ -1,6 +1,6 @@
 # Huntix · cardápios no padrão rede social
 
-Sistema da **Hunte Marketing** para vários clientes. Cada loja tem um cardápio com cara de Instagram (stories, feed, curtidas, campeão da semana, robô no direct) e um painel próprio. Você administra todos pelo painel admin.
+Sistema da **Hunter Marketing** para vários clientes. Cada loja tem um cardápio com cara de Instagram (stories, feed, curtidas, campeão da semana, robô no direct) e um painel próprio. Você administra todos pelo painel admin.
 
 | Endereço | O que é |
 |---|---|

@@ -17,7 +17,7 @@ let win = null, tray = null, saindo = false;
 
 if (!app.requestSingleInstanceLock()) app.quit();
 app.on('second-instance', () => mostrar());
-app.setAppUserModelId('br.com.huntemarketing.huntix');
+app.setAppUserModelId('br.com.huntermarketing.huntix');
 
 function mostrar() { if (!win) return criarJanela(); if (win.isMinimized()) win.restore(); win.show(); win.focus(); }
 
@@ -79,7 +79,7 @@ async function montarBandeja() {
       ...ps.map(p => ({ label: p.name, type: 'radio', checked: cfg.impressora === p.name, click: () => { cfg.impressora = p.name; salvar(); } }))] },
     { label: 'Iniciar com o Windows', type: 'checkbox', checked: inicia, click: m => app.setLoginItemSettings({ openAtLogin: m.checked, args: ['--oculto'] }) },
     { type: 'separator' },
-    { label: 'Sobre', click: () => dialog.showMessageBox({ type: 'info', title: 'Huntix Pedidos', message: `Huntix Pedidos ${app.getVersion()}`, detail: `Um sistema Hunte Marketing.\n${SERVIDOR}` }) },
+    { label: 'Sobre', click: () => dialog.showMessageBox({ type: 'info', title: 'Huntix Pedidos', message: `Huntix Pedidos ${app.getVersion()}`, detail: `Um sistema Hunter Marketing.\n${SERVIDOR}` }) },
     { label: 'Sair', click: () => { saindo = true; app.quit(); } }
   ]));
 }

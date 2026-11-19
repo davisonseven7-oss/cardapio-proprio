@@ -30,6 +30,16 @@ main{max-width:1180px;margin:0 auto;padding:22px 16px 60px}
 .cl .meta b{font-size:13px;color:var(--ink)}
 .cl .acts{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
 @media (max-width:720px){.cl{grid-template-columns:1fr}.cl .acts{justify-content:flex-start}}
+
+/* visual sóbrio */
+.top{background:var(--card);color:var(--ink);border-bottom:1px solid var(--line)}
+.top .hx-logo i{border:0}
+.top .who{color:var(--muted)}
+.top .btn.ghost{color:var(--ink);border-color:var(--line)}
+.bar h1{font-size:18px;font-weight:600}
+.kpi{border-radius:8px}.kpi small{font-weight:500}.kpi b{font-family:var(--f);font-size:22px;font-weight:600}
+.cl{border-radius:6px}
+.cl b{font-size:15px;font-weight:600}
 </style>
 </head>
 <body>
@@ -38,7 +48,7 @@ main{max-width:1180px;margin:0 auto;padding:22px 16px 60px}
   <span class="who" id="who"></span><button class="btn ghost sm" id="sair">Sair</button>
 </div></header>
 <main>
-  <div class="bar"><h1>Seus clientes</h1><input type="text" id="busca" placeholder="Buscar cliente" style="width:220px"><a class="btn ghost" href="/api/a/backup" title="Cópia completa do banco (todos os clientes). O sistema também guarda uma cópia por dia no servidor.">⬇ Baixar backup</a><button class="btn" id="novo">+ Novo cliente</button></div>
+  <div class="bar"><h1>Seus clientes</h1><input type="text" id="busca" placeholder="Buscar cliente" style="width:220px"><a class="btn ghost" href="/api/a/backup" title="Cópia completa do banco (todos os clientes). O sistema também guarda uma cópia por dia no servidor.">Baixar backup</a><button class="btn" id="novo">+ Novo cliente</button></div>
   <div class="kpis" id="kpis"></div>
   <div class="list" id="list"><p class="muted">Carregando…</p></div>
 </main>
@@ -68,7 +78,7 @@ function render(){
     <div class="kpi"><small>Pedidos (30 dias)</small><b class="num">${ALL.reduce((s,t)=>s+t.pedidos30,0)}</b></div><div class="kpi"><small>Vendas dos clientes (30 dias)</small><b class="num">${BRL(ALL.reduce((s,t)=>s+t.vendas30,0))}</b></div>`;
   $('#list').innerHTML=list.map(t=>`<div class="cl ${t.status==='ativo'?'':'paused'}"><div><b>${esc(t.name)}</b> <span class="badge ${t.status==='ativo'?'ok':'warn'}">${t.status}</span>
       <div class="meta"><span>/${esc(t.slug)}</span><span><b class="num">${t.pedidos30}</b> pedidos · <b class="num">${BRL(t.vendas30)}</b> em 30 dias</span><span>${t.produtos} produtos</span><span>Login: ${t.logins?esc(t.logins):'<b style="color:var(--bad)">sem login</b>'}</span></div></div>
-    <div class="acts"><button class="btn sm" data-act="${t.id}">Abrir painel</button><a class="btn sec sm" href="/${esc(t.slug)}" target="_blank" rel="noopener">Ver cardápio ↗</a><button class="btn ghost sm" data-login="${t.id}">Login do cliente</button><button class="btn ghost sm" data-edit="${t.id}">Editar</button></div></div>`).join('')||'<div class="card muted">Nenhum cliente encontrado.</div>';
+    <div class="acts"><button class="btn sm" data-act="${t.id}">Abrir painel</button><a class="btn sec sm" href="/${esc(t.slug)}" target="_blank" rel="noopener">Ver cardápio</a><button class="btn ghost sm" data-login="${t.id}">Login do cliente</button><button class="btn ghost sm" data-edit="${t.id}">Editar</button></div></div>`).join('')||'<div class="card muted">Nenhum cliente encontrado.</div>';
   $$('[data-act]').forEach(b=>b.onclick=async()=>{ await api('/api/a/act','POST',{id:+b.dataset.act}); location.href='/painel'; });
   $$('[data-edit]').forEach(b=>b.onclick=()=>edit(ALL.find(t=>t.id===+b.dataset.edit)));
   $$('[data-login]').forEach(b=>b.onclick=()=>loginModal(ALL.find(t=>t.id===+b.dataset.login)));
