@@ -611,7 +611,7 @@ let RF={de:today(),ate:today()};
    FASE 3 · loja física: balcão (PDV), mesas, caixa e estoque
    ===================================================================== */
 let MENU=null;
-async function loadMenu(){ const r=await fetch(`/api/m/${LOJA.slug}`); if(r.status===423) throw new Error('Cardápio pausado: ative a loja para vender'); MENU=await r.json(); return MENU; }
+async function loadMenu(){ MENU=await api('/api/p/menu'); return MENU; }
 const PAGS=['Dinheiro','Pix','Cartão de débito','Cartão de crédito'];
 const gOf=g=>({nome:g.nome,itens:g.itens||[],min:g.min??1,max:g.max??1,regra:g.regra||'soma'});
 const extraOf=(p,sel)=>(p.opts||[]).map(gOf).reduce((t,g,gi)=>{ const ex=(sel[gi]||[]).map(i=>+g.itens[i][1]||0); if(!ex.length) return t; return t+(g.regra==='maior'?Math.max(...ex):g.regra==='media'?ex.reduce((a,b)=>a+b,0)/ex.length:ex.reduce((a,b)=>a+b,0)); },0);

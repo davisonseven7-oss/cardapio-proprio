@@ -578,6 +578,8 @@ function checaEstoque(tid, items) {
   }
   return null;
 }
+/* produtos para o balcão e as mesas (funciona mesmo com o cardápio público pausado) */
+app.get('/api/p/menu', P, (req, res) => res.json(menuPayload(req.tenant, null)));
 app.get('/api/p/estoque', P, (req, res) => {
   const ps = db.prepare(`SELECT p.id, p.name, p.estoque_controle, p.estoque, p.estoque_min, p.active, c.name categoria,
       (SELECT MAX(0,COALESCE(-SUM(qtd),0)) FROM stock_moves m WHERE m.product_id=p.id AND m.motivo IN ('venda','cancelamento') AND m.order_id IS NOT NULL AND m.created_at>?) vendidos30
