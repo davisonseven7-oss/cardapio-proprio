@@ -8,6 +8,12 @@ const ICONS={
   pizza:'<path d="M24 42L8 12c10-5 22-5 32 0z"/><circle cx="21" cy="20" r="2"/><circle cx="28" cy="26" r="2"/><circle cx="23" cy="32" r="1.6"/>',
   burger:'<path d="M9 22c0-8 7-12 15-12s15 4 15 12z"/><path d="M8 27h32M10 32h28c0 4-3 6-6 6H16c-3 0-6-2-6-6z"/>',
   bag:'<path d="M10 16h28l-2 26H12z"/><path d="M18 16a6 6 0 0 1 12 0"/>',
+  pill:'<rect x="8" y="17" width="32" height="14" rx="7" transform="rotate(-35 24 24)"/><path d="M19 17l10 14"/>',
+  cross:'<path d="M19 8h10v11h11v10H29v11H19V29H8V19h11z"/>',
+  baby:'<circle cx="24" cy="20" r="11"/><path d="M20 19h.01M28 19h.01M21 25c2 2 4 2 6 0"/><path d="M14 40c2-5 6-7 10-7s8 2 10 7"/>',
+  sun:'<circle cx="24" cy="24" r="8"/><path d="M24 6v5M24 37v5M6 24h5M37 24h5M11 11l3.5 3.5M33.5 33.5L37 37M11 37l3.5-3.5M33.5 14.5L37 11"/>',
+  drop:'<path d="M24 6s-12 14-12 22a12 12 0 0 0 24 0c0-8-12-22-12-22z"/>',
+  bandage:'<rect x="6" y="17" width="36" height="14" rx="7" transform="rotate(-35 24 24)"/><rect x="18" y="18" width="12" height="12" rx="2" transform="rotate(-35 24 24)"/>',
 
   horse:'<path d="M14 42l2-11c-3-3-4-7-3-11l5-9 3 4 2-5 3 6c6 2 10 7 11 14l1 5c0 2-2 3-4 2l-5-3-4 3-1 5"/><circle cx="23" cy="17" r="1.2" fill="currentColor"/><path d="M27 13c-3 3-4 7-4 11"/>',
   dog:'<path d="M15 14c-4 0-7 6-6 12 1 3 4 2 5-1"/><path d="M33 14c4 0 7 6 6 12-1 3-4 2-5-1"/><path d="M14 22c0-6 4-10 10-10s10 4 10 10v7c0 6-4 10-10 10s-10-4-10-10z"/><path d="M21 31h6l-3 3z" fill="currentColor"/><circle cx="20" cy="24" r="1.3" fill="currentColor"/><circle cx="28" cy="24" r="1.3" fill="currentColor"/>',
@@ -26,5 +32,5 @@ const ICONS={
   boot:'<path d="M15 6h12v20l10 5c3 1 4 4 4 7v2H11l1-5c1-4 3-6 3-10z"/><path d="M11 40v3h30v-3M15 14h12"/>',
   belt:'<path d="M4 20h40v8H4z"/><rect x="18" y="16" width="12" height="16" rx="3"/><path d="M24 20v8"/>',
 };
-const ICON_NAMES={horse:"Cavalo",dog:"Cachorro",cat:"Gato",bird:"Ave",corn:"Grão",sack:"Saco",jar:"Pote",bone:"Osso",saddle:"Sela",bridle:"Rédea",shoe:"Ferradura",brush:"Escova",hat:"Chapéu",shirt:"Camisa",boot:"Bota",belt:"Cinto",coconut:"Coco",bottle:"Garrafa",heart:"Coração",cup:"Copo",plate:"Prato",pizza:"Pizza",burger:"Lanche",bag:"Sacola"};
+const ICON_NAMES={pill:"Remédio",cross:"Farmácia",baby:"Bebê",sun:"Sol",drop:"Gota",bandage:"Curativo",horse:"Cavalo",dog:"Cachorro",cat:"Gato",bird:"Ave",corn:"Grão",sack:"Saco",jar:"Pote",bone:"Osso",saddle:"Sela",bridle:"Rédea",shoe:"Ferradura",brush:"Escova",hat:"Chapéu",shirt:"Camisa",boot:"Bota",belt:"Cinto",coconut:"Coco",bottle:"Garrafa",heart:"Coração",cup:"Copo",plate:"Prato",pizza:"Pizza",burger:"Lanche",bag:"Sacola"};
 function ico(n,cls){return '<svg class="'+(cls||"i")+'" viewBox="0 0 48 48" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">'+(ICONS[n]||ICONS.bag)+"</svg>";}

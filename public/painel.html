@@ -230,6 +230,19 @@ main{margin-left:var(--side);max-width:calc(1180px + var(--side));padding:22px 2
 .mesa b{font-size:15px}.mesa small{color:var(--muted);font-size:12px}.mesa span{font-weight:600}
 .mesa.oc{border-color:#E8A15F;background:#FFF8F1;box-shadow:inset 3px 0 0 var(--hx)}
 .mesa em{font-style:normal;font-size:12px;color:var(--warn);font-weight:500}
+/* tema sazonal */
+.sl.tema b{font-weight:600}
+.sl.tema.on{color:var(--hx)}.sl.tema.on svg{color:var(--hx)}
+.tlist{display:grid;gap:8px}.tlist.two{grid-template-columns:1fr 1fr}
+@media (max-width:640px){.tlist.two{grid-template-columns:1fr}}
+.topt{display:grid;grid-template-columns:auto auto 1fr auto;gap:10px;align-items:center;border:1px solid var(--line);border-radius:8px;padding:10px 12px;cursor:pointer;font-weight:400}
+.topt:hover{border-color:var(--ink)}.topt.on{border-color:var(--hx);box-shadow:inset 0 0 0 1px var(--hx)}
+.topt input{margin:0;accent-color:var(--hx)}
+.topt b{display:block;font-size:14px}.topt small b{display:inline;font-size:inherit}.topt small{display:block;color:var(--muted);font-size:12px;line-height:1.35}
+.topt .sw{display:inline-flex;padding:3px;border-radius:6px;border:1px solid var(--line);gap:2px}
+.topt .sw i{width:12px;height:22px;border-radius:3px;display:block}
+.tver{font-size:12px;color:var(--muted);text-decoration:underline}
+.grp2{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin:16px 0 8px}
 </style>
 </head>
 <body>
@@ -264,6 +277,7 @@ main{margin-left:var(--side);max-width:calc(1180px + var(--side));padding:22px 2
     <button data-tab="conta"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="3.6"/><path d="M5 20c.8-3.6 3.5-5.6 7-5.6s6.2 2 7 5.6"/></svg><span>Conta</span></button>
   </nav>
   <div class="sideFoot">
+    <button class="sl tema" id="temaBtn" title="Mudar o visual do cardápio para a época do ano"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18c1.4 0 2-1 2-2 0-1.4-1.2-1.6-1.2-3 0-1 .8-1.8 1.8-1.8H17a4 4 0 0 0 4-4C21 6.5 17 3 12 3z"/><circle cx="7.5" cy="11" r="1.2" fill="currentColor"/><circle cx="10.5" cy="7" r="1.2" fill="currentColor"/><circle cx="15" cy="7.5" r="1.2" fill="currentColor"/></svg><span>Tema: <b id="temaNome">Normal</b></span></button>
     <a class="sl" id="ver" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg><span>Ver cardápio</span></a>
     <a class="sl app" id="getApp" href="/download" hidden title="Instale no computador da loja: imprime direto na térmica e avisa pedido novo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg><span>Baixar app</span></a>
     <button class="sl" id="sair"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 4h4v16h-4M10 8l-4 4 4 4M6 12h10"/></svg><span>Sair</span></button>
@@ -312,9 +326,39 @@ let ME,LOJA,tab='pedidos';
   if(ME.role==='admin'){ $('#acting').hidden=false; $('#acting').innerHTML=`Você está no painel de <b>${esc(ME.tenant.name)}</b> como administrador · <a href="#" id="back">voltar ao admin</a>`; $('#back').onclick=async e=>{ e.preventDefault(); await api('/api/a/act','POST',{id:null}); location.href='/admin'; }; }
   await loadLoja(); const h=location.hash.slice(1); show($(`[data-tab="${h}"]`)?h:'pedidos'); pollNew(); setInterval(pollNew,20000);
 })();
-async function loadLoja(){ LOJA=await api('/api/p/loja'); $('#sName').textContent=LOJA.name; const url=location.origin+'/'+LOJA.slug; $('#sLink').textContent=url.replace(/^https?:\/\//,'')+(LOJA.status==='pausado'?' · pausado':''); $('#ver').href='/'+LOJA.slug; const lg=$('#sLogo'); lg.hidden=!LOJA.settings.logo; lg.src=LOJA.settings.logo||''; document.title=LOJA.name+' · Huntix'; }
+async function loadLoja(){ LOJA=await api('/api/p/loja'); temaLabel(); $('#sName').textContent=LOJA.name; const url=location.origin+'/'+LOJA.slug; $('#sLink').textContent=url.replace(/^https?:\/\//,'')+(LOJA.status==='pausado'?' · pausado':''); $('#ver').href='/'+LOJA.slug; const lg=$('#sLogo'); lg.hidden=!LOJA.settings.logo; lg.src=LOJA.settings.logo||''; document.title=LOJA.name+' · Huntix'; }
 /* fora do app: mostra o botão de baixar (só faz sentido em computador) */
 if(!DESK&&!/Android|iPhone|iPad/i.test(navigator.userAgent)) $('#getApp').hidden=false;
+/* ---------------- tema sazonal do cardápio ---------------- */
+function nomeTema(z){ return z.id==='blackfriday'?'Black '+(LOJA.settings.sigla||LOJA.marca):z.nome; }
+function temaLabel(){
+  const e=LOJA.settings.sazonal||'', z=LOJA.sazonais.find(x=>x.id===LOJA.sazonalAtual);
+  $('#temaNome').textContent=!e?'Normal':e==='auto'?'do momento ('+(z?nomeTema(z):'—')+')':(z?nomeTema(z):'Normal');
+  $('#temaBtn').classList.toggle('on',!!e);
+}
+function temaModal(){
+  const e=LOJA.settings.sazonal||'', mes=LOJA.sazonais.find(x=>x.id===LOJA.sazonalDoMes), T=LOJA.settings.tema||{};
+  const sw=(a,b,c,dk)=>`<span class="sw"${dk?' style="background:#000"':''}><i style="background:${a}"></i><i style="background:${b}"></i><i style="background:${c}"></i></span>`;
+  const MES=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+  const op=(id,nome,sub,cores,ver)=>`<label class="topt${e===id?' on':''}"><input type="radio" name="saz" value="${id}"${e===id?' checked':''}>${cores}<span><b>${nome}</b><small>${sub}</small></span><a href="/${LOJA.slug}?saz=${ver}" target="_blank" rel="noopener" class="tver">Ver</a></label>`;
+  modal(`<h2>Tema do cardápio</h2><p class="muted" style="margin-top:-8px">Escolha manter o seu design ou usar o visual da época. A troca vale na hora para todos os clientes.</p>
+  <div class="tlist">
+    ${op('','Manter o design normal','As cores da sua loja, como sempre.',sw(T.cor||'#333',T.destaque||'#ccc',T.acento||'#eee'),'normal')}
+    ${op('auto','Tema do momento (automático)',`Agora: <b>${mes?nomeTema(mes):'—'}</b>. Muda sozinho todo mês: Black Friday em novembro, Natal em dezembro, São João em junho…`,mes?(mes.id==='blackfriday'?sw(T.cor||'#333',T.destaque||'#ccc','#000',true):sw(mes.cor,mes.destaque,mes.acento)):'','auto')}
+  </div>
+  <label class="f" style="margin-top:14px">Nome da loja no tema<input id="tSigla" maxlength="18" value="${esc(LOJA.settings.sigla||'')}" placeholder="${esc(LOJA.marca)}"></label>
+  <p class="help" style="margin-top:4px">Aparece no tema: <b id="tEx">BLACK ${esc((LOJA.settings.sigla||LOJA.marca).toUpperCase())}</b>, Natal ${esc(LOJA.settings.sigla||LOJA.marca)}… As cores e o logo continuam os da sua loja.</p>
+  <div class="grp2">Ou escolha um tema fixo</div>
+  <div class="tlist two">${LOJA.sazonais.map(z=>op(z.id,z.id==='blackfriday'?'Black '+esc(LOJA.settings.sigla||LOJA.marca):z.nome,MES[z.mes-1]+(z.id===LOJA.sazonalDoMes?' · <b>época atual</b>':''),(z.id==='blackfriday'?sw(T.cor||'#333',T.destaque||'#ccc','#000',true):sw(z.cor,z.destaque,z.acento)),z.id)).join('')}</div>
+  <div class="row" style="justify-content:flex-end;gap:8px;margin-top:14px"><button class="btn sec" id="tCancel">Cancelar</button><button class="btn" id="tSave">Salvar tema</button></div>`);
+  $('#mbox').querySelectorAll('input[name=saz]').forEach(r=>r.onchange=()=>$('#mbox').querySelectorAll('.topt').forEach(l=>l.classList.toggle('on',l.querySelector('input').checked)));
+  $('#tCancel').onclick=()=>$('#modal').hidden=true;
+  $('#tSigla').oninput=e=>$('#tEx').textContent='BLACK '+(e.target.value.trim()||LOJA.marca).toUpperCase();
+  $('#tSave').onclick=async()=>{ const v=$('#mbox').querySelector('input[name=saz]:checked')?.value||'';
+    try{ await api('/api/p/loja','PUT',{name:LOJA.name,settings:{sazonal:v,sigla:$('#tSigla').value.trim()}}); $('#modal').hidden=true; await loadLoja();
+      toast(v?'Tema '+$('#temaNome').textContent+' ativado no cardápio':'Design normal de volta no cardápio'); }catch(err){ toast(err.message); } };
+}
+$('#temaBtn').onclick=temaModal;
 $('#sair').onclick=async()=>{ await fetch('/api/logout',{method:'POST'}); location.replace('/login'); };
 $('#tabs').onclick=e=>{ const b=e.target.closest('[data-tab]'); if(b){ show(b.dataset.tab); document.body.classList.remove('menuOn'); } };
 $('#menuBtn').onclick=()=>document.body.classList.toggle('menuOn'); $('#sideBack').onclick=()=>document.body.classList.remove('menuOn');

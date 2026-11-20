@@ -7,11 +7,11 @@ function seed({ db, hashPass }) {
     if (email && pass.length >= 8) { db.prepare(`INSERT INTO users(email,name,pass_hash,role) VALUES(?,?,?,'admin')`).run(email, 'Administrador', hashPass(pass)); console.log('Admin criado:', email); }
     else console.warn('ATENÇÃO: defina ADMIN_EMAIL e ADMIN_PASSWORD (8+ caracteres) para criar o login de administrador.');
   }
-  if (db.prepare('SELECT 1 FROM tenants').get()) { demo(db); fotos(db); return; }
+  if (db.prepare('SELECT 1 FROM tenants').get()) { demo(db); fotos(db); galdino(db); return; }
   db.exec('BEGIN');
   try { potengi(db); boaHora(db); db.exec('COMMIT'); console.log('Cardápios iniciais criados: /potengi e /boahora'); }
   catch (e) { db.exec('ROLLBACK'); throw e; }
-  demo(db); fotos(db);
+  demo(db); fotos(db); galdino(db);
 }
 
 /* login de demonstração do Boa Hora (para mostrar a clientes).
@@ -41,6 +41,83 @@ function fotos(db) {
   let n = 0; for (const [nome, arq] of Object.entries(FOTOS)) n += Number(up.run('/img/' + arq, t.id, nome).changes);
   s.fotosDemo = true; db.prepare('UPDATE tenants SET settings=? WHERE id=?').run(JSON.stringify(s), t.id);
   console.log('Fotos ilustrativas da Potengi:', n, 'produtos');
+}
+
+/* Farmácia Antônio Galdino (FAG), cliente do CRM. Cardápio de demonstração com
+   login próprio. Roda uma vez: só cria se a loja ainda não existir.
+   Só o hash da senha fica aqui; a senha não está no código. */
+const GALDINO_LOGIN = { email: 'galdino@demo.huntix', hash: '69f1378626f2d69ebbaa240c8b51cc85:26955960d74f332ee5e97b6ea425b35ba5d667d34a153909b7e24920d41f154a6c703cb70bcb48018c45fffef972b93a4f913853e5394b8634760ab51633f627' };
+function galdino(db) {
+  if (db.prepare("SELECT 1 FROM tenants WHERE slug='galdino'").get()) return;
+  db.exec('BEGIN');
+  try {
+    const t = ins(db, 'tenants', { slug: 'galdino', name: 'Farmácia Galdino', status: 'ativo', settings: {
+      subtitulo: 'Nosso compromisso é a sua saúde! · Caiçara/RN', sigla: 'FAG', cidade: 'Caiçara/RN', logo: '/img/galdino-logo.jpg',
+      whatsapp: '5584998610037', enviarWhats: false, atendente: 'seg a sáb 7h–21h, dom 8h–12h',
+      tema: { cor: '#B5202E', destaque: '#FFD54A', acento: '#FDE8EA', fonte: 'Archivo Black' },
+      horario: { 0: [8, 12], 1: [7, 21], 2: [7, 21], 3: [7, 21], 4: [7, 21], 5: [7, 21], 6: [7, 21] },
+      bairros: [['Centro', 3], ['Bairros próximos', 5], ['Zona rural', 10]],
+      retirada: true, minimo: 0, pagamentos: ['Pix na entrega', 'Cartão (maquininha)', 'Dinheiro'],
+      promoTemas: ['Domingo de plantão', 'Segunda da saúde', 'Terça da beleza', 'Quarta do bebê', 'Quinta natural', 'Sexta perfumada', 'Sábado de cuidados'],
+      curtidas: { meta: 3, desconto: 5, campeao: 10 }, robo: { nome: 'Felix', ativo: true }
+    } });
+    const C = {}; [['dor', 'Dor e febre', 'pill'], ['gripe', 'Gripe e garganta', 'pill'], ['estomago', 'Estômago', 'pill'], ['naturais', 'Naturais e suplementos', 'jar'],
+      ['perfumes', 'Perfumes árabes', 'bottle'], ['higiene', 'Higiene', 'drop'], ['beleza', 'Beleza e dermo', 'sun'], ['bebe', 'Mamãe e bebê', 'baby'], ['socorro', 'Primeiros socorros', 'bandage']]
+      .forEach(([k, n, i], s) => C[k] = ins(db, 'categories', { tenant_id: t, name: n, icon: i, sort: s }));
+    const o = (nome, ...itens) => [{ nome, itens: itens.map(x => [x, 0]) }];
+    const BULA = ' Leia a bula. Se persistirem os sintomas, procure um médico.';
+    const P = {}; let s = 0;
+    const add = (k, cat, name, price, img, descr, x = {}) => P[k] = ins(db, 'products', { tenant_id: t, category_id: C[cat], name, price, img: '/img/' + img, icon: 'pill', descr, sort: s++, tag: x.tag || '', bulk_qty: x.at ? x.at[0] : null, bulk_price: x.at ? x.at[1] : null, options: x.opts || [], promo_price: x.promo ? x.promo[0] : null, promo_days: x.promo ? x.promo[1] : [], keywords: x.kw || '' });
+    add('dorflex', 'dor', 'Dorflex 36 comprimidos', 26.99, 'gal-1.jpg', 'Analgésico e relaxante muscular.' + BULA, { tag: 'Mais vendido', promo: [23.99, [1]], kw: 'dor dor de cabeca relaxante muscular' });
+    add('dipirona', 'dor', 'Dipirona 500 mg 10 comprimidos', 5.99, 'gal-2.png', 'Genérico. Para dor e febre.' + BULA, { at: [3, 4.99], kw: 'febre dor generico' });
+    add('neosaldina', 'dor', 'Neosaldina 20 drágeas', 24.99, 'gal-3.jpg', 'Para dor de cabeça.' + BULA, { kw: 'dor de cabeca enxaqueca' });
+    add('benegrip', 'gripe', 'Benegrip 6 comprimidos', 9.99, 'gal-4.jpg', 'Alivia os sintomas da gripe.' + BULA, { promo: [8.49, [1]], kw: 'gripe resfriado' });
+    add('strepsils', 'gripe', 'Strepsils mel e limão 8 pastilhas', 16.99, 'gal-5.jpg', 'Para dor de garganta.' + BULA, { kw: 'garganta pastilha' });
+    add('buscopan', 'estomago', 'Buscopan Composto 20 comprimidos', 29.99, 'gal-6.jpg', 'Para cólicas e dor abdominal.' + BULA, { kw: 'colica barriga' });
+    add('eno', 'estomago', 'Sal de fruta Eno 100 g', 22.99, 'gal-7.jpg', 'Para azia e má digestão.' + BULA, { kw: 'azia ma digestao' });
+    add('engov', 'estomago', 'Engov 12 comprimidos', 17.99, 'gal-8.jpg', 'Para o dia seguinte da festa.' + BULA, { promo: [14.99, [5, 6]], kw: 'ressaca' });
+    add('lavitan', 'naturais', 'Lavitan A-Z 60 comprimidos', 39.99, 'gal-9.jpg', 'Polivitamínico para o dia a dia.', { tag: 'Mais vendido', kw: 'vitamina' });
+    add('vitc', 'naturais', 'Vitamina C 1 g efervescente 10 un', 14.99, 'gal-10.jpg', 'Reforço para a imunidade.', { at: [3, 12.99], kw: 'vitamina c imunidade' });
+    add('propolis', 'naturais', 'Extrato de própolis vermelho 20 ml', 39.9, 'gal-28.png', 'Produto natural, em gotas.', { promo: [34.9, [4]], kw: 'propolis natural garganta' });
+    add('colageno', 'naturais', 'Colágeno Verisol 30 sachês', 89.9, 'gal-29.jpg', 'Para pele, unhas e cabelo.', { promo: [79.9, [2]], kw: 'colageno pele' });
+    add('creatina', 'naturais', 'Creatina 300 g', 99.9, 'gal-30.png', 'Creatina pura para treino.', { tag: 'Chegou', kw: 'academia treino' });
+    add('omega', 'naturais', 'Ômega 3 60 cápsulas', 49.9, 'gal-31.jpg', 'Para o coração e a memória.', { kw: 'omega 3 oleo de peixe' });
+    add('melatonina', 'naturais', 'Melatonina em gotas 30 ml', 39.9, 'gal-32.png', 'Ajuda a regular o sono.', { kw: 'sono dormir' });
+    add('khamrah', 'perfumes', 'Lattafa Khamrah 100 ml', 299.9, 'gal-24.jpg', 'Perfume árabe unissex, doce e marcante.', { tag: 'Destaque', promo: [279.9, [5]], kw: 'perfume arabe lattafa' });
+    add('haya', 'perfumes', 'Lattafa Haya 100 ml', 249.9, 'gal-25.jpg', 'Perfume árabe feminino, floral e frutado.', { promo: [229.9, [5]], kw: 'perfume arabe feminino' });
+    add('desertrose', 'perfumes', 'Afnan Souvenir Desert Rose 100 ml', 279.9, 'gal-26.jpg', 'Perfume árabe feminino, rosa e baunilha.', { kw: 'perfume arabe feminino' });
+    add('alwesal', 'perfumes', 'Al Wataniah Attar Al Wesal 100 ml', 199.9, 'gal-27.jpg', 'Perfume árabe masculino, amadeirado.', { kw: 'perfume arabe masculino' });
+    add('colgate', 'higiene', 'Creme dental Colgate Total 12 90 g', 13.99, 'gal-11.jpg', 'Proteção completa para a boca.', { at: [3, 11.99], kw: 'pasta de dente' });
+    add('dove', 'higiene', 'Sabonete Dove 135 g', 5.99, 'gal-12.jpg', 'Hidratação na hora do banho.', { at: [6, 4.99] });
+    add('rexona', 'higiene', 'Desodorante Rexona aerosol 150 ml', 17.99, 'gal-13.jpg', 'Proteção por 72 horas.', { promo: [14.99, [6]], kw: 'desodorante' });
+    add('elseve', 'higiene', 'Shampoo Elseve Óleo Extraordinário 400 ml', 32.99, 'gal-14.jpg', 'Nutrição para cabelos secos.', { kw: 'shampoo cabelo' });
+    add('sunfresh', 'beleza', 'Protetor solar Neutrogena Sun Fresh 200 ml', 69.99, 'gal-15.jpg', 'Toque seco, não deixa a pele oleosa.', { opts: o('FPS', '30', '50', '70'), promo: [59.99, [2, 6]], kw: 'protetor solar praia' });
+    add('nivea', 'beleza', 'Loção Nivea Milk 400 ml', 29.99, 'gal-16.jpg', 'Para pele seca a extrasseca.', { kw: 'hidratante' });
+    add('cetaphil', 'beleza', 'Creme hidratante Cetaphil 250 g', 79.99, 'gal-17.png', 'Para pele sensível.', { kw: 'hidratante pele sensivel' });
+    add('off', 'beleza', 'Repelente OFF! Family 165 ml', 24.99, 'gal-18.jpg', 'Protege contra mosquitos.', { kw: 'repelente dengue mosquito' });
+    add('pampers', 'bebe', 'Fralda Pampers Confort Sec 92 un', 129.99, 'gal-19.jpg', 'Até 12 horas sequinho.', { opts: o('Tamanho', 'M', 'G', 'XG', 'XXG'), tag: 'Mais vendido', promo: [114.99, [3]], kw: 'fralda bebe' });
+    add('bepantol', 'bebe', 'Bepantol Baby 60 g', 39.99, 'gal-20.jpg', 'Previne assaduras.', { promo: [34.99, [3]], kw: 'assadura bebe pomada' });
+    add('colonia', 'bebe', 'Colônia Huggies Extra Suave 100 ml', 29.99, 'gal-21.jpg', 'Hipoalergênica, para bebês.', { kw: 'colonia bebe' });
+    add('bandaid', 'socorro', 'Curativo Band-Aid transparente 40 un', 14.99, 'gal-22.jpg', 'Para pequenos cortes.', { kw: 'curativo' });
+    add('termometro', 'socorro', 'Termômetro infravermelho G-Tech', 149.9, 'gal-23.jpg', 'Mede a febre sem encostar.', { kw: 'febre termometro' });
+
+    const st = (name, cover, slides, sort) => ins(db, 'stories', { tenant_id: t, name, cover, slides, sort });
+    st('Receita', 'icon:cross', [{ icon: 'cross', t: 'Tem receita?', p: 'Mande a foto da receita no WhatsApp\nque a gente separa pra você.' }, { icon: 'pill', t: 'Remédio de uso contínuo', p: 'A gente avisa quando estiver\nperto de acabar.' }], 1);
+    st('Perfumes', '/img/gal-24.jpg', [{ img: '/img/gal-24.jpg', t: 'Perfumes árabes', p: 'Os queridinhos do momento,\ncom envio para todo o Brasil.' }, { img: '/img/gal-24.jpg', t: 'Lattafa Khamrah', p: 'Doce e marcante.', prod: P.khamrah }, { img: '/img/gal-25.jpg', t: 'Lattafa Haya', p: 'Floral e frutado.', prod: P.haya }], 2);
+    st('Naturais', '/img/gal-28.png', [{ img: '/img/gal-28.png', t: 'Produtos naturais', p: 'Própolis, colágeno, ômega 3\ne muito mais.' }, { img: '/img/gal-29.jpg', t: 'Colágeno Verisol', p: 'Pele, unhas e cabelo.', prod: P.colageno }, { img: '/img/gal-30.png', t: 'Creatina', p: 'Chegou!', prod: P.creatina }], 3);
+    st('Bebê', '/img/gal-19.jpg', [{ img: '/img/gal-19.jpg', t: 'Quarta do bebê', p: 'Fralda e cuidados com preço especial.' }, { img: '/img/gal-19.jpg', t: 'Pampers Confort Sec', p: 'Do M ao XXG.', prod: P.pampers }], 4);
+    st('Curta e ganhe', 'icon:heart', [{ icon: 'heart', t: 'Curta e ganhe 5%', p: 'Curta 3 produtos que você gosta\ne ganhe 5% no pedido.' }, { icon: 'heart', t: 'Campeão da semana', p: 'O produto mais curtido até domingo\nfica 10% mais barato na semana seguinte.' }], 5);
+    const po = (prod, caption, overlay, h) => ins(db, 'posts', { tenant_id: t, img: '', product_id: P[prod], caption, overlay, created_at: ago(h) });
+    po('khamrah', 'Lattafa Khamrah chegou! Perfume árabe doce e marcante. Enviamos para todo o Brasil.', 'Chegou', 2);
+    po('sunfresh', 'Sol forte em Caiçara? Neutrogena Sun Fresh com toque seco, FPS 30, 50 ou 70.', 'Promo', 5);
+    po('pampers', 'Quarta do bebê: Pampers Confort Sec com preço especial.', '', 9);
+    po('colageno', 'Colágeno Verisol para pele, unhas e cabelo.', '', 20);
+    po('dorflex', 'Dorflex 36 comprimidos, o mais pedido da casa.', 'Mais vendido', 30);
+    po('propolis', 'Própolis vermelho em gotas, natural para a garganta.', '', 44);
+
+    if (!db.prepare('SELECT 1 FROM users WHERE email=?').get(GALDINO_LOGIN.email)) db.prepare("INSERT INTO users(email,name,pass_hash,role,tenant_id) VALUES(?,?,?,'cliente',?)").run(GALDINO_LOGIN.email, 'Farmácia Galdino (demonstração)', GALDINO_LOGIN.hash, t);
+    db.exec('COMMIT'); console.log('Cardápio da Farmácia Galdino criado: /galdino');
+  } catch (e) { db.exec('ROLLBACK'); throw e; }
 }
 
 const ins = (db, tb, o) => { const ks = Object.keys(o); return db.prepare(`INSERT INTO ${tb}(${ks.join(',')}) VALUES(${ks.map(() => '?').join(',')})`).run(...ks.map(k => o[k] !== null && typeof o[k] === 'object' ? JSON.stringify(o[k]) : o[k])).lastInsertRowid; };

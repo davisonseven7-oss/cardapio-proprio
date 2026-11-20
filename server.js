@@ -13,6 +13,7 @@ try { for (const l of fs.readFileSync(path.join(__dirname, '.env.local'), 'utf8'
 const express = require('express');
 const { db, DATA_DIR, J, backupNow } = require('./db');
 const { seed } = require('./seed');
+const { SAZONAIS, sazonalAtivo, escolhaValida, marcaCurta } = require('./sazonal');
 
 const PORT = +process.env.PORT || 3000;
 const PROD = process.env.NODE_ENV === 'production' || !!process.env.RAILWAY_ENVIRONMENT;
@@ -143,7 +144,7 @@ app.get('/api/me', (req, res) => {
 });
 
 /* ---------------- cardápio público ---------------- */
-function menuPayload(t, visitor) {
+function menuPayload(t, visitor, previa) {
   const s = settingsOf(t), dow = nowLocal().getUTCDay(), wk = weekKey(), champ = champion(t.id);
   const brands = db.prepare('SELECT id,name,sub,logo FROM brands WHERE tenant_id=? ORDER BY sort,id').all(t.id);
   const cats = db.prepare('SELECT id,brand_id,name,icon FROM categories WHERE tenant_id=? AND active=1 ORDER BY sort,id').all(t.id);
@@ -155,7 +156,8 @@ function menuPayload(t, visitor) {
   const mine = visitor ? db.prepare('SELECT product_id FROM likes WHERE tenant_id=? AND week=? AND visitor=?').all(t.id, wk, visitor).map(r => r.product_id) : [];
   const stories = db.prepare('SELECT id,name,cover,slides FROM stories WHERE tenant_id=? AND active=1 ORDER BY sort,id').all(t.id).map(x => ({ ...x, slides: J(x.slides, []) }));
   const posts = db.prepare('SELECT id,img,product_id prod,caption,overlay,created_at FROM posts WHERE tenant_id=? AND active=1 ORDER BY created_at DESC LIMIT 30').all(t.id);
-  const pub = { entrega: { modo: s.entrega.modo, raioMax: s.entrega.raioMax }, fidelidade: { tipo: s.fidelidade.tipo, cashbackPct: s.fidelidade.cashbackPct, selosMeta: s.fidelidade.selosMeta, selosPremio: s.fidelidade.selosPremio }, temCupom: !!db.prepare('SELECT 1 FROM coupons WHERE tenant_id=? AND ativo=1').get(t.id), pixChave: s.pixChave, pixNome: s.pixNome, pixAntecipado: !!(s.pixAntecipado && s.pixChave), subtitulo: s.subtitulo, cidade: s.cidade, logo: s.logo, endereco: s.endereco, tempoPreparo: s.tempoPreparo, tempoEntrega: s.tempoEntrega, tema: s.tema, horario: s.horario, bairros: s.bairros, retirada: s.retirada, minimo: s.minimo, pagamentos: payOptions(s), curtidas: s.curtidas, robo: s.robo, temaHoje: s.promoTemas[dow] || '', whatsapp: s.whatsapp ? true : false, atendente: s.atendente, pixelId: s.pixelId };
+  const sz = sazonalAtivo(previa != null ? previa : s.sazonal, nowLocal());
+  const pub = { sazonal: sz && { id: sz.id, nome: sz.nome, titulo: sz.titulo.replace('{marca}', sz.id === 'blackfriday' ? marcaCurta(s, t.name).toUpperCase() : marcaCurta(s, t.name)), frase: sz.frase, cor: sz.cor, destaque: sz.destaque }, entrega: { modo: s.entrega.modo, raioMax: s.entrega.raioMax }, fidelidade: { tipo: s.fidelidade.tipo, cashbackPct: s.fidelidade.cashbackPct, selosMeta: s.fidelidade.selosMeta, selosPremio: s.fidelidade.selosPremio }, temCupom: !!db.prepare('SELECT 1 FROM coupons WHERE tenant_id=? AND ativo=1').get(t.id), pixChave: s.pixChave, pixNome: s.pixNome, pixAntecipado: !!(s.pixAntecipado && s.pixChave), subtitulo: s.subtitulo, cidade: s.cidade, logo: s.logo, endereco: s.endereco, tempoPreparo: s.tempoPreparo, tempoEntrega: s.tempoEntrega, tema: s.tema, horario: s.horario, bairros: s.bairros, retirada: s.retirada, minimo: s.minimo, pagamentos: payOptions(s), curtidas: s.curtidas, robo: s.robo, temaHoje: s.promoTemas[dow] || '', whatsapp: s.whatsapp ? true : false, atendente: s.atendente, pixelId: s.pixelId };
   return { loja: { slug: t.slug, name: t.name, ...pub }, brands, cats, prods, stories, posts, likes: { counts, mine, week: wk }, champion: champ, dow, agora: nowLocal().toISOString() };
 }
 const visitorOk = v => typeof v === 'string' && /^[a-z0-9]{8,40}$/i.test(v);
@@ -163,7 +165,8 @@ const visitorOk = v => typeof v === 'string' && /^[a-z0-9]{8,40}$/i.test(v);
 app.get('/api/m/:slug', (req, res) => {
   const t = tenantBySlug(req.params.slug); if (!t) return res.status(404).json({ erro: 'Cardápio não encontrado' });
   if (t.status !== 'ativo') return res.status(423).json({ erro: 'pausado', name: t.name });
-  res.json(menuPayload(t, visitorOk(req.query.v) ? req.query.v : null));
+  const previa = req.query.saz === 'normal' ? '' : req.query.saz ? escolhaValida(String(req.query.saz)) || null : null;
+  res.json(menuPayload(t, visitorOk(req.query.v) ? req.query.v : null, previa));
 });
 app.post('/api/m/:slug/like', (req, res) => {
   const t = tenantBySlug(req.params.slug); if (!t || t.status !== 'ativo') return res.status(404).end();
@@ -460,12 +463,12 @@ async function sendCapi(t, s, o) {
 
 /* ---------------- painel do cliente ---------------- */
 const P = auth('painel');
-app.get('/api/p/loja', P, (req, res) => { const t = req.tenant; res.json({ id: t.id, slug: t.slug, name: t.name, status: t.status, settings: settingsOf(t) }); });
+app.get('/api/p/loja', P, (req, res) => { const t = req.tenant; const s = settingsOf(t), sz = sazonalAtivo(s.sazonal, nowLocal()); res.json({ id: t.id, slug: t.slug, name: t.name, status: t.status, settings: s, sazonais: SAZONAIS, sazonalAtual: sz ? sz.id : '', sazonalDoMes: sazonalAtivo('auto', nowLocal()).id, marca: marcaCurta(s, t.name) }); });
 app.put('/api/p/loja', P, (req, res) => {
   const b = req.body || {}, cur = settingsOf(req.tenant), n = b.settings || {};
-  const keep = ['subtitulo', 'cidade', 'logo', 'endereco', 'telefone', 'tempoPreparo', 'tempoEntrega', 'whatsapp', 'enviarWhats', 'atendente', 'tema', 'horario', 'bairros', 'retirada', 'minimo', 'pagamentos', 'promoTemas', 'curtidas', 'robo', 'pixelId', 'capiToken', 'capiTeste', 'mensagens', 'pixChave', 'pixNome', 'pixAntecipado', 'entrega', 'fidelidade', 'lojaLat', 'lojaLng', 'servicoPct'];
+  const keep = ['subtitulo', 'cidade', 'logo', 'endereco', 'telefone', 'tempoPreparo', 'tempoEntrega', 'whatsapp', 'enviarWhats', 'atendente', 'tema', 'horario', 'bairros', 'retirada', 'minimo', 'pagamentos', 'promoTemas', 'curtidas', 'robo', 'pixelId', 'capiToken', 'capiTeste', 'mensagens', 'pixChave', 'pixNome', 'pixAntecipado', 'entrega', 'fidelidade', 'lojaLat', 'lojaLng', 'servicoPct', 'sazonal', 'sigla'];
   const out = { ...cur }; keep.forEach(k => { if (k in n) out[k] = n[k]; });
-  out.minimo = +out.minimo || 0; out.bairros = (out.bairros || []).filter(x => x && x[0]).map(([a, v]) => [String(a).slice(0, 60), +v || 0]);
+  out.sazonal = escolhaValida(out.sazonal); out.sigla = String(out.sigla || '').trim().slice(0, 18); out.minimo = +out.minimo || 0; out.bairros = (out.bairros || []).filter(x => x && x[0]).map(([a, v]) => [String(a).slice(0, 60), +v || 0]);
   out.pixelId = String(out.pixelId || '').replace(/\D/g, ''); out.whatsapp = String(out.whatsapp || '').replace(/\D/g, '');
   db.prepare('UPDATE tenants SET name=?, settings=? WHERE id=?').run(String(b.name || req.tenant.name).slice(0, 80), JSON.stringify(out), req.tid);
   res.json({ ok: true });
