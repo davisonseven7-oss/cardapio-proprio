@@ -7,11 +7,11 @@ function seed({ db, hashPass }) {
     if (email && pass.length >= 8) { db.prepare(`INSERT INTO users(email,name,pass_hash,role) VALUES(?,?,?,'admin')`).run(email, 'Administrador', hashPass(pass)); console.log('Admin criado:', email); }
     else console.warn('ATENÇÃO: defina ADMIN_EMAIL e ADMIN_PASSWORD (8+ caracteres) para criar o login de administrador.');
   }
-  if (db.prepare('SELECT 1 FROM tenants').get()) { demo(db); return; }
+  if (db.prepare('SELECT 1 FROM tenants').get()) { demo(db); fotos(db); return; }
   db.exec('BEGIN');
   try { potengi(db); boaHora(db); db.exec('COMMIT'); console.log('Cardápios iniciais criados: /potengi e /boahora'); }
   catch (e) { db.exec('ROLLBACK'); throw e; }
-  demo(db);
+  demo(db); fotos(db);
 }
 
 /* login de demonstração do Boa Hora (para mostrar a clientes).
@@ -24,6 +24,23 @@ function demo(db) {
   if (!db.prepare('SELECT 1 FROM users WHERE email=?').get(DEMO.email)) db.prepare("INSERT INTO users(email,name,pass_hash,role,tenant_id) VALUES(?,?,?,'cliente',?)").run(DEMO.email, 'Boa Hora (demonstração)', DEMO.hash, t.id);
   s.demoCriado = true; db.prepare("UPDATE tenants SET status='ativo', settings=? WHERE id=?").run(JSON.stringify(s), t.id);
   console.log('Login de demonstração do Boa Hora pronto:', DEMO.email);
+}
+
+/* fotos ilustrativas dos produtos da Potengi e da Don Diego (para demonstração).
+   Roda uma vez e só preenche produtos que ainda estão sem foto. */
+const FOTOS = { 'Ração para equinos 40 kg': 'pot-1.jpg', 'SM Mustang 4.0': 'pot-2.jpg', 'Sal mineral equino 25 kg': 'pot-3.jpg', 'Aveia em grão 30 kg': 'pot-4.jpg',
+  'Ração cães adultos 15 kg': 'pot-5.png', 'Ração cães filhotes 10 kg': 'pot-6.png', 'Ração gatos adultos 10 kg': 'pot-7.png', 'Areia sanitária 4 kg': 'pot-8.webp',
+  'Petisco bifinho 500 g': 'pot-9.webp', 'Milho em grão 50 kg': 'pot-10.jpg', 'Ração postura 40 kg': 'pot-11.jpg', 'Ração pintinho inicial 20 kg': 'pot-12.jpg',
+  'Sela australiana': 'pot-13.jpg', 'Cabeçada com rédea': 'pot-14.jpg', 'Peitoral trançado': 'pot-15.jpg', 'Manta para sela': 'pot-16.jpg',
+  'Cabresto de corda': 'pot-17.jpg', 'Kit escova e rasqueadeira': 'pot-18.jpg', 'Ferradura (par)': 'pot-19.jpg', 'Chapéu de feltro': 'pot-20.jpg',
+  'Camisa xadrez manga longa': 'pot-21.jpg', 'Bota de couro cano longo': 'pot-22.jpg', 'Cinto com fivela': 'pot-23.jpg' };
+function fotos(db) {
+  const t = db.prepare("SELECT * FROM tenants WHERE slug='potengi'").get(); if (!t) return;
+  const s = JSON.parse(t.settings || '{}'); if (s.fotosDemo) return;
+  const up = db.prepare("UPDATE products SET img=? WHERE tenant_id=? AND name=? AND (img IS NULL OR img='')");
+  let n = 0; for (const [nome, arq] of Object.entries(FOTOS)) n += Number(up.run('/img/' + arq, t.id, nome).changes);
+  s.fotosDemo = true; db.prepare('UPDATE tenants SET settings=? WHERE id=?').run(JSON.stringify(s), t.id);
+  console.log('Fotos ilustrativas da Potengi:', n, 'produtos');
 }
 
 const ins = (db, tb, o) => { const ks = Object.keys(o); return db.prepare(`INSERT INTO ${tb}(${ks.join(',')}) VALUES(${ks.map(() => '?').join(',')})`).run(...ks.map(k => o[k] !== null && typeof o[k] === 'object' ? JSON.stringify(o[k]) : o[k])).lastInsertRowid; };
