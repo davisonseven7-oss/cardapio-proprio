@@ -7,11 +7,11 @@ function seed({ db, hashPass }) {
     if (email && pass.length >= 8) { db.prepare(`INSERT INTO users(email,name,pass_hash,role) VALUES(?,?,?,'admin')`).run(email, 'Administrador', hashPass(pass)); console.log('Admin criado:', email); }
     else console.warn('ATENÇÃO: defina ADMIN_EMAIL e ADMIN_PASSWORD (8+ caracteres) para criar o login de administrador.');
   }
-  if (db.prepare('SELECT 1 FROM tenants').get()) { demo(db); fotos(db); galdino(db); return; }
+  if (db.prepare('SELECT 1 FROM tenants').get()) { demo(db); fotos(db); galdino(db); galdinoReal(db); return; }
   db.exec('BEGIN');
   try { potengi(db); boaHora(db); db.exec('COMMIT'); console.log('Cardápios iniciais criados: /potengi e /boahora'); }
   catch (e) { db.exec('ROLLBACK'); throw e; }
-  demo(db); fotos(db); galdino(db);
+  demo(db); fotos(db); galdino(db); galdinoReal(db);
 }
 
 /* login de demonstração do Boa Hora (para mostrar a clientes).
@@ -117,6 +117,89 @@ function galdino(db) {
 
     if (!db.prepare('SELECT 1 FROM users WHERE email=?').get(GALDINO_LOGIN.email)) db.prepare("INSERT INTO users(email,name,pass_hash,role,tenant_id) VALUES(?,?,?,'cliente',?)").run(GALDINO_LOGIN.email, 'Farmácia Galdino (demonstração)', GALDINO_LOGIN.hash, t);
     db.exec('COMMIT'); console.log('Cardápio da Farmácia Galdino criado: /galdino');
+  } catch (e) { db.exec('ROLLBACK'); throw e; }
+}
+
+/* Catálogo real da Farmácia Galdino: produtos e preços enviados pela dona (Maxsonay)
+   em 20/11/2026. Fotos de lojas e das marcas, em boa qualidade. Roda uma vez:
+   esconde os produtos de demonstração (não apaga) e cria os reais. */
+function galdinoReal(db) {
+  const t = db.prepare("SELECT * FROM tenants WHERE slug='galdino'").get(); if (!t) return;
+  const s = JSON.parse(t.settings || '{}'); if (s.catalogoReal) return;
+  db.exec('BEGIN');
+  try {
+    const cat = n => (db.prepare('SELECT id FROM categories WHERE tenant_id=? AND name=?').get(t.id, n) || {}).id
+      || ins(db, 'categories', { tenant_id: t.id, name: n, icon: 'pill', sort: 20 });
+    const C = { dor: cat('Dor e febre'), gripe: cat('Gripe e garganta'), sup: cat('Naturais e suplementos'), hig: cat('Higiene'), dermo: cat('Beleza e dermo'), bebe: cat('Mamãe e bebê') };
+    db.prepare("UPDATE categories SET name='Skincare e protetor solar', icon='sun' WHERE id=?").run(C.dermo);
+    db.prepare('UPDATE products SET active=0 WHERE tenant_id=?').run(t.id);
+    db.prepare('UPDATE posts SET active=0 WHERE tenant_id=?').run(t.id);
+    db.prepare("UPDATE stories SET active=0 WHERE tenant_id=? AND name NOT IN ('Receita','Curta e ganhe')").run(t.id);
+    const o = (nome, ...itens) => [{ nome, itens: itens.map(x => [x, 0]) }];
+    const BULA = ' Leia a bula. Se persistirem os sintomas, procure um médico.';
+    const P = {}; let n = 0;
+    const add = (k, c, name, price, img, descr, x = {}) => P[k] = ins(db, 'products', { tenant_id: t.id, category_id: C[c], name, price, img: '/img/' + img, icon: 'pill', descr, sort: n++, tag: x.tag || '', options: x.opts || [], keywords: x.kw || '' });
+    // remédios
+    add('dipgotas', 'dor', 'Dipirona gotas 500 mg/ml 20 ml (genérico)', 4.99, 'fag-9.jpg', 'Para dor e febre.' + BULA, { tag: 'Mais vendido', kw: 'dipirona febre dor gotas' });
+    add('dip1g', 'dor', 'Dipirona 1 g 10 comprimidos (genérico)', 8.99, 'fag-10.jpg', 'Para dor e febre.' + BULA, { kw: 'dipirona febre dor' });
+    add('dorflex', 'dor', 'Dorflex 10 comprimidos', 7.99, 'fag-11.png', 'Analgésico e relaxante muscular.' + BULA, { kw: 'dor relaxante muscular' });
+    add('cimegripe', 'gripe', 'Cimegripe 20 cápsulas', 14.99, 'fag-32.jpg', 'Alivia os sintomas da gripe.' + BULA, { kw: 'gripe resfriado' });
+    // skincare e protetor solar
+    add('pdrn', 'dermo', 'Sérum Hidrabene PDRN 30 ml', 69.9, 'fag-1.jpg', 'Renovação e firmeza da pele.', { tag: 'Lançamento', kw: 'hidrabene serum skincare' });
+    add('ghk', 'dermo', 'Sérum Hidrabene GHK-Cu peptídeo de cobre 30 ml', 69.9, 'fag-2.jpg', 'Firmeza e densidade da pele.', { tag: 'Lançamento', kw: 'hidrabene serum skincare' });
+    add('retinal', 'dermo', 'Hidrabene Retinal Shot noturno 15 g', 79.9, 'fag-3.jpg', 'Retinal puro 0,05% para uso à noite.', { kw: 'hidrabene retinal skincare' });
+    add('harmon', 'dermo', 'Hidrabene Harmonizador Facial V-Shape 40 g', 79.9, 'fag-4.jpg', 'Contorno do rosto mais definido.', { kw: 'hidrabene harmonizador' });
+    add('gellimp', 'dermo', 'Gel de limpeza facial Hidrabene 300 g', 29.9, 'fag-5.png', 'Limpeza diária do rosto.', { opts: o('Tipo de pele', 'Mista e oleosa', 'Clareador', 'Sensível'), kw: 'hidrabene sabonete facial' });
+    add('basestick', 'dermo', 'Base Stick Hidrabene com protetor solar', 79.9, 'fag-7.jpg', 'Base em bastão com proteção solar.', { kw: 'hidrabene base maquiagem' });
+    add('luminous', 'dermo', 'Sérum Nivea Luminous 630 Skin Glow 30 ml', 65, 'fag-6.jpg', 'Pele iluminada e uniforme.', { kw: 'nivea serum manchas' });
+    add('isdincov', 'dermo', 'Protetor ISDIN Coverage alta cobertura FPS 60', 99.9, 'fag-8.webp', 'Protetor facial com cor.', { kw: 'isdin protetor solar facial' });
+    add('isdingel', 'dermo', 'Protetor ISDIN Gel Cream Wet Skin FPS 50 198 g', 96.9, 'fag-13.jpg', 'Pode passar com a pele molhada.', { kw: 'isdin protetor solar corpo praia' });
+    add('oaz', 'dermo', 'Protetor solar OAZ FPS 70 200 ml', 59.9, 'fag-12.jpg', 'Protege e hidrata o corpo.', { kw: 'protetor solar praia' });
+    add('xo', 'dermo', 'Repelente Xô Inseto loção 200 ml', 19.9, 'fag-14.jpg', 'Proteção contra mosquitos.', { kw: 'repelente dengue mosquito' });
+    // suplementos
+    add('omegafor', 'sup', 'Omegafor Plus Vitafor 120 cápsulas', 149.9, 'fag-24.jpg', 'Ômega 3 de alta concentração.', { kw: 'omega 3 vitafor' });
+    add('coq10', 'sup', 'Coenzima Q10 Vitafor 60 cápsulas', 134.9, 'fag-25.jpg', 'Energia e antioxidante.', { kw: 'coq10 coenzima vitafor' });
+    add('resvera', 'sup', 'Resveratrol Plus Vitafor 60 cápsulas', 125.9, 'fag-29.jpg', 'Antioxidante.', { kw: 'resveratrol vitafor' });
+    add('creatina', 'sup', 'Creatina Creatine Vitafor', 79.9, 'fag-31.webp', 'Creatina 100% pura.', { kw: 'creatina academia treino' });
+    add('meladuo', 'sup', 'Melatonin Duo Harmony Essential', 139.9, 'fag-26.jpg', 'Melatonina de dupla ação para o sono.', { kw: 'melatonina sono' });
+    add('mela', 'sup', 'Melatonina Natus Prime 30 gomas', 49.9, 'fag-35.png', 'Gomas sabor morango para o sono.', { kw: 'melatonina sono goma' });
+    add('lavnoite', 'sup', 'Lavitan Super Fórmula Noite em pó 300 g', 99.9, 'fag-30.jpg', 'Para uma noite de sono tranquila.', { kw: 'lavitan sono' });
+    add('dux', 'sup', 'Multivitamínico Dux 90 cápsulas', 89.9, 'fag-27.jpg', 'Vitaminas e minerais do dia a dia.', { kw: 'multivitaminico vitamina' });
+    add('supply', 'sup', 'The Supply WePink cabelos e unhas 30 cápsulas', 59.9, 'fag-28.jpg', 'Vitaminas para cabelo e unhas.', { kw: 'wepink cabelo unha' });
+    add('linda', 'sup', 'Linda Caps Renova 60 cápsulas', 69.9, 'fag-34.png', 'Biotina e vitamina A para cabelo, pele e unhas.', { kw: 'cabelo unha pele biotina' });
+    add('lavcu', 'sup', 'Lavitan Cabelos e Unhas 30 cápsulas', 19.9, 'fag-33.jpg', 'Vitaminas para cabelo e unhas.', { kw: 'lavitan cabelo unha' });
+    // higiene
+    add('doveaer', 'hig', 'Desodorante Dove Original aerosol 150 ml', 19.9, 'fag-39.jpg', 'Proteção por 48 horas.', { kw: 'desodorante dove' });
+    add('dovestick', 'hig', 'Desodorante Dove Sérum Stick 45 g', 24.9, 'fag-40.jpg', 'Antitranspirante em bastão.', { kw: 'desodorante dove' });
+    add('useorg', 'hig', 'Desodorante roll-on Use Orgânico 55 ml', 19.9, 'fag-15.jpg', 'Desodorante natural.', { opts: o('Fragrância', 'Lavanda e camomila', 'Lemongrass e sálvia'), kw: 'desodorante natural' });
+    add('niveaoleo', 'hig', 'Sabonete líquido Nivea Óleo de Banho', 49.9, 'fag-36.jpg', 'Banho que hidrata a pele.', { kw: 'sabonete nivea' });
+    add('nathy', 'hig', 'Sabonete líquido Nathy', 14.9, 'fag-23.jpg', 'Várias fragrâncias.', { kw: 'sabonete liquido' });
+    add('dermafeme', 'hig', 'Sabonete íntimo Dermafeme Floral (2 frascos)', 19.9, 'fag-38.jpg', 'Leve mais por menos.', { kw: 'sabonete intimo' });
+    add('esfol', 'hig', 'Esfoliante para os pés Labotrat', 29.9, 'fag-37.jpg', 'Remove calosidades e deixa os pés macios.', { kw: 'esfoliante pes' });
+    add('ricca', 'hig', 'Escova de cabelo Ricca', 14.9, 'fag-42.jpg', 'Desembaraça sem puxar.', { kw: 'escova cabelo' });
+    // mamãe e bebê
+    add('shampoojm', 'bebe', 'Shampoo bebê João e Maria glicerina 400 ml', 29.9, 'fag-16.png', 'Fórmula suave para o bebê.', { kw: 'shampoo bebe' });
+    add('sabliqjm', 'bebe', 'Sabonete líquido bebê João e Maria 200 ml', 23.9, 'fag-17.png', 'Da cabeça aos pés.', { opts: o('Tipo', 'Glicerina', 'Cabeça aos pés'), kw: 'sabonete bebe' });
+    add('sabbarjm', 'bebe', 'Sabonete em barra bebê João e Maria 75 g', 5.99, 'fag-18.webp', 'Suave para a pele do bebê.', { opts: o('Tipo', 'Glicerina', 'Karité'), kw: 'sabonete bebe' });
+    add('lencojm', 'bebe', 'Lenço umedecido João e Maria', 12.9, 'fag-21.jpg', 'Limpeza na troca de fralda.', { kw: 'lenco umedecido bebe' });
+    add('mamadeira', 'bebe', 'Mamadeira João e Maria 240 ml', 29.9, 'fag-41.jpg', 'Bico ortodôntico de silicone.', { kw: 'mamadeira bebe' });
+    add('chupetajm', 'bebe', 'Chupeta João e Maria tamanho 2 (+6 meses)', 19.9, 'fag-19.jpg', 'Bico ortodôntico de silicone.', { kw: 'chupeta bebe' });
+    add('mam', 'bebe', 'Chupeta MAM Supreme Night (2 unidades)', 79.9, 'fag-20.jpg', 'Brilha no escuro.', { kw: 'chupeta mam bebe' });
+    add('nistatina', 'bebe', 'Nistatina + óxido de zinco pomada 60 g (genérico)', 14.9, 'fag-22.jpg', 'Prevenção e tratamento de assaduras.' + BULA, { kw: 'assadura pomada bebe' });
+
+    const st = (name, cover, slides, sort) => ins(db, 'stories', { tenant_id: t.id, name, cover, slides, sort });
+    st('Skincare', '/img/fag-1.jpg', [{ img: '/img/fag-1.jpg', t: 'Lançamentos Hidrabene', p: 'PDRN, GHK-Cu, Retinal e Harmonizador.' }, { img: '/img/fag-1.jpg', t: 'Sérum PDRN', p: 'Renovação e firmeza.', prod: P.pdrn }, { img: '/img/fag-3.jpg', t: 'Retinal Shot', p: 'Para usar à noite.', prod: P.retinal }], 2);
+    st('Sol', '/img/fag-13.jpg', [{ img: '/img/fag-13.jpg', t: 'Proteção solar', p: 'ISDIN, OAZ e mais.' }, { img: '/img/fag-12.jpg', t: 'OAZ FPS 70', p: 'R$ 59,90.', prod: P.oaz }], 3);
+    st('Suplementos', '/img/fag-24.jpg', [{ img: '/img/fag-24.jpg', t: 'Suplementos', p: 'Vitafor, Dux, Lavitan e mais.' }, { img: '/img/fag-26.jpg', t: 'Para dormir bem', p: 'Melatonina e Lavitan Noite.', prod: P.meladuo }], 4);
+    st('Bebê', '/img/fag-16.png', [{ img: '/img/fag-16.png', t: 'Linha João e Maria', p: 'Shampoo, sabonete, lenço e mais.' }, { img: '/img/fag-20.jpg', t: 'Chupeta MAM', p: 'Brilha no escuro.', prod: P.mam }], 5);
+    const po = (prod, caption, overlay, h) => ins(db, 'posts', { tenant_id: t.id, img: '', product_id: P[prod], caption, overlay, created_at: ago(h) });
+    po('pdrn', 'Chegou a linha nova da Hidrabene: PDRN e GHK-Cu para a pele.', 'Lançamento', 2);
+    po('isdingel', 'ISDIN Gel Cream Wet Skin: protetor que pode passar com a pele molhada.', '', 6);
+    po('meladuo', 'Dificuldade para dormir? Temos melatonina e Lavitan Noite.', '', 12);
+    po('shampoojm', 'Linha João e Maria para o banho do bebê.', '', 20);
+    po('dipgotas', 'Dipirona gotas por R$ 4,99.', 'Preço baixo', 30);
+    s.catalogoReal = true; db.prepare('UPDATE tenants SET settings=? WHERE id=?').run(JSON.stringify(s), t.id);
+    db.exec('COMMIT'); console.log('Catálogo real da Galdino:', n, 'produtos');
   } catch (e) { db.exec('ROLLBACK'); throw e; }
 }
 
