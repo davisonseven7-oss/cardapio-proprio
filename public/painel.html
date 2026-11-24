@@ -462,7 +462,7 @@ async function moveOrder(id,to,motivo){
   try{ const j=await api('/api/p/orders/'+id,'PUT',{status:to});
     let msg=j.aviso; if(to==='cancelado'&&motivo) msg+=`\nMotivo: ${motivo}`;
     if(win){ if(msg){ win.location.href=waUrl(o.phone,msg); } else win.close(); }
-    toast(`#${o.num}: ${to==='saiu'?stLabel({...o,status:'saiu'}):ST[to][0]}${win&&msg?' · WhatsApp aberto':''}`);
+    toast(`#${o.num}: ${to==='saiu'?stLabel({...o,status:'saiu'}):ST[to][0]}${j.crmEnviado?' · aviso enviado pelo WhatsApp oficial':win&&msg?' · WhatsApp aberto':''}`);
     /* Pix antecipado: imprime quando a loja confirma o pagamento (nunca antes) */
     if(to==='preparando'&&(pref('imprimir',false)||(o.status==='pix'&&pref('imprimirNovo',false)))) printOrder({...o,status:to});
   }catch(e){ win&&win.close(); toast(e.message); }

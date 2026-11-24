@@ -45,7 +45,7 @@ const DEFAULTS = {
   robo: { nome: 'Atendente', ativo: true },
   pixelId: '', capiToken: '', capiTeste: '',
   mensagens: {
-    preparando: 'Oi, {nome}! Seu pedido #{pedido} na {loja} foi aceito e já está em preparo. 👨‍🍳\nAcompanhe aqui: {link}',
+    preparando: 'Oi, {nome}! Seu pedido #{pedido} na {loja} foi aceito e já está em preparo. 🍳\nAcompanhe aqui: {link}',
     saiu: '{nome}, seu pedido #{pedido} saiu para entrega! 🛵\nTotal: {total} ({pagamento}).\nAcompanhe aqui: {link}',
     pronto: '{nome}, seu pedido #{pedido} está pronto para retirada na {loja}! ✅\nTotal: {total} ({pagamento}).',
     concluido: 'Pedido #{pedido} entregue. Obrigado pela preferência, {nome}! 💚\nVolte sempre: {cardapio}',
@@ -411,18 +411,20 @@ app.post('/api/m/:slug/order', async (req, res) => {
    Com a chave do CRM salva (painel → Pixel Meta → Huntix CRM), cada pedido e cada mudança de status
    vão para o CRM: o cliente entra no funil como venda fechada e o pedido aparece na aba Pedidos. */
 const CRM_URL = (process.env.CRM_URL || 'https://app.crmfelix.com.br').replace(/\/$/, '');
-async function crmSync(t, o, event, trackUrl) {
-  const s = settingsOf(t); if (!s.crmToken || !o || !o.phone) return;
+async function crmSync(t, o, event, trackUrl, extra = {}) {
+  const s = settingsOf(t); if (!s.crmToken || !o || !o.phone) return null;
   const pedido = { num: o.num, status: o.status, cliente: o.customer, telefone: o.phone,
     itens: J(o.items, []).map(i => ({ qtd: i.qty, nome: i.nome, opcoes: i.opts || [], total: i.total })),
     subtotal: o.subtotal, desconto: o.discount, taxa: o.fee, total: o.total, pagamento: o.payment,
-    endereco: o.address, bairro: o.bairro, obs: o.notes, acompanhar: trackUrl };
-  let info;
+    endereco: o.address, bairro: o.bairro, obs: o.notes, acompanhar: trackUrl, ...extra };
+  let info, out = null;
   try {
     const r = await fetch(`${CRM_URL}/api/integrations/cardapio`, { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${s.crmToken}` }, body: JSON.stringify({ event, pedido }), signal: AbortSignal.timeout(8000) });
-    info = r.ok ? 'ok' : `erro ${r.status}: ${(await r.text()).slice(0, 80)}`;
+    if (r.ok) { out = await r.json().catch(() => ({})); info = 'ok' + (out.enviado ? ' · aviso enviado pelo WhatsApp oficial' : out.motivo ? ' · aviso: ' + out.motivo : ''); }
+    else info = `erro ${r.status}: ${(await r.text()).slice(0, 80)}`;
   } catch (e) { info = 'erro: ' + e.message; }
-  db.prepare('INSERT INTO events(tenant_id,type,info) VALUES(?,?,?)').run(t.id, 'CRM', `${event} #${o.num} · ${info}`);
+  db.prepare('INSERT INTO events(tenant_id,type,info) VALUES(?,?,?)').run(t.id, 'CRM', `${event} #${o.num} · ${info}`.slice(0, 200));
+  return out;
 }
 
 /* fidelidade ao mudar status: credita cashback ao concluir; devolve ao cancelar */
@@ -547,7 +549,7 @@ app.get('/api/p/orders', P, (req, res) => {
   res.json(rows.map(o => ({ ...o, items: J(o.items, []), log: J(o.log, []), descontos: J(o.descontos, []) })));
 });
 app.get('/api/p/orders/novos', P, (req, res) => res.json(db.prepare(`SELECT COUNT(*) n, MAX(id) ultimo FROM orders WHERE tenant_id=? AND status IN ('novo','pix')`).get(req.tid)));
-app.put('/api/p/orders/:id', P, (req, res) => {
+app.put('/api/p/orders/:id', P, async (req, res) => {
   const st = (req.body || {}).status; if (!ST.includes(st)) return res.status(400).end();
   const o = db.prepare('SELECT * FROM orders WHERE id=? AND tenant_id=?').get(+req.params.id, req.tid); if (!o) return res.status(404).end();
   const log = J(o.log, []); if (o.status !== st) log.push({ s: st, t: new Date().toISOString() });
@@ -555,10 +557,13 @@ app.put('/api/p/orders/:id', P, (req, res) => {
   let ganhou = 0; if (o.status !== st) { try { ganhou = loyaltyOnStatus(req.tenant, o, st); } catch (e) { console.error('fidelidade', e.message); }
     if (st === 'cancelado') devolveEstoque(req.tid, o.id);
     if (st === 'concluido' && !o.caixa_id) { const cx = caixaAberto(req.tid); if (cx) db.prepare('UPDATE orders SET caixa_id=? WHERE id=?').run(cx.id, o.id); } }
-  if (o.status !== st && o.track) crmSync(req.tenant, { ...o, status: st }, 'pedido.status', `${baseUrl(req)}/${req.tenant.slug}/pedido/${o.track}`).catch(() => {});
   let msg = statusMessage(req.tenant, settingsOf(req.tenant), { ...o, status: st, prev: o.status }, req);
   if (msg && ganhou > 0) msg += `
 🎁 Você ganhou ${brlS(ganhou)} de cashback para o próximo pedido!`;
+  // o CRM manda o aviso pelo WhatsApp oficial; o painel só abre o link do WhatsApp se o CRM não conseguiu
+  let crm = null;
+  if (o.status !== st && o.track) crm = await crmSync(req.tenant, { ...o, status: st }, 'pedido.status', `${baseUrl(req)}/${req.tenant.slug}/pedido/${o.track}`, { anterior: o.status, mensagem: msg }).catch(() => null);
+  if (crm && crm.enviado) return res.json({ ok: true, aviso: '', whats: null, crmEnviado: true });
   res.json({ ok: true, aviso: msg, whats: msg && o.phone ? waLink(o.phone, msg) : null });
 });
 /* acompanhamento do pedido pelo cliente (link secreto) */
