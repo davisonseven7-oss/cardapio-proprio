@@ -1160,8 +1160,10 @@ async function pixel(){
   <div class="card"><h2>API de Conversões (recomendado)</h2><div class="row"><label class="f">Token de acesso<input type="password" id="ct" value="${esc(s.capiToken)}" autocomplete="off" placeholder="Gerado no Gerenciador de Eventos → Configurações"></label>
     <label class="f">Código de teste (opcional)<input type="text" id="cte" value="${esc(s.capiTeste)}" placeholder="TEST12345"><span class="h">Use só enquanto testa em "Testar eventos"; depois apague.</span></label>
     <p class="help">A compra também é enviada pelo servidor, com o mesmo ID do evento do Pixel. Assim a Meta não conta duas vezes e as vendas aparecem mesmo com bloqueador de anúncio.</p></div></div>
+  <div class="card"><h2>Huntix CRM</h2><div class="row"><label class="f">Chave do CRM<input type="password" id="crm" value="${esc(s.crmToken||'')}" autocomplete="off" placeholder="hx_..."><span class="h">No Huntix CRM: Configurações → Huntix Cardápio → Gerar chave.</span></label>
+    <p class="help">Com a chave salva, cada pedido vai sozinho para o CRM: o cliente entra no funil como venda fechada, o pedido aparece na aba Pedidos e o status (preparando, saiu, concluído) acompanha.</p></div></div>
   <div class="card"><h2>Últimos eventos enviados pelo servidor</h2>${capi.length?`<div class="tw"><table><tr><th>Quando</th><th>Resultado</th></tr>${capi.map(c=>`<tr><td>${new Date(c.created_at).toLocaleString('pt-BR')}</td><td>${esc(c.info)}</td></tr>`).join('')}</table></div>`:'<p class="muted">Nenhum envio ainda. Aparece aqui depois do primeiro pedido com o token preenchido.</p>'}</div></div>`;
-  $('#save').onclick=async()=>{ try{ await api('/api/p/loja','PUT',{name:LOJA.name,settings:{pixelId:$('#px').value.trim(),capiToken:$('#ct').value.trim(),capiTeste:$('#cte').value.trim()}}); toast('Pixel salvo'); }catch(e){ toast(e.message); } };
+  $('#save').onclick=async()=>{ try{ await api('/api/p/loja','PUT',{name:LOJA.name,settings:{pixelId:$('#px').value.trim(),capiToken:$('#ct').value.trim(),capiTeste:$('#cte').value.trim(),crmToken:$('#crm').value.trim()}}); toast('Salvo'); }catch(e){ toast(e.message); } };
 }
 
 /* ---------------- conta ---------------- */

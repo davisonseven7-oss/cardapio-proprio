@@ -403,8 +403,27 @@ app.post('/api/m/:slug/order', async (req, res) => {
   try { upsertCustomer(t.id, { phone: fone, name: nome, address: endereco, bairro: retirada ? '' : bairro }); } catch (e) { console.error('cliente', e.message); }
   const eventId = `${t.slug}-${num}`;
   if (s.pixelId && s.capiToken) sendCapi(t, s, { eventId, total, items, fone, nome, req, fbp: b.fbp, fbc: b.fbc, num, cupom: q.coupon, pagamento: pay, cidade: q.cepInfo && q.cepInfo.localidade, uf: q.cepInfo && q.cepInfo.uf, cep: q.cep, visitor: visitorOk(b.visitor) ? b.visitor : null }).catch(() => {});
+  crmSync(t, db.prepare('SELECT * FROM orders WHERE id=?').get(r.lastInsertRowid), 'pedido.novo', trackUrl).catch(() => {});
   res.json({ ok: true, id: r.lastInsertRowid, num, total, eventId, msg, track, trackUrl, status: status0, ganhaCashback: q.fidelidade.ganhaCashback, pix: pixFirst ? { chave: s.pixChave, nome: s.pixNome, whatsapp: s.whatsapp || '' } : null, whats: s.whatsapp && s.enviarWhats ? `https://wa.me/${s.whatsapp.replace(/\D/g, '')}?text=${encodeURIComponent(msg)}` : null });
 });
+
+/* ---------------- Huntix CRM ----------------
+   Com a chave do CRM salva (painel → Pixel Meta → Huntix CRM), cada pedido e cada mudança de status
+   vão para o CRM: o cliente entra no funil como venda fechada e o pedido aparece na aba Pedidos. */
+const CRM_URL = (process.env.CRM_URL || 'https://app.crmfelix.com.br').replace(/\/$/, '');
+async function crmSync(t, o, event, trackUrl) {
+  const s = settingsOf(t); if (!s.crmToken || !o || !o.phone) return;
+  const pedido = { num: o.num, status: o.status, cliente: o.customer, telefone: o.phone,
+    itens: J(o.items, []).map(i => ({ qtd: i.qty, nome: i.nome, opcoes: i.opts || [], total: i.total })),
+    subtotal: o.subtotal, desconto: o.discount, taxa: o.fee, total: o.total, pagamento: o.payment,
+    endereco: o.address, bairro: o.bairro, obs: o.notes, acompanhar: trackUrl };
+  let info;
+  try {
+    const r = await fetch(`${CRM_URL}/api/integrations/cardapio`, { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${s.crmToken}` }, body: JSON.stringify({ event, pedido }), signal: AbortSignal.timeout(8000) });
+    info = r.ok ? 'ok' : `erro ${r.status}: ${(await r.text()).slice(0, 80)}`;
+  } catch (e) { info = 'erro: ' + e.message; }
+  db.prepare('INSERT INTO events(tenant_id,type,info) VALUES(?,?,?)').run(t.id, 'CRM', `${event} #${o.num} · ${info}`);
+}
 
 /* fidelidade ao mudar status: credita cashback ao concluir; devolve ao cancelar */
 function loyaltyOnStatus(t, o, st) {
@@ -466,10 +485,10 @@ const P = auth('painel');
 app.get('/api/p/loja', P, (req, res) => { const t = req.tenant; const s = settingsOf(t), sz = sazonalAtivo(s.sazonal, nowLocal()); res.json({ id: t.id, slug: t.slug, name: t.name, status: t.status, settings: s, sazonais: SAZONAIS, sazonalAtual: sz ? sz.id : '', sazonalDoMes: sazonalAtivo('auto', nowLocal()).id, marca: marcaCurta(s, t.name) }); });
 app.put('/api/p/loja', P, (req, res) => {
   const b = req.body || {}, cur = settingsOf(req.tenant), n = b.settings || {};
-  const keep = ['subtitulo', 'cidade', 'logo', 'endereco', 'telefone', 'tempoPreparo', 'tempoEntrega', 'whatsapp', 'enviarWhats', 'atendente', 'tema', 'horario', 'bairros', 'retirada', 'minimo', 'pagamentos', 'promoTemas', 'curtidas', 'robo', 'pixelId', 'capiToken', 'capiTeste', 'mensagens', 'pixChave', 'pixNome', 'pixAntecipado', 'entrega', 'fidelidade', 'lojaLat', 'lojaLng', 'servicoPct', 'sazonal', 'sigla'];
+  const keep = ['subtitulo', 'cidade', 'logo', 'endereco', 'telefone', 'tempoPreparo', 'tempoEntrega', 'whatsapp', 'enviarWhats', 'atendente', 'tema', 'horario', 'bairros', 'retirada', 'minimo', 'pagamentos', 'promoTemas', 'curtidas', 'robo', 'pixelId', 'capiToken', 'capiTeste', 'mensagens', 'pixChave', 'pixNome', 'pixAntecipado', 'entrega', 'fidelidade', 'lojaLat', 'lojaLng', 'servicoPct', 'sazonal', 'sigla', 'crmToken'];
   const out = { ...cur }; keep.forEach(k => { if (k in n) out[k] = n[k]; });
   out.sazonal = escolhaValida(out.sazonal); out.sigla = String(out.sigla || '').trim().slice(0, 18); out.minimo = +out.minimo || 0; out.bairros = (out.bairros || []).filter(x => x && x[0]).map(([a, v]) => [String(a).slice(0, 60), +v || 0]);
-  out.pixelId = String(out.pixelId || '').replace(/\D/g, ''); out.whatsapp = String(out.whatsapp || '').replace(/\D/g, '');
+  out.pixelId = String(out.pixelId || '').replace(/\D/g, ''); out.crmToken = String(out.crmToken || '').trim().slice(0, 120); out.whatsapp = String(out.whatsapp || '').replace(/\D/g, '');
   db.prepare('UPDATE tenants SET name=?, settings=? WHERE id=?').run(String(b.name || req.tenant.name).slice(0, 80), JSON.stringify(out), req.tid);
   res.json({ ok: true });
 });
@@ -536,6 +555,7 @@ app.put('/api/p/orders/:id', P, (req, res) => {
   let ganhou = 0; if (o.status !== st) { try { ganhou = loyaltyOnStatus(req.tenant, o, st); } catch (e) { console.error('fidelidade', e.message); }
     if (st === 'cancelado') devolveEstoque(req.tid, o.id);
     if (st === 'concluido' && !o.caixa_id) { const cx = caixaAberto(req.tid); if (cx) db.prepare('UPDATE orders SET caixa_id=? WHERE id=?').run(cx.id, o.id); } }
+  if (o.status !== st && o.track) crmSync(req.tenant, { ...o, status: st }, 'pedido.status', `${baseUrl(req)}/${req.tenant.slug}/pedido/${o.track}`).catch(() => {});
   let msg = statusMessage(req.tenant, settingsOf(req.tenant), { ...o, status: st, prev: o.status }, req);
   if (msg && ganhou > 0) msg += `
 🎁 Você ganhou ${brlS(ganhou)} de cashback para o próximo pedido!`;
@@ -929,7 +949,7 @@ app.get('/api/p/report', P, (req, res) => {
     bairros[o.bairro] = (bairros[o.bairro] || 0) + 1; pays[o.payment] = (pays[o.payment] || 0) + o.total;
     for (const i of J(o.items, [])) { const k = i.nome; prods[k] = prods[k] || { nome: k, qtd: 0, total: 0 }; prods[k].qtd += i.qty; prods[k].total += i.total; }
   }
-  const capi = db.prepare(`SELECT info, created_at FROM events WHERE tenant_id=? AND type='CAPI' ORDER BY id DESC LIMIT 20`).all(req.tid);
+  const capi = db.prepare(`SELECT info, created_at FROM events WHERE tenant_id=? AND type IN ('CAPI','CRM') ORDER BY id DESC LIMIT 20`).all(req.tid);
   /* clientes novos x que voltaram, no período */
   const firstOf = db.prepare(`SELECT MIN(id) id FROM orders WHERE tenant_id=? AND phone=? AND status!='cancelado'`);
   let novos = 0, voltaram = 0; const vistos = new Set();
