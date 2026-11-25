@@ -504,7 +504,7 @@ const visCats=()=>CATS.filter(c=>brand==='all'||String(c.brand_id)===String(bran
 const prodsOf=c=>D.prods.filter(p=>p.cat===c.id);
 const visProds=()=>{ const ids=new Set(visCats().map(c=>c.id)); return D.prods.filter(p=>ids.has(p.cat)||(!p.cat&&brand==='all')); };
 function priceHtml(p){ return `${p.old?`<s>${BRLs(p.old)}</s>`:''}${BRLs(p.price)}${p.old&&L.sazonal&&L.sazonal.id==='blackfriday'?`<em class="off">↓${pctOff(p)}%</em>`:''}`; }
-function tagHtml(p){ return p.esg?'<span class="tag" style="background:#1F2328;color:#fff">Esgotado</span>':p.why==='campeao'?`<span class="tag hot">Campeão −${L.curtidas.campeao}%</span>`:p.why==='promo'?'<span class="tag hot">Promo de hoje</span>':p.tag?`<span class="tag">${esc(p.tag)}</span>`:''; }
+function tagHtml(p){ return p.esg?'<span class="tag" style="background:#1F2328;color:#fff">Esgotado</span>':p.why==='campeao'?`<span class="tag hot">Campeão −${L.curtidas.campeao}%</span>`:p.why==='promo'?`<span class="tag hot">${p.ate?'Oferta até '+p.ate.slice(8,10)+'/'+p.ate.slice(5,7):'Promo de hoje'}</span>`:p.tag?`<span class="tag">${esc(p.tag)}</span>`:''; }
 
 function renderCatalog(){
   const cats=visCats().filter(c=>prodsOf(c).length), multi=D.brands.length>1;

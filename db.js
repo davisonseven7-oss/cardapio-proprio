@@ -99,6 +99,8 @@ CREATE INDEX IF NOT EXISTS events_t ON events(tenant_id, created_at);
 
 /* migrações simples: colunas novas em bancos que já existem */
 const addCol = (tb, col, def) => { const cols = db.prepare(`PRAGMA table_info(${tb})`).all().map(c => c.name); if (!cols.includes(col)) db.exec(`ALTER TABLE ${tb} ADD COLUMN ${col} ${def}`); };
+addCol('products', 'promo_de', "TEXT DEFAULT ''");   // promoção: data de início (AAAA-MM-DD, vazio = já vale)
+addCol('products', 'promo_ate', "TEXT DEFAULT ''");  // promoção: último dia (vazio = sem fim)
 addCol('orders', 'track', 'TEXT');                 // código secreto da página de acompanhamento
 addCol('orders', 'log', "TEXT DEFAULT '[]'");      // histórico de status [{s, t}]
 for (const o of db.prepare('SELECT id, created_at FROM orders WHERE track IS NULL').all())

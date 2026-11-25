@@ -81,7 +81,8 @@ function champion(tid) {
 function priceInfo(p, dow, champId, s) {
   let price = p.price, old = null, why = '';
   const days = J(p.promo_days, []);
-  if (p.promo_price != null && p.promo_price < p.price && (!days.length || days.includes(dow))) { price = p.promo_price; old = p.price; why = 'promo'; }
+  const hoje = nowLocal().toISOString().slice(0, 10), noPrazo = (!p.promo_de || hoje >= p.promo_de) && (!p.promo_ate || hoje <= p.promo_ate);
+  if (p.promo_price != null && p.promo_price < p.price && noPrazo && (!days.length || days.includes(dow))) { price = p.promo_price; old = p.price; why = 'promo'; }
   if (champId === p.id) { const c = round2(p.price * (1 - s.curtidas.campeao / 100)); if (c < price) { price = c; old = p.price; why = 'campeao'; } }
   return { price, old, why };
 }
@@ -150,7 +151,7 @@ function menuPayload(t, visitor, previa) {
   const cats = db.prepare('SELECT id,brand_id,name,icon FROM categories WHERE tenant_id=? AND active=1 ORDER BY sort,id').all(t.id);
   const prods = db.prepare('SELECT * FROM products WHERE tenant_id=? AND active=1 ORDER BY sort,id').all(t.id).map(p => {
     const i = priceInfo(p, dow, champ, s);
-    return { esg: !!(p.estoque_controle && p.estoque <= 0), id: p.id, cat: p.category_id, name: p.name, desc: p.descr, price: i.price, old: i.old, why: i.why, base: p.price, bulk: p.bulk_qty ? [p.bulk_qty, p.bulk_price] : null, img: p.img, icon: p.icon, tag: p.tag, opts: J(p.options, []), kw: p.keywords, promoLabel: p.promo_label };
+    return { esg: !!(p.estoque_controle && p.estoque <= 0), id: p.id, cat: p.category_id, name: p.name, desc: p.descr, price: i.price, old: i.old, why: i.why, ate: i.why === 'promo' ? p.promo_ate || '' : '', base: p.price, bulk: p.bulk_qty ? [p.bulk_qty, p.bulk_price] : null, img: p.img, icon: p.icon, tag: p.tag, opts: J(p.options, []), kw: p.keywords, promoLabel: p.promo_label };
   });
   const counts = Object.fromEntries(db.prepare('SELECT product_id id, COUNT(*) n FROM likes WHERE tenant_id=? AND week=? GROUP BY product_id').all(t.id, wk).map(r => [r.id, r.n]));
   const mine = visitor ? db.prepare('SELECT product_id FROM likes WHERE tenant_id=? AND week=? AND visitor=?').all(t.id, wk, visitor).map(r => r.product_id) : [];
@@ -506,7 +507,7 @@ app.post('/api/p/senha', P, (req, res) => {
 const TABLES = {
   brands: { cols: ['name', 'sub', 'logo', 'sort'], order: 'sort,id' },
   categories: { cols: ['brand_id', 'name', 'icon', 'sort', 'active'], order: 'sort,id' },
-  products: { cols: ['estoque_controle', 'estoque_min', 'category_id', 'name', 'descr', 'price', 'promo_price', 'promo_days', 'promo_label', 'bulk_qty', 'bulk_price', 'img', 'icon', 'tag', 'options', 'keywords', 'active', 'sort'], order: 'sort,id', json: ['promo_days', 'options'] },
+  products: { cols: ['estoque_controle', 'estoque_min', 'category_id', 'name', 'descr', 'price', 'promo_price', 'promo_days', 'promo_label', 'promo_de', 'promo_ate', 'bulk_qty', 'bulk_price', 'img', 'icon', 'tag', 'options', 'keywords', 'active', 'sort'], order: 'sort,id', json: ['promo_days', 'options'] },
   stories: { cols: ['name', 'cover', 'slides', 'sort', 'active'], order: 'sort,id', json: ['slides'] },
   posts: { cols: ['img', 'product_id', 'caption', 'overlay', 'active', 'created_at'], order: 'created_at DESC' },
 };

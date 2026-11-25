@@ -7,11 +7,11 @@ function seed({ db, hashPass }) {
     if (email && pass.length >= 8) { db.prepare(`INSERT INTO users(email,name,pass_hash,role) VALUES(?,?,?,'admin')`).run(email, 'Administrador', hashPass(pass)); console.log('Admin criado:', email); }
     else console.warn('ATENÇÃO: defina ADMIN_EMAIL e ADMIN_PASSWORD (8+ caracteres) para criar o login de administrador.');
   }
-  if (db.prepare('SELECT 1 FROM tenants').get()) { demo(db); fotos(db); galdino(db); galdinoReal(db); return; }
+  if (db.prepare('SELECT 1 FROM tenants').get()) { demo(db); fotos(db); galdino(db); galdinoReal(db); galdinoOfertasNov(db); return; }
   db.exec('BEGIN');
   try { potengi(db); boaHora(db); db.exec('COMMIT'); console.log('Cardápios iniciais criados: /potengi e /boahora'); }
   catch (e) { db.exec('ROLLBACK'); throw e; }
-  demo(db); fotos(db); galdino(db); galdinoReal(db);
+  demo(db); fotos(db); galdino(db); galdinoReal(db); galdinoOfertasNov(db);
 }
 
 /* login de demonstração do Boa Hora (para mostrar a clientes).
@@ -200,6 +200,33 @@ function galdinoReal(db) {
     po('dipgotas', 'Dipirona gotas por R$ 4,99.', 'Preço baixo', 30);
     s.catalogoReal = true; db.prepare('UPDATE tenants SET settings=? WHERE id=?').run(JSON.stringify(s), t.id);
     db.exec('COMMIT'); console.log('Catálogo real da Galdino:', n, 'produtos');
+  } catch (e) { db.exec('ROLLBACK'); throw e; }
+}
+
+/* Ofertas da Farmácia Galdino de 25 a 30/11/2026 (artes enviadas pela loja).
+   Preço normal fica no produto; a promoção vale só nessas datas e depois some sozinha. */
+function galdinoOfertasNov(db) {
+  const t = db.prepare("SELECT * FROM tenants WHERE slug='galdino'").get(); if (!t) return;
+  const s = JSON.parse(t.settings || '{}'); if (s.ofertasNov25) return;
+  db.exec('BEGIN');
+  try {
+    const cat = (n, icon, sort) => (db.prepare('SELECT id FROM categories WHERE tenant_id=? AND name=?').get(t.id, n) || {}).id || ins(db, 'categories', { tenant_id: t.id, name: n, icon, sort });
+    const perf = cat('Perfumaria', 'bottle', 3), sup = cat('Naturais e suplementos', 'jar', 4);
+    const o = (nome, ...itens) => [{ nome, itens: itens.map(x => [x, 0]) }];
+    const add = (c, name, price, promo, img, descr, x = {}) => ins(db, 'products', { tenant_id: t.id, category_id: c, name, price, promo_price: promo, promo_days: [], promo_de: '2026-11-25', promo_ate: '2026-11-30', img: '/img/' + img, icon: 'bottle', descr, sort: -1, tag: 'Oferta', options: x.opts || [], keywords: x.kw || '' });
+    const a = add(perf, 'Body Splash WePink 200 ml', 60, 45, 'fag-43.jpg', 'Perfume leve e refrescante para o corpo.', { opts: o('Fragrância', 'Virginia Fonseca Golden', 'Obsessed Lovely', 'Cassera'), kw: 'body splash wepink perfume' });
+    const b = add(perf, 'Perfume WePink (qualquer modelo)', 129.9, 89.9, 'fag-44.jpg', 'Qualquer perfume da WePink pelo mesmo preço. Confirme o modelo disponível no WhatsApp.', { opts: o('Modelo', 'Liberté Exclusif', 'Liberté Platiné', 'Virginia Fonseca Golden', 'Virginia Fonseca Bloom', 'Wonderful', '27', 'Outro (combinar no WhatsApp)'), kw: 'perfume wepink virginia' });
+    const c = add(sup, 'Termo Plus Vitafor 30 sachês', 120, 59.9, 'fag-45.jpg', 'Sabor frutas vermelhas com gengibre e chá verde. Auxilia no metabolismo energético.', { kw: 'termo plus vitafor termogenico emagrecer' });
+    ins(db, 'stories', { tenant_id: t.id, name: 'Ofertas', cover: '/img/fag-of1.jpg', sort: 0, slides: [
+      { img: '/img/fag-of1.jpg', t: 'Body Splash WePink', p: 'De R$ 60 por R$ 45. Só até 30/11.', prod: a },
+      { img: '/img/fag-of2.jpg', t: 'Perfumes WePink', p: 'Qualquer um por R$ 89,90. Só até 30/11.', prod: b },
+      { img: '/img/fag-of3.jpg', t: 'Termo Plus Vitafor', p: 'De R$ 120 por R$ 59,90. Só até 30/11.', prod: c }] });
+    const po = (prod, img, caption) => ins(db, 'posts', { tenant_id: t.id, img: '/img/' + img, product_id: prod, caption, overlay: '', created_at: new Date().toISOString() });
+    po(c, 'fag-of3.jpg', 'Termo Plus Vitafor de R$ 120 por R$ 59,90. Oferta válida de 25 a 30/11.');
+    po(b, 'fag-of2.jpg', 'Qualquer perfume da WePink por R$ 89,90 cada. De 25 a 30/11.');
+    po(a, 'fag-of1.jpg', 'Body Splash WePink de R$ 60 por R$ 45. De 25 a 30/11.');
+    s.ofertasNov25 = true; db.prepare('UPDATE tenants SET settings=? WHERE id=?').run(JSON.stringify(s), t.id);
+    db.exec('COMMIT'); console.log('Ofertas de 25 a 30/11 da Galdino criadas');
   } catch (e) { db.exec('ROLLBACK'); throw e; }
 }
 
