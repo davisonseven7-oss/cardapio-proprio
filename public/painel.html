@@ -537,10 +537,9 @@ function printerSetup(){
   <p class="help">Essas opções valem para este computador. Deixe o painel aberto nesta aba para a impressão automática funcionar.</p>
   <div class="card" style="box-shadow:none;padding:12px;font-size:13px"><b>Como ligar a impressora térmica (uma vez só)</b>
    <ol style="margin:8px 0 0;padding-left:18px;display:grid;gap:6px">
-    <li>Instale o driver da impressora (Elgin i9, Epson TM-T20, Bematech MP-4200, Knup etc.) e coloque o papel certo (58 ou 80 mm).</li>
-    <li>No Windows: <b>Configurações → Bluetooth e dispositivos → Impressoras</b>, abra a térmica e clique em <b>Definir como padrão</b>.</li>
-    <li>Para imprimir <b>sem a janela de confirmação</b>: crie um atalho do Chrome na área de trabalho, clique com o botão direito → Propriedades, e no fim de <b>Destino</b> acrescente <code>--kiosk-printing</code>. Feche todos os Chrome e abra o painel por esse atalho.</li>
-    <li>Clique em <b>Imprimir teste</b> abaixo.</li></ol></div></div>
+    <li>Ligue a térmica no USB e instale o driver dela (Epson TM-T20: driver <b>Epson Advanced Printer Driver</b>, no site da Epson; Elgin, Bematech e Knup têm o driver no site de cada marca). Ela precisa aparecer em <b>Configurações → Bluetooth e dispositivos → Impressoras</b>.</li>
+    <li><b>Jeito mais fácil, sem mexer na impressora padrão:</b> instale o app <b>Huntix Pedidos</b> (botão <b>Baixar app</b> no menu), abra o painel por ele e aqui em <b>Impressora</b> escolha a térmica. A comanda sai direto nela e a impressora comum continua sendo a padrão do Windows.</li>
+    <li><b>Pelo navegador:</b> clique em <b>Imprimir teste</b> e, na janela que abrir, troque o <b>Destino</b> para a térmica. O Chrome lembra a última impressora usada, então nas próximas vezes ela já vem escolhida.</li></ol></div></div>
   <div class="foot"><button class="btn sec" id="pt">Imprimir teste</button><button class="btn sec" onclick="closeModal()">Fechar</button><button class="btn" id="ok">Salvar</button></div>`);
   if(DESK){ const box=document.querySelector('#mbox .card'); if(box) box.innerHTML='<b>App Huntix Pedidos conectado</b><p class="help" style="margin:6px 0 0">A comanda vai direto para a impressora escolhida, sem janela de confirmação. Mesmo minimizado, o app avisa e imprime.</p><label class="f" style="margin-top:10px">Impressora<select id="pdev"><option value="">Padrão do Windows</option></select></label>';
     DESK.printers().then(p=>{ const s=$('#pdev'); if(!s) return; p.lista.forEach(x=>{ const o=document.createElement('option'); o.value=x.nome; o.textContent=x.nome+(x.padrao?' (padrão)':''); s.appendChild(o); }); s.value=p.atual; s.onchange=()=>DESK.setPrinter(s.value).then(()=>toast('Impressora escolhida')); }); }
