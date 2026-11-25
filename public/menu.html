@@ -133,7 +133,7 @@ svg.i{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.9;stro
 .card .ph>img{width:100%;height:100%;object-fit:cover;transition:transform .35s}
 .card:hover .ph>img{transform:scale(1.04)}
 .card .price{position:absolute;left:10px;bottom:10px;background:var(--sun);color:#1B1300;font-family:var(--f-brand);font-size:18px;line-height:1;padding:7px 10px 9px;border-radius:12px;transform:rotate(-3deg)}
-.card .price s{display:block;font-family:var(--f-ui);font-size:11px;opacity:.65;margin-bottom:2px}
+.card .price s{display:block;font-family:var(--f-ui);font-size:14px;font-weight:700;opacity:.85;margin-bottom:3px;text-decoration:line-through 2px #D7263D}
 .card .pp{position:absolute;right:10px;bottom:10px;width:36px;height:36px;border-radius:50%;background:var(--green);color:var(--green-fg);display:grid;place-items:center;font-size:22px;font-weight:700;box-shadow:0 4px 12px rgba(0,0,0,.25)}
 .card .tag{position:absolute;left:10px;top:10px;background:#fff;color:#121712;font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;padding:4px 8px;border-radius:99px;max-width:calc(100% - 80px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .card .tag.hot{background:var(--heart);color:#fff}
@@ -348,7 +348,8 @@ input[type=text],input[type=tel],select,textarea{width:100%;border:1.5px solid v
 /* --- Black: cards do cardápio --- */
 [data-saz="blackfriday"] .card .ph{background:#fff}
 [data-saz="blackfriday"] .card .ph>img{object-fit:contain;padding:10px}
-.card .price .off{display:block;font-style:normal;font-family:var(--f-ui);font-size:10px;font-weight:800;color:#fff;background:#D7263D;border-radius:4px;padding:1px 4px;margin-top:3px;width:max-content}
+.card .price .off{display:block;font-style:normal;font-family:var(--f-ui);font-size:13px;font-weight:800;color:#fff;background:#D7263D;border-radius:4px;padding:1px 4px;margin-top:3px;width:max-content}
+.card .tag.hot{white-space:normal;max-width:calc(100% - 58px);line-height:1.25;font-size:11px;letter-spacing:.02em}
 </style>
 </head>
 <body>
@@ -503,8 +504,8 @@ async function activeOrderBanner(){
 const visCats=()=>CATS.filter(c=>brand==='all'||String(c.brand_id)===String(brand));
 const prodsOf=c=>D.prods.filter(p=>p.cat===c.id);
 const visProds=()=>{ const ids=new Set(visCats().map(c=>c.id)); return D.prods.filter(p=>ids.has(p.cat)||(!p.cat&&brand==='all')); };
-function priceHtml(p){ return `${p.old?`<s>${BRLs(p.old)}</s>`:''}${BRLs(p.price)}${p.old&&L.sazonal&&L.sazonal.id==='blackfriday'?`<em class="off">↓${pctOff(p)}%</em>`:''}`; }
-function tagHtml(p){ return p.esg?'<span class="tag" style="background:#1F2328;color:#fff">Esgotado</span>':p.why==='campeao'?`<span class="tag hot">Campeão −${L.curtidas.campeao}%</span>`:p.why==='promo'?`<span class="tag hot">${p.ate?'Oferta até '+p.ate.slice(8,10)+'/'+p.ate.slice(5,7):'Promo de hoje'}</span>`:p.tag?`<span class="tag">${esc(p.tag)}</span>`:''; }
+function priceHtml(p){ return `${p.old?`<s>${BRLs(p.old)}</s>`:''}${BRLs(p.price)}${p.old?`<em class="off">↓${pctOff(p)}%</em>`:''}`; }
+function tagHtml(p){ return p.esg?'<span class="tag" style="background:#1F2328;color:#fff">Esgotado</span>':p.why==='campeao'?`<span class="tag hot">Campeão −${L.curtidas.campeao}%</span>`:p.prox?`<span class="tag hot">A partir de ${p.prox.de.slice(8,10)}/${p.prox.de.slice(5,7)}: ${BRL(p.prox.preco)}</span>`:p.why==='promo'?`<span class="tag hot">${p.ate?'Oferta até '+p.ate.slice(8,10)+'/'+p.ate.slice(5,7):'Promo de hoje'}</span>`:p.tag?`<span class="tag">${esc(p.tag)}</span>`:''; }
 
 function renderCatalog(){
   const cats=visCats().filter(c=>prodsOf(c).length), multi=D.brands.length>1;
